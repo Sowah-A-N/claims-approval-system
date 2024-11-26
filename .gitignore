@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 .env
 /includes/conn.inc.php
 config.inc.php
@@ -7,3 +8,6 @@ users/user/pages/fileNewClaim/xindex.inc2.php
 users/user/pages/fileNewClaim/x2index.inc2.php
 /users/user/assets/blank_page.php
 /users/user/pages/snippets.txt
+=======
+
+>>>>>>> 6e3b1042a5f3ed7941ea17e0c2ecffba5c3025ac
