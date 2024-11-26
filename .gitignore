@@ -1,0 +1,9 @@
+.env
+/includes/conn.inc.php
+config.inc.php
+/libs
+/users/user/pages/fileNewClaim/snippets.js
+users/user/pages/fileNewClaim/xindex.inc2.php
+users/user/pages/fileNewClaim/x2index.inc2.php
+/users/user/assets/blank_page.php
+/users/user/pages/snippets.txt
