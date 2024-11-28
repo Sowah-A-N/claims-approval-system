@@ -44,77 +44,189 @@
 
 <html>
 	<body>
+    <div class="container-scroller">
+	<?php include "../../assets/partials/_navbar.php"; ?>
+
+    <div class="container-fluid page-body-wrapper">
+		<?php include "../../assets/partials/_sidebar.php" ?>
+
+
+        <div class="main-panel">
+            <div class="content-wrapper">
+
+            <?php print_r($_SESSION); ?>
 	
 		<form method="POST" id="newClaimForm" name="newClaimForm">
-     <!-- Display the rate -->
-     <div class="form-group row">
-            <label class="col-sm-3 col-form-label" for="rate">Rate</label>
-            <div class="col-sm-9">
-                <input type="text" name="rate" class="form-control" id="rate" style="width:50%" 
-                        value="GH₵ <?php echo $currentRate ?>" readonly>
+            <!-- Display the rate -->
+            <div class="form-group row">
+                <label class="col-sm-3 col-form-label" for="rate">Rate (GH₵)</label>
+                <div class="col-sm-9">
+                    <input type="text" name="rate" class="form-control" id="rate" style="width:50%" 
+                            value="<?php echo $currentRate ?>" readonly>
+                </div>
             </div>
-        </div>
 		
-		<div class="form-group row">
-			<label class="col-sm-3 col-form-label" for="programme">Programme</label>
-			<div class="col-sm-9">
-				<select class="form-select" name="programme" id="programme" style="width:75%">
-					<option value="">--Select Programme--</option>
-					<?php 
-					
-					while ($row = mysqli_fetch_assoc($programmeSelectResult)) {
-							$programmeName = htmlspecialchars($row['name'], ENT_QUOTES, 'UTF-8');
-							$selected = $programme === $currentProgramme ? 'selected' : '';
-							echo "<option value=\"$programmeName\" $selected>$programmeName</option>";
-					}
-					?>
-				</select>
-			</div>
-		</div>
+            <div class="form-group row">
+                <label class="col-sm-3 col-form-label" for="programme">Programme</label>
+                <div class="col-sm-9">
+                    <select class="form-select" name="programme" id="programme" style="width:75%">
+                        <option value="">--Select Programme--</option>
+                        <?php 
+                        
+                        while ($row = mysqli_fetch_assoc($programmeSelectResult)) {
+                                $programmeName = htmlspecialchars($row['name'], ENT_QUOTES, 'UTF-8');
+                                $selected = $programme === $currentProgramme ? 'selected' : '';
+                                echo "<option value=\"$programmeName\" $selected>$programmeName</option>";
+                        }
+                        ?>
+                    </select>
+                </div>
+            </div>
 
-		 <div class="form-group row">
-			 <label class="col-sm-3 col-form-label" for="department">Department</label>
-			 <div class="col-sm-9">
-				 <select class="form-select" name="department" id="department" style="width:25%">
-					 <option value="">--Select Department--</option>
-					 <?php 
-					while ($row = mysqli_fetch_assoc($departmentSelectResult)) {
-							$deptName = htmlspecialchars($row['dept_name'], ENT_QUOTES, 'UTF-8');
-							$selected = $deptName === $currentDepartment ? 'selected' : '';
-							echo "<option value=\"$deptName\" $selected>$deptName</option>";
-						}
-					 ?>
-				 </select>
-			 </div>
-		</div>
-		<br /><br />
-		
-		<div class="form-group row">
-			 <label class="col-sm-3 col-form-label" for="course">Course</label>
-			 <div class="col-sm-9">
-				 <select class="form-select" name="course" id="course" style="width:25%">
-					<option value="">--Select Department First--</option>
-				</select>
-			</div>		
-		</div>
-		<br >
-		
-		<div class="row">
-			<div class="col-12 text-end">
-				<button type="button" id="submitClaim" class="btn btn-success btn-lg">Submit Claim</button>
-			</div>
-		</div>
+            <div class="form-group row">
+                <label class="col-sm-3 col-form-label" for="department">Department</label>
+                <div class="col-sm-9">
+                    <select class="form-select" name="department" id="department" style="width:25%">
+                        <option value="">--Select Department--</option>
+                        <?php 
+                        while ($row = mysqli_fetch_assoc($departmentSelectResult)) {
+                                $deptName = htmlspecialchars($row['dept_name'], ENT_QUOTES, 'UTF-8');
+                                $selected = $deptName === $currentDepartment ? 'selected' : '';
+                                echo "<option value=\"$deptName\" $selected>$deptName</option>";
+                            }
+                        ?>
+                    </select>
+                </div>
+            </div>
+            <br /><br />
+            
+            <div class="form-group row">
+                <label class="col-sm-3 col-form-label" for="course">Course</label>
+                <div class="col-sm-9">
+                    <select class="form-select" name="course" id="course" style="width:25%">
+                        <option value="">--Select Department First--</option>
+                    </select>
+                </div>		
+            </div>
+            <br >
+            
+            <div class="row">
+                <div class="col-12 text-end">
+                    <button type="button" id="submitClaim" class="btn btn-success btn-lg">Submit Claim</button>
+                </div>
+            </div>
 
-	<!-- Container for dynamically added rows -->
-	<div id="courseTimeRows" class="mt-4">
-		<!-- Dynamic rows for times and dates will be appended here -->
-	</div>
+            <!-- Container for dynamically added rows -->
+            <div id="courseTimeRows" class="mt-4">
+                <!-- Dynamic rows for times and dates will be appended here -->
+            </div>
 
-	<!-- Button to add a new time slot -->
-	<div class="col-md-3 col-sm-6 mb-2">
-		<button type="button" id="addTimeSlot" class="btn btn-secondary btn-rounded btn-block" >Add Time Slot</button>
-	</div>
+            <!-- Button to add a new time slot -->
+            <div class="col-md-3 col-sm-6 mb-2">
+                <button type="button" id="addTimeSlot" class="btn btn-secondary btn-rounded btn-block" >Add Time Slot</button>
+            </div>
 		</form>
+
+        
+        <script src="https://code.jquery.com/jquery-3.7.1.js" integrity="sha256-eKhayi8LEQwp4NKxN+CfCh+3qOVUtJn3QNZ0TciWLP4=" crossorigin="anonymous"></script>
+        <script>
+            $(document).ready(function () {
+
+                $(document).on("click", "#submitClaim", function (e) {
+                    $("#newClaimForm").submit(); 
+                }); 
+
+                $(document).on("submit", "#newClaimForm", function (e) {
+                    e.preventDefault();
+
+                    const department = document.getElementById("department").value;
+                    const programme = document.getElementById("programme").value;
+                    const course = document.getElementById("course").value;
+                    const rate = document.getElementById("rate").value;
+
+                    // Validate department, programme, and course are selected
+                    if (!department || !programme || !course) {
+                        alert("Please select department, programme, and course before submitting.");
+                        return;
+                    }
+
+                    // Gather form data
+                    const claimData = {
+                        department: department,
+                        programme: programme,
+                        course: course,
+                        rate: rate, // Assuming there's a rate field
+                        //rate: 35,
+                        timeSlots: [],
+                    };
+
+                    // Iterate through each time slot row
+                    const timeSlotDivs = document.querySelectorAll(".time-slot");
+                    timeSlotDivs.forEach((slotDiv) => {
+                        const startTime = slotDiv.querySelector('input[name^="startTime"]').value;
+                        const endTime = slotDiv.querySelector('input[name^="endTime"]').value;
+                        const periods = 30;//slotDiv.querySelector('input[name^="period"]').value;
+                        const subTotal = 450; //slotDiv.querySelector('input[name^="subTotal"]').value;
+                        const fuelComponent = slotDiv.querySelector('input[name^="fuelComponent"]')?.checked ? "Yes" : "No";
+
+                        // Collect dates for this time slot
+                        const dates = Array.from(slotDiv.querySelectorAll('input[name^="dates"]')).map(
+                            (dateInput) => dateInput.value
+                        );
+
+                        // Push the time slot data with its dates
+                        claimData.timeSlots.push({
+                            startTime,
+                            endTime,
+                            periods,
+                            subTotal,
+                            fuelComponent,
+                            dates,
+                        });
+                    });
+
+                    // Validate at least one time slot is present
+                    if (claimData.timeSlots.length === 0) {
+                        alert("Please add at least one time slot with valid details before submitting.");
+                        return;
+                    }
+
+                     // Convert claimData into FormData
+                    const formData = new FormData();
+                    formData.append("department", claimData.department);
+                    formData.append("programme", claimData.programme);
+                    formData.append("course", claimData.course);
+                    formData.append("rate", claimData.rate);
+
+                    claimData.timeSlots.forEach((slot, index) => {
+                        formData.append(`timeSlots[${index}][startTime]`, slot.startTime);
+                        formData.append(`timeSlots[${index}][endTime]`, slot.endTime);
+                        formData.append(`timeSlots[${index}][periods]`, slot.periods);
+                        formData.append(`timeSlots[${index}][subTotal]`, slot.subTotal);
+                        formData.append(`timeSlots[${index}][fuelComponent]`, slot.fuelComponent);
+
+                        slot.dates.forEach((date, dateIndex) => {
+                            formData.append(`timeSlots[${index}][dates][${dateIndex}]`, date);
+                        });
+                    });		
+                    
+                    $.ajax({
+                        type: "POST",
+                        url: "multiClaimsSubmit.inc.php",
+                        data: formData,
+                        processData: false,
+                        contentType: false, 
+                        cache:false,
+                        success:function(result) {
+                            console.log(result);
+                        },
+                        error: function(xhr, status, error) {
+                            console.log(error);
+                        }
+                    })
+                });  
+            });
+        </script>
 		
 		<script>
 			document.getElementById("department").addEventListener("change", function () {
@@ -257,106 +369,10 @@ document.getElementById("addTimeSlot").addEventListener("click", function () {
     // Append time slot to the container
     document.getElementById("courseTimeRows").appendChild(timeSlotDiv);
 });
-
-			document.getElementById("submitClaim").addEventListener("click", function () {
-    const department = document.getElementById("department").value;
-    const programme = document.getElementById("programme").value;
-    const course = document.getElementById("course").value;
-
-    // Validate department, programme, and course are selected
-    if (!department || !programme || !course) {
-        alert("Please select Department, Programme, and Course before submitting.");
-        return;
-    }
-
-    // Gather form data
-    const claimData = {
-        department: department,
-        programme: programme,
-        course: course,
-        rate: document.getElementById("rate").value, // Assuming there's a rate field
-        //rate: 35,
-		timeSlots: [],
-    };
-
-    // Iterate through each time slot row
-    const timeSlotDivs = document.querySelectorAll(".time-slot");
-    timeSlotDivs.forEach((slotDiv) => {
-        const startTime = slotDiv.querySelector('input[name^="startTime"]').value;
-        const endTime = slotDiv.querySelector('input[name^="endTime"]').value;
-        const periods = 30;//slotDiv.querySelector('input[name^="period"]').value;
-        const subTotal = 450; //slotDiv.querySelector('input[name^="subTotal"]').value;
-        const fuelComponent = slotDiv.querySelector('input[name^="fuelComponent"]')?.checked ? "Yes" : "No";
-
-        // Collect dates for this time slot
-        const dates = Array.from(slotDiv.querySelectorAll('input[name^="dates"]')).map(
-            (dateInput) => dateInput.value
-        );
-
-        // Push the time slot data with its dates
-        claimData.timeSlots.push({
-            startTime,
-            endTime,
-            periods,
-            subTotal,
-            fuelComponent,
-            dates,
-        });
-    });
-
-    // Validate at least one time slot is present
-    if (claimData.timeSlots.length === 0) {
-        alert("Please add at least one time slot with valid details before submitting.");
-        return;
-    }
-				
-	 // Convert claimData into FormData
-    const formData = new FormData();
-    formData.append("department", claimData.department);
-    formData.append("programme", claimData.programme);
-    formData.append("course", claimData.course);
-    formData.append("rate", claimData.rate);
-
-    claimData.timeSlots.forEach((slot, index) => {
-        formData.append(`timeSlots[${index}][startTime]`, slot.startTime);
-        formData.append(`timeSlots[${index}][endTime]`, slot.endTime);
-        formData.append(`timeSlots[${index}][periods]`, slot.periods);
-        formData.append(`timeSlots[${index}][subTotal]`, slot.subTotal);
-        formData.append(`timeSlots[${index}][fuelComponent]`, slot.fuelComponent);
-
-        slot.dates.forEach((date, dateIndex) => {
-            formData.append(`timeSlots[${index}][dates][${dateIndex}]`, date);
-        });
-    });			
-	
-	console.log("Form Data :", formData);				
-				
-    // Send data to the server
-    fetch("multiClaimsSubmit.inc.php", {
-        method: "POST",
-        //headers: {
-            //"Content-Type": "application/json",
-			//"Content-Type":"multipart/form",
-			//"Content-Type":"application/x-www-form-urlencoded",
-        //},
-        //body: JSON.stringify(claimData),
-		body: formData,
-    })
-        .then((response) => response.json())
-        .then((data) => {
-            if (data.success) {
-                alert("Claim submitted successfully!");
-                window.location.reload(); // Refresh or redirect to another page
-            } else {
-                alert("Error submitting claim: " + data.message);
-            }
-        })
-        .catch((error) => {
-            console.error("Error:", error);
-            alert("An error occurred while submitting the claim.");
-        });
-});
-
 		</script>
+        </div>
+        </div>
+        </div>
+        </div>
 	</body>
 </html>

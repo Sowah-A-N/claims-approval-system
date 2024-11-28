@@ -48,6 +48,7 @@ if (!$query_result) {
 		$_SESSION['rate'] = $row['rate'] ?? "";
 		$_SESSION['dept'] = ($row['department'] ?? "");
 		$_SESSION['stage'] = ($row['stage'] ?? "");
+        $_SESSION['faculty'] = ($row['faculty']) ?? "";
 
 
 

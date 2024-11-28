@@ -1,34 +1,42 @@
+<?php
+// Define the base URL dynamically
+$base_url = isset($_SERVER['HTTP_HOST']) && strpos($_SERVER['HTTP_HOST'], 'localhost') !== false
+    ? '/claims_system/' // Local environment
+    : '/'; // Live environment
+?>
+
+
 <nav class="sidebar sidebar-offcanvas" id="sidebar">
   <ul class="nav">
     <li class="nav-item">
-      <a class="nav-link" href="/users/user/">
+      <a class="nav-link" href="<?php echo $base_url; ?>users/user/">
         <i class="icon-grid menu-icon"></i>
         <span class="menu-title">Dashboard</span>
       </a>
     </li> 
     <li class="nav-item">
-      <a class="nav-link" href="/users/user/pages/fileNewClaim" aria-expanded="false" aria-controls="">
+      <a class="nav-link" href="<?php echo $base_url; ?>users/user/pages/fileNewClaim" aria-expanded="false" aria-controls="">
         <i class="mdi mdi-file-document menu-icon"></i>
         <span class="menu-title">File New Claim</span>
         <i class="menu-arrow"></i>
       </a>
     </li>
     <li class="nav-item">
-      <a class="nav-link" href="/users/user/pages/myClaims" aria-expanded="false" aria-controls="">
+      <a class="nav-link" href="<?php echo $base_url; ?>users/user/pages/myClaims" aria-expanded="false" aria-controls="">
         <i class="icon-bar-graph menu-icon"></i>
         <span class="menu-title">My Claims</span>
         <i class="menu-arrow"></i>
       </a>     
     </li>
     <li class="nav-item">
-      <a class="nav-link" href="/users/user/pages/settings" aria-expanded="false" aria-controls="">
+      <a class="nav-link" href="<?php echo $base_url; ?>users/user/pages/settings" aria-expanded="false" aria-controls="">
         <i class="ti ti-settings menu-icon"></i>
         <span class="menu-title">Settings</span>
         <i class="menu-arrow"></i>
       </a>      
     </li>
     <li class="nav-item">
-      <a class="nav-link" href="/users/user/pages/logout" aria-expanded="false" aria-controls="">
+      <a class="nav-link" href="<?php echo $base_url; ?>users/user/pages/logout" aria-expanded="false" aria-controls="">
         <i class="mdi mdi-exit-to-app menu-icon"></i>
         <span class="menu-title">Logout</span>
         <i class="menu-arrow"></i>
