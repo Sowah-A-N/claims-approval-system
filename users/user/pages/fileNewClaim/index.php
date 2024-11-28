@@ -491,8 +491,8 @@ function getClaimFieldValue($field)
                     cache:false,
                     success:function(result) {
                         console.log(result);
-                        $("#newClaimForm")[0].reset(); 
-
+                        alert("Claim submitted successfully");
+                        window.location.reload();
 
                     },
                     error: function(xhr, status, error) {

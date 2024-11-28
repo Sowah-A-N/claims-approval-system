@@ -1,14 +1,10 @@
-<?php
-	
+<?php	
     //Session Include goes here
     $pageTitle = "Approver Dashboard";
 
     include "./assets/partials/head.php";
 
     include_once '../../includes/conn.inc.php';
-
-    var_dump($_SESSION);
-
 
     // Retrieve approver's stage from session, defaulting to empty string if not set
     $approverStage = $_SESSION['stage'] ?? "";
@@ -141,58 +137,52 @@
             <?php include './assets/partials/header.html'; ?>
 			
 			<div class="container-fluid">
-				<?php
-					echo '<pre>';
-					var_dump($_SESSION['stage'], $_SESSION['dept']);
-					echo '</pre>';
-					
-				?>
-
-
-			
-			<br /><br />
-            <h5 class="card-title fw-semibold mb-4">Pending Claims</h5>
-			<?php if ($_SESSION['stage'] && $_SESSION['stage'] !== 1): ?>
-				<div class="mx-auto" style="width: 25%;">
-                    <label for="departmentFilter">Filter by Department:</label>
-                    <select id="departmentFilter" class="form-select" onchange="filterTable()">
-                        <option value="">All Departments</option>
-                        <?php
-                        // Collect unique departments from claims
-                        $departments = array_unique(array_column($claims, 'department'));
-                        foreach ($departments as $department) {
-                            echo "<option value='" . htmlspecialchars($department) . "'>" . htmlspecialchars($department) . "</option>";
-                        }
-                        ?>
-                    </select>
-                </div>
-			<?php endif; ?>
-			
-			<div class="col-lg-12 d-flex align-items-stretch">
-                <div class="card">
-                    <div class="card-body p-8">
-                        <div class="table-responsive">
-                            <table class="table text-nowrap mb-0 align-middle">
-                                <thead class="text-dark fs-4">
-                                    <tr>
-                                        <th class="border-bottom-0">Claim ID</th>
-                                        <th class="border-bottom-0">Claimant</th>
-                                        <!--th class="border-bottom-0">Department</th>
-                                        <th class="border-bottom-0">Programme</th-->
-                                        <th class="border-bottom-0">Course</th>
-                                        <th class="border-bottom-0">Date Submitted</th>
-                                        <th class="border-bottom-0">View Details</th>
-                                        <th class="border-bottom-0">Approve</th>
-                                        <th class="border-bottom-0">Flag</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <?php if (!empty($claims)) : 
-										$index = 1;
-									?>
+						
+                <br /><br />
+                <h5 class="card-title fw-semibold mb-4">Pending Claims</h5>
+                <?php 
+                    if ($_SESSION['stage'] && $_SESSION['stage'] !== 1): 
+                ?>
+                    <div class="mx-auto" style="width: 25%;">
+                        <label for="departmentFilter">Filter by Department:</label>
+                        <select id="departmentFilter" class="form-select" onchange="filterTable()">
+                            <option value="">All Departments</option>
+                            <?php
+                            // Collect unique departments from claims
+                            $departments = array_unique(array_column($claims, 'department'));
+                            foreach ($departments as $department) {
+                                echo "<option value='" . htmlspecialchars($department) . "'>" . htmlspecialchars($department) . "</option>";
+                            }
+                            ?>
+                        </select>
+                    </div>
+                <?php endif; ?>
+                
+                <div class="col-lg-12 d-flex align-items-stretch">
+                    <div class="card">
+                        <div class="card-body p-8">
+                            <div class="table-responsive">
+                                <table class="table text-nowrap mb-0 align-middle">
+                                    <thead class="text-dark fs-4">
+                                        <tr>
+                                            <th class="border-bottom-0">S/N</th>
+                                            <th class="border-bottom-0">Claimant</th>
+                                            <!--th class="border-bottom-0">Department</th>
+                                            <th class="border-bottom-0">Programme</th-->
+                                            <th class="border-bottom-0">Course</th>
+                                            <th class="border-bottom-0">Date Submitted</th>
+                                            <th class="border-bottom-0">View Details</th>
+                                            <th class="border-bottom-0">Approve</th>
+                                            <th class="border-bottom-0">Flag</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <?php if (!empty($claims)) : 
+                                            $index = 1;
+                                        ?>
                                         <?php foreach ($claims as $claim) : ?>
-                                   				 <tr data-department="<?php echo htmlspecialchars($claim['department']); ?>" id="<?php echo $claim['claimId']; ?>">                                            
-												<td><?php echo $index; ?></td>
+                                            <tr data-department="<?php echo htmlspecialchars($claim['department']); ?>" id="<?php echo $claim['claimId']; ?>">                                            
+                                                <td><?php echo $index; ?></td>
                                                 <td><?php echo htmlspecialchars($claim['full_name']); ?></td>
                                                 <!--<td><?php echo htmlspecialchars($claim['department']); ?></td>
                                                 <td><?php echo htmlspecialchars($claim['programme']); ?></td>-->
@@ -231,21 +221,29 @@
                                                 </div>
                                             </div>
                                         <?php 
-									$index++;
-									endforeach; 
-									?>
+                                            $index++;
+                                            endforeach; 
+                                        ?>
 
-                                    <?php else : ?>
-                                        <tr>
-                                            <td colspan="9" class="text-center">No claims found</td>
-                                        </tr>
-                                    <?php endif; ?>
-                                </tbody>
-                            </table>
-                        </div> <!-- Close table-responsive -->
-                    </div> <!-- Close card-body -->
-                </div> <!-- Close card -->
-            </div> <!-- Close col-lg-8 -->
+                                        <?php else : ?>
+                                            <tr>
+                                                <td colspan="9" class="text-center">No claims found</td>
+                                            </tr>
+                                        <?php endif; ?>
+                                    </tbody>
+                                </table>
+                            </div> <!-- Close table-responsive -->
+                        </div> <!-- Close card-body -->
+                    </div> <!-- Close card -->
+                </div> <!-- Close col-lg-8 -->
+
+                <?php
+					echo '<pre>';
+                        var_dump($_SESSION);
+					echo '</pre>';
+					
+				?>	
+
 		   </div> <!--Close container-fluid-->
         </div> <!-- Close body-wrapper -->
     </div> <!-- Close page-wrapper -->
