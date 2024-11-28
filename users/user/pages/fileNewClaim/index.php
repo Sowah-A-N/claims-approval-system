@@ -144,16 +144,21 @@ function getClaimFieldValue($field)
                             <!-- Dynamic rows for times and dates will be appended here -->
                         </div>
 
+                        <!-- Container for other details -->
+                        <div id="detailsRowsDiv" class="mt-4">
+                            <!-- Details for times and dates will be appended here -->
+                        </div>
+
                         <!-- Buttons for form actions -->               
                         <div class="form-group row">
                             <div class="col-md-3 col-sm-6 mb-2">
                                 <button type='button' id="addTimeSlot" class="btn btn-secondary btn-rounded btn-block">Add Timeslot</button>
                             </div>
                             <div class="col-md-3 col-sm-6 mb-2">
-                                <button type='submit' name='submitBtn' id='saveFormDetails' class="btn btn-primary btn-rounded btn-block">Save Claim Info</button>
+                                <button type='submit' id='saveFormDetails' name='submitBtn'  class="btn btn-primary btn-rounded btn-block">Save Claim Info</button>
                             </div>
                             <div class="col-md-3 col-sm-6 mb-2">
-                                <button type='submit' name='submitBtn' id='submitClaim' class="btn btn-success btn-rounded btn-block">Submit Claim</button>
+                                <button type='submit' id='submitClaim' name='submitBtn'  class="btn btn-success btn-rounded btn-block">Submit Claim</button>
                             </div>                           
                         </div>
 
@@ -284,7 +289,9 @@ function getClaimFieldValue($field)
             detailsRow.appendChild(fuelCol);
             <?php endif; ?>
 
-            timeSlotDiv.appendChild(detailsRow);
+            const detailsDiv = document.getElementById('detailsRow');
+            //timeSlotDiv.appendChild(detailsRow);
+            detailsRowsDiv.appendChild(detailsRow);
 
             // Add dates under the time slot
             const dateContainer = document.createElement("div");
@@ -325,7 +332,8 @@ function getClaimFieldValue($field)
         // Function to check for duplicate date and time
         function checkDuplicateDateTime() {
         var rows = document.getElementsByName('date[]');
-        var startTimes = document.getElementsByName('startTime[${course}][]');
+        const course = document.getElementById("course").value;
+        var startTimes = document.getElementsByName(`startTime[${course}][]`);
         
         var values = {};
         var duplicateFound = false;
@@ -344,18 +352,52 @@ function getClaimFieldValue($field)
             // You can throw a flag, show an alert, disable form submission, etc.
             alert('Duplicate date and start time found in multiple rows!');
             // Example: disable submit button
-            document.getElementById('submitForm').disabled = true;
+            document.getElementById('addTimeSlot').disabled = true;
             document.getElementById('saveFormDetails').disabled = true;
-            document.getElementById('addNewRow').disabled = true;
+            document.getElementById('submitClaim').disabled = true;
 
 
         } else {
             // Enable submit button if no duplicates
-            document.getElementById('submitForm').disabled = false;
+            document.getElementById('addTimeSlot').disabled = false;
             document.getElementById('saveFormDetails').disabled = false;
-            document.getElementById('addNewRow').disabled = false;
+            document.getElementById('submitClaim').disabled = false;
         }    
 	};
+
+        // Event listener for time picker changes
+        document.querySelectorAll('input[type="time"]').forEach(function(timePicker) {
+            timePicker.addEventListener('input', calculatePeriod);
+        });
+
+        function calculatePeriod() {
+            // Select all start time, end time, and period input fields
+            const startTimeInputs = document.querySelectorAll('input[name="startTime[]"]');
+            const endTimeInputs = document.querySelectorAll('input[name="endTime[]"]');
+            const periodInputs = document.querySelectorAll('input[name="period[]"]');
+
+            // Loop through each pair of start time and end time inputs
+            startTimeInputs.forEach((startTimeInput, index) => {
+                const endTimeInput = endTimeInputs[index];
+                const periodInput = periodInputs[index];
+
+                const startTime = startTimeInput.value;
+                const endTime = endTimeInput.value;
+
+                if (startTime && endTime) {
+                    const startTimeParts = startTime.split(':');
+                    const endTimeParts = endTime.split(':');
+
+                    const startTimeMinutes = parseInt(startTimeParts[0]) * 60 + parseInt(startTimeParts[1]);
+                    const endTimeMinutes = parseInt(endTimeParts[0]) * 60 + parseInt(endTimeParts[1]);
+
+                    const timeDifferenceMinutes = endTimeMinutes - startTimeMinutes;
+                    const periods = Math.ceil(timeDifferenceMinutes / 50);
+
+                    periodInput.value = periods;
+                }
+            });
+        }
 
 
 
