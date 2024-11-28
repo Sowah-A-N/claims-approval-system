@@ -120,7 +120,7 @@ foreach ($queries as $key => $query) {
                             echo '<td>' . $row['department'] . '</td>';
                             echo '<td>' . $row['programme'] . '</td>';
                             echo '<td>' . $row['course'] . '</td>';
-							echo '<td>' . date('d/m/Y', strtotime($row['time_submitted'])) . '</td>';
+							echo '<td>' . date('d-m-Y', strtotime($row['time_submitted'])) . '</td>';
 							echo '<td>
                                     <span class="mdi mdi-eye-outline" style="font-size:1.8rem; cursor:pointer;" 			onclick="viewClaimDetails(' . $row['claimId'] . ')"></span>
                                   </td>';

@@ -17,10 +17,10 @@ if(isset($_GET['claimId'])) {
             $row = mysqli_fetch_assoc($claimsDetailsResult);
 
             // Output the claim details in HTML format
-            echo "<p><strong>Claim ID:</strong> {$row['claimId']}</p>";
+            //echo "<p><strong>Claim ID:</strong> {$row['claimId']}</p>";
             echo "<p><strong>Programme:</strong> {$row['programme']}</p>";
             echo "<p><strong>Course:</strong> {$row['course']}</p>";
-			echo "<p><strong>Rate:</strong> {$row['rate']}</p>";
+			echo "<p><strong>Rate: GH₵</strong> {$row['rate']}</p>";
 
             // Add more details as needed
 
@@ -48,9 +48,9 @@ if(isset($_GET['claimId'])) {
                     // Fetch and output the additional claim data
                     while ($row = mysqli_fetch_assoc($claimDataResult)) {
                         echo '<tr>';
-						echo '<td>' . $row['date'] . '</td>';
-                        echo '<td>' . $row['start_time'] . '</td>';
-                        echo '<td>' . $row['end_time'] . '</td>';
+						echo '<td>' . date('d-m-Y', strtotime($row['date'])) . '</td>';
+                        echo '<td>' . date('g:iA', strtotime($row['start_time'])) . '</td>';
+                        echo '<td>' . date('g:iA', strtotime($row['end_time'])) . '</td>';
                         echo '<td>' . $row['periods'] . '</td>';
 						echo '<td>' . $row['subTotal'] . '</td>';
                         echo '</tr>';
