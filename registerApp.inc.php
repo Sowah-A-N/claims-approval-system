@@ -1,69 +1,69 @@
 <?php
-session_start(); 
-include 'includes/conn.inc.php';
+declare(strict_types=1);
 
-// Function to sanitize input data
-function sanitize_data($data) {
-    $data = trim($data); // Remove leading/trailing whitespace
-    $data = stripslashes($data); // Remove backslashes
-    $data = htmlspecialchars($data); // Convert special characters to HTML entities
-    return $data;
+require_once __DIR__ . '/includes/auth.php';
+require_once __DIR__ . '/includes/db.php';
+require_once __DIR__ . '/includes/functions.php';
+
+require_post();
+
+$first_name   = validated_str($_POST['first_name']   ?? '');
+$last_name    = validated_str($_POST['last_name']    ?? '');
+$other_names  = validated_str($_POST['other_names']  ?? '');
+$phone_number = validated_str($_POST['phone_number'] ?? '');
+$gender       = validated_str($_POST['gender']       ?? '');
+$email        = validated_str($_POST['email']        ?? '');
+$raw_password = $_POST['password'] ?? '';
+$department   = validated_str($_POST['department']   ?? '');
+$rank         = validated_str($_POST['rank']         ?? '');
+
+if ($first_name === '' || $last_name === '' || $email === '' || $raw_password === '') {
+    $_SESSION['message'] = 'Please fill in all required fields.';
+    header('Location: ./registerApp.php');
+    exit;
 }
 
-// Retrieve and sanitize form data
-$first_name = sanitize_data($_POST['first_name']);
-$last_name = sanitize_data($_POST['last_name']);
-$other_names = sanitize_data($_POST['other_names']) ?? "";
-$phone_number = sanitize_data($_POST['phone_number']);
-$gender = sanitize_data($_POST['gender']);
-$email = sanitize_data($_POST['email']);
-$password = sanitize_data($_POST['password']);
-$department = sanitize_data($_POST['department']); 
-$rank = sanitize_data($_POST['rank']);
-
-// Default values for other fields
-$role = 'approver';
-$rate = 0;
+$password_hash  = password_hash($raw_password, PASSWORD_BCRYPT, ['cost' => 12]);
+$role           = 'approver';
+$rate           = 0.0;
 $account_status = 'disabled';
-$date_created = date('Y-m-d H:i:s');
+$date_created   = date('Y-m-d H:i:s');
 
-// Begin transaction
-mysqli_begin_transaction($conn);
+$conn->begin_transaction();
 
 try {
-    // SQL query to insert data into the user_details table
-    $registerSql = "INSERT INTO user_details (first_name, last_name, other_names, phone_number, gender, email, 
-                                `password`, department, `role`, `rank`, `rate`, account_status, date_created)
-                    VALUES ('$first_name', '$last_name', '$other_names', '$phone_number', '$gender', '$email',
-                             '$password', '$department', '$role', '$rank', $rate, '$account_status', '$date_created')";
+    $s1 = $conn->prepare(
+        'INSERT INTO user_details
+             (first_name, last_name, other_names, phone_number, gender, email,
+              `password`, department, `role`, `rank`, `rate`, account_status, date_created)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+    );
+    $s1->bind_param(
+        'ssssssssssdss',
+        $first_name, $last_name, $other_names, $phone_number, $gender,
+        $email, $password_hash, $department, $role, $rank,
+        $rate, $account_status, $date_created
+    );
+    $s1->execute();
+    $userId = (int) $conn->insert_id;
 
-    if (!mysqli_query($conn, $registerSql)) {
-        throw new Exception("Error inserting user details: " . mysqli_error($conn));
-    }
+    $s2 = $conn->prepare(
+        'INSERT INTO login_details (userId, email, `password`, `role`, `rank`)
+         VALUES (?, ?, ?, ?, ?)'
+    );
+    $s2->bind_param('issss', $userId, $email, $password_hash, $role, $rank);
+    $s2->execute();
 
-    $userId = mysqli_insert_id($conn);
+    $conn->commit();
 
-    // SQL query to insert data into the login_details table
-    $updateLoginSql = "INSERT INTO login_details (userId, email, `password`, `role`, `rank`)
-                        VALUES ($userId, '$email', '$password', '$role', '$rank')";
-
-    if (!mysqli_query($conn, $updateLoginSql)) {
-        throw new Exception("Error inserting login details: " . mysqli_error($conn));
-    }
-
-    // Commit transaction
-    mysqli_commit($conn);
-
-    // Set success message in session
-    $_SESSION['message'] = 'Registration successful! You will be informed when your account is activated.';
+    $_SESSION['message'] = 'Registration successful! You will be notified when your account is activated.';
     header('Location: ./index.php');
-    exit();
+    exit;
 
 } catch (Exception $e) {
-    // Rollback transaction in case of error
-    mysqli_rollback($conn);
-    echo "Error: " . $e->getMessage();
+    $conn->rollback();
+    error_log('[registerApp] failed: ' . $e->getMessage());
+    $_SESSION['message'] = 'Registration failed. Please try again.';
+    header('Location: ./registerApp.php');
+    exit;
 }
-
-// Close connection
-mysqli_close($conn);

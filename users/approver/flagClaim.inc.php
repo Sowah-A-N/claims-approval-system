@@ -1,86 +1,43 @@
 <?php
-session_start();
-include "../../includes/conn.inc.php";
+declare(strict_types=1);
 
-// Retrieve the current stage and approver ID from the session
-$flagged_at_stage = $_SESSION['stage'] ?? 0;
-$flagged_by = $_SESSION['approverId'] ?? 0;
+require_once __DIR__ . '/../../includes/auth.php';
+require_once __DIR__ . '/../../includes/db.php';
+require_once __DIR__ . '/../../includes/functions.php';
+require_once __DIR__ . '/queries/approval.queries.php';
 
-// Check if claimId and flagReason are provided in the POST request
-if (!isset($_POST['claimId']) || !isset($_POST['flagReason'])) {
-    echo json_encode(['success' => false, 'message' => 'Missing claim ID or flag reason.']);
-    exit;
+require_post();
+require_role(['approver', 'Approver']);
+
+$claimId      = validated_int($_POST['claimId']    ?? null, 'claimId');
+$flagReason   = validated_str($_POST['flagReason'] ?? '');
+$sessionStage = (int) ($_SESSION['stage'] ?? 0);
+
+if ($flagReason === '') {
+    json_response(['success' => false, 'message' => 'A flag reason is required.'], 400);
 }
 
-$claimId = $_POST['claimId'];
-$flagged_msg = $_POST['flagReason'];
+if ($sessionStage === 0) {
+    json_response(['success' => false, 'message' => 'Approver stage not set in session.'], 403);
+}
 
-// Begin a transaction
-$conn->begin_transaction();
+// Stage ownership check: claim must be at this approver's stage.
+$currentStage = db_get_current_stage($conn, $claimId);
+
+if ($currentStage === null) {
+    json_response(['success' => false, 'message' => 'Claim not found.'], 404);
+}
+
+if ($currentStage !== $sessionStage) {
+    json_response([
+        'success' => false,
+        'message' => 'You are not authorised to flag this claim at its current stage.',
+    ], 403);
+}
 
 try {
-    // Fetch claim details
-    $claimDetailsQuery = "SELECT department, programme, course FROM claim_details WHERE claimId = ?";
-    $claimDetailsStmt = $conn->prepare($claimDetailsQuery);
-    
-    if (!$claimDetailsStmt) {
-        throw new Exception("Failed to prepare claim details query: " . $conn->error);
-    }
-
-    $claimDetailsStmt->bind_param('i', $claimId);
-    $claimDetailsStmt->execute();
-    $claimDetailsResult = $claimDetailsStmt->get_result();
-
-    if ($claimDetailsResult->num_rows === 0) {
-        throw new Exception("Claim not found.");
-    }
-
-    $claimDetails = $claimDetailsResult->fetch_assoc();
-    $claimDetailsStmt->close();
-
-    // Update claim_details to flag the claim
-    $flagClaimQuery = "UPDATE claim_details SET flagged = 1 WHERE claimId = ?";
-    $flagClaimStmt = $conn->prepare($flagClaimQuery);
-
-    if (!$flagClaimStmt) {
-        throw new Exception("Failed to prepare flag claim query: " . $conn->error);
-    }
-
-    $flagClaimStmt->bind_param('i', $claimId);
-    $flagClaimStmt->execute();
-
-    if ($flagClaimStmt->affected_rows <= 0) {
-        throw new Exception("Failed to flag the claim or claim was already flagged.");
-    }
-
-    $flagClaimStmt->close();
-
-    // Insert details into claim_approval_stages for flagging
-    $insertStageQuery = "INSERT INTO claim_approval_stages 
-                        (claimId, stage, `status`, time_rejected) 
-                        VALUES (?, ?, 'Flagged', NOW())";
-    
-    $insertStageStmt = $conn->prepare($insertStageQuery);
-
-    if (!$insertStageStmt) {
-        throw new Exception("Failed to prepare insert claim approval stages query: " . $conn->error);
-    }
-
-    $insertStageStmt->bind_param('ii', $claimId, $flagged_at_stage);
-    $insertStageStmt->execute();
-
-    if ($insertStageStmt->affected_rows <= 0) {
-        throw new Exception("Failed to record the flagging in claim approval stages.");
-    }
-
-    $insertStageStmt->close();
-
-    // Commit the transaction
-    $conn->commit();
-    echo json_encode(['success' => true, 'message' => 'Claim successfully flagged and recorded.']);
-
-} catch (Exception $e) {
-    // Roll back the transaction on error
-    $conn->rollback();
-    echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+    db_flag_claim($conn, $claimId, $sessionStage, $flagReason);
+    json_response(['success' => true, 'message' => 'Claim flagged successfully.']);
+} catch (RuntimeException $e) {
+    json_response(['success' => false, 'message' => $e->getMessage()], 409);
 }

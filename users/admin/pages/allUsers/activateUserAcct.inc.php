@@ -1,26 +1,20 @@
 <?php
-include_once '../../../../includes/conn.inc.php';
+declare(strict_types=1);
 
-// Check if userId is provided in GET request
-if (!isset($_GET['userId'])) {
-    http_response_code(400);
-    echo "User ID not provided";
-    exit;
-}
+require_once __DIR__ . '/../../../../includes/auth.php';
+require_once __DIR__ . '/../../../../includes/db.php';
+require_once __DIR__ . '/../../../../includes/functions.php';
+require_once __DIR__ . '/../../queries/user.queries.php';
 
-$userId = $_GET['userId'];
+require_post();
+require_role(['admin', 'Admin']);
 
-// Perform the update query to activate the user account
-$sql = "UPDATE user_details SET account_status = 'active' WHERE userId = $userId";
+$userId = validated_int($_POST['userId'] ?? null, 'userId');
 
-if ($conn->query($sql) === TRUE) {
-    http_response_code(200);
-    echo "Account activated successfully."; 
+$updated = db_set_account_status($conn, $userId, 'active');
+
+if ($updated) {
+    json_response(['success' => true, 'message' => 'Account activated successfully.']);
 } else {
-    http_response_code(500);
-    echo "Error activating account: " . $conn->error;
+    json_response(['success' => false, 'message' => 'User not found or status unchanged.'], 404);
 }
-
-$conn->close();
-exit;
-

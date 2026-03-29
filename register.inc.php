@@ -1,88 +1,87 @@
 <?php
-    include 'includes/conn.inc.php';
-    session_start();
+declare(strict_types=1);
 
-    // Function to sanitize input data
-    function sanitize_data($data) {
-        $data = trim($data); // Remove leading/trailing whitespace
-        $data = stripslashes($data); // Remove backslashes
-        $data = htmlspecialchars($data); // Convert special characters to HTML entities
-        return $data;
-    }
+require_once __DIR__ . '/includes/auth.php';
+require_once __DIR__ . '/includes/db.php';
+require_once __DIR__ . '/includes/functions.php';
 
-    // Retrieve and sanitize form data
-    $first_name = sanitize_data($_POST['first_name']);
-    $last_name = sanitize_data($_POST['last_name']);
-    $other_names = sanitize_data($_POST['other_names'] ?? "");
-    $phone_number = sanitize_data($_POST['phone_number']);
-    $gender = sanitize_data($_POST['gender']);
-    $email = sanitize_data($_POST['email']);
-    $password = sanitize_data($_POST['password']);
-    $department = sanitize_data($_POST['department']); 
-    $rank = sanitize_data($_POST['rank']);
-    $rate = sanitize_data($_POST['rate']);
+require_post();
 
-    //Bank details to go into user_bank_details table
-    $bank_name = sanitize_data($_POST['bank_name']);
-    $bank_branch = sanitize_data($_POST['bank_branch']);
-    $account_name = sanitize_data($_POST['account_name']);
-    $account_number = sanitize_data($_POST['account_number']);
+// Collect and trim input — no SQL interpolation; prepared statements used below.
+$first_name     = validated_str($_POST['first_name']    ?? '');
+$last_name      = validated_str($_POST['last_name']     ?? '');
+$other_names    = validated_str($_POST['other_names']   ?? '');
+$phone_number   = validated_str($_POST['phone_number']  ?? '');
+$gender         = validated_str($_POST['gender']        ?? '');
+$email          = validated_str($_POST['email']         ?? '');
+$raw_password   = $_POST['password'] ?? '';
+$department     = validated_str($_POST['department']    ?? '');
+$rank           = validated_str($_POST['rank']          ?? '');
+$rate           = (float) ($_POST['rate']               ?? 0);
+$bank_name      = validated_str($_POST['bank_name']     ?? '');
+$bank_branch    = validated_str($_POST['bank_branch']   ?? '');
+$account_name   = validated_str($_POST['account_name']  ?? '');
+$account_number = validated_str($_POST['account_number'] ?? '');
 
+// Basic presence check.
+if ($first_name === '' || $last_name === '' || $email === '' || $raw_password === '') {
+    $_SESSION['message'] = 'Please fill in all required fields.';
+    header('Location: ./register.php');
+    exit;
+}
 
+// Hash the password — never store plaintext credentials.
+$password_hash = password_hash($raw_password, PASSWORD_BCRYPT, ['cost' => 12]);
 
-    // Default values for other fields
-    $role = 'claimant';    
-    $account_status = 'disabled';
-    $date_created = date('Y-m-d H:i:s');
+$role           = 'claimant';
+$account_status = 'disabled';
+$date_created   = date('Y-m-d H:i:s');
 
-    // SQL query to insert data into the user_details table
-    $registerSql = "INSERT INTO user_details (first_name, last_name, other_names, phone_number,
-                     gender, email, `password`, department, `role`, `rank`, rate, account_status, date_created)
-                    VALUES ('$first_name', '$last_name', '$other_names', '$phone_number',
-                     '$gender', '$email', '$password', '$department', '$role', '$rank', $rate, '$account_status', '$date_created')";
+$conn->begin_transaction();
 
-    if ($conn->query($registerSql) === TRUE) {
-        echo "Registration successful";
-        echo "<br />";
+try {
+    // 1. Insert into user_details.
+    $s1 = $conn->prepare(
+        'INSERT INTO user_details
+             (first_name, last_name, other_names, phone_number, gender, email,
+              `password`, department, `role`, `rank`, rate, account_status, date_created)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+    );
+    $s1->bind_param(
+        'ssssssssssdss',
+        $first_name, $last_name, $other_names, $phone_number, $gender,
+        $email, $password_hash, $department, $role, $rank,
+        $rate, $account_status, $date_created
+    );
+    $s1->execute();
+    $userId = (int) $conn->insert_id;
 
-        $userId = $conn->insert_id;
+    // 2. Mirror credentials to login_details.
+    $s2 = $conn->prepare(
+        'INSERT INTO login_details (userId, email, `password`, `role`, `rank`)
+         VALUES (?, ?, ?, ?, ?)'
+    );
+    $s2->bind_param('issss', $userId, $email, $password_hash, $role, $rank);
+    $s2->execute();
 
-         // Select columns you want to duplicate to another table
-        $detailsForLogin = ['userId', 'email', 'password', 'role', '`rank`'];
+    // 3. Insert bank details.
+    $s3 = $conn->prepare(
+        'INSERT INTO user_bank_details (userId, bank_name, bank_branch, account_name, account_number)
+         VALUES (?, ?, ?, ?, ?)'
+    );
+    $s3->bind_param('issss', $userId, $bank_name, $bank_branch, $account_name, $account_number);
+    $s3->execute();
 
-        // Construct the query to duplicate values to another table
-        $updateLoginSql = "INSERT INTO login_details (" . implode(',', $detailsForLogin) . ")
-                             VALUES ('$userId', '$email', '$password', '$role', '$rank')";
+    $conn->commit();
 
-        $bankDetailsSql = "INSERT INTO user_bank_details (userId, bank_name, bank_branch, account_name, account_number)
-                             VALUES ('$userId', '$bank_name', '$bank_branch', '$account_name', '$account_number')";
+    $_SESSION['message'] = 'Registration successful! You will be notified when your account is activated.';
+    header('Location: ./index.php');
+    exit;
 
-        // Execute the query to duplicate values
-        if (mysqli_query($conn, $updateLoginSql)) {          
-            // echo "Login details updated successfully!";
-            // echo "<br />";
-
-        } else {
-            echo "Error duplicating values: " . mysqli_error($conn);
-        }
-
-        if (mysqli_query($conn, $bankDetailsSql)) {
-              // Set success message in session
-              $_SESSION['message'] = 'Registration successful! You will be informed when your account is activated.';
-            
-              // Redirect to login page
-              header('Location: ./index.php');
-              exit();
-            // echo "bank details submitted successfully!";
-            // echo "<br />";
-
-        } else {
-            echo "Error submitting bank details: " . mysqli_error($conn);
-        }
-    } else {
-        echo "Error: " . $registerSql . "<br>" . $conn->error;
-    }
-
-    // Close connection
-    $conn->close();
-    
+} catch (Exception $e) {
+    $conn->rollback();
+    error_log('[register] failed: ' . $e->getMessage());
+    $_SESSION['message'] = 'Registration failed. Please try again.';
+    header('Location: ./register.php');
+    exit;
+}

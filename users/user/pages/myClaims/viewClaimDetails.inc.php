@@ -1,76 +1,46 @@
 <?php
-include_once '../../includes/conn.inc.php';
+declare(strict_types=1);
 
-// Check if claimId parameter is set in the request
-if(isset($_GET['claimId'])) {
-    $claimId = $_GET['claimId'];
+require_once __DIR__ . '/../../../../includes/auth.php';
+require_once __DIR__ . '/../../../../includes/db.php';
+require_once __DIR__ . '/../../../../includes/functions.php';
+require_once __DIR__ . '/../../queries/claim.queries.php';
 
-    // Perform SELECT query to fetch claim details based on claimId
-    $claimsDetailsQuery = "SELECT * FROM claim_details WHERE claimId = '$claimId'";
-    $claimsDetailsResult = mysqli_query($conn, $claimsDetailsQuery);
+require_role(['user', 'claimant']);
 
-    // Check if the query was successful
-    if($claimsDetailsResult) {
-        // Check if any rows were returned
-        if(mysqli_num_rows($claimsDetailsResult) > 0) {
-            // Fetch the claim details
-            $row = mysqli_fetch_assoc($claimsDetailsResult);
+$claimId = validated_int($_GET['claimId'] ?? null, 'claimId');
+$userId  = current_user_id();
 
-            // Output the claim details in HTML format
-            //echo "<p><strong>Claim ID:</strong> {$row['claimId']}</p>";
-            echo "<p><strong>Programme:</strong> {$row['programme']}</p>";
-            echo "<p><strong>Course:</strong> {$row['course']}</p>";
-			echo "<p><strong>Rate: GH₵</strong> {$row['rate']}</p>";
+// Ownership enforced in query — returns null if claimId belongs to another user.
+$claim = db_get_claim_by_owner($conn, $claimId, $userId);
 
-            // Add more details as needed
-
-            // Query to fetch additional claim data
-            $claimDataQuery = "SELECT * FROM claim_data WHERE claimId = '$claimId'";
-            $claimDataResult = mysqli_query($conn, $claimDataQuery);
-
-            // Check if the query was successful
-            if($claimDataResult) {
-                echo '<table class="table">';
-                echo '<thead class="thead-light">';
-                echo '<tr>';
-				echo '<th>Date</th>';
-                echo '<th>Start Time</th>'; 
-                echo '<th>End Time</th>';
-                echo '<th>Periods</th>';
-                echo '<th>Sub Total</th>';
-                echo '<th></th>';
-                echo '</tr>';
-                echo '</thead>';
-                echo '<tbody>';
-
-                // Check if any rows were returned
-                if(mysqli_num_rows($claimDataResult) > 0) {
-                    // Fetch and output the additional claim data
-                    while ($row = mysqli_fetch_assoc($claimDataResult)) {
-                        echo '<tr>';
-						echo '<td>' . date('d-m-Y', strtotime($row['date'])) . '</td>';
-                        echo '<td>' . date('g:iA', strtotime($row['start_time'])) . '</td>';
-                        echo '<td>' . date('g:iA', strtotime($row['end_time'])) . '</td>';
-                        echo '<td>' . $row['periods'] . '</td>';
-						echo '<td>' . $row['subTotal'] . '</td>';
-                        echo '</tr>';
-                    }
-                } else {
-                    echo '<tr><td colspan="4">No claim data available</td></tr>';
-                }
-
-                echo '</tbody>';
-                echo '</table>';
-            } else {
-                echo "<p>Error retrieving additional claim data: " . mysqli_error($conn) . "</p>";
-            }
-        } else {
-            echo "<p>No claim found with ID: $claimId</p>";
-        }
-    } else {
-        echo "<p>Error retrieving claim details: " . mysqli_error($conn) . "</p>";
-    }
-} else {
-    echo "<p>Invalid request. Claim ID parameter is missing.</p>";
+if ($claim === null) {
+    echo '<p>Claim not found.</p>';
+    exit;
 }
-?>
+
+echo '<p><strong>Programme:</strong> ' . h($claim['programme']) . '</p>';
+echo '<p><strong>Course:</strong> '    . h($claim['course'])    . '</p>';
+echo '<p><strong>Rate: GH₵</strong> ' . h($claim['rate'])       . '</p>';
+
+$rows = db_get_claim_data_rows($conn, $claimId);
+
+if (!empty($rows)) {
+    echo '<table class="table"><thead class="thead-light"><tr>';
+    echo '<th>Date</th><th>Start</th><th>End</th><th>Periods</th><th>Sub Total</th>';
+    echo '</tr></thead><tbody>';
+
+    foreach ($rows as $row) {
+        echo '<tr>';
+        echo '<td>' . h(date('d-m-Y', strtotime($row['date'])))    . '</td>';
+        echo '<td>' . h(date('g:iA', strtotime($row['start_time']))) . '</td>';
+        echo '<td>' . h(date('g:iA', strtotime($row['end_time'])))   . '</td>';
+        echo '<td>' . h($row['periods'])                             . '</td>';
+        echo '<td>' . h($row['subTotal'])                            . '</td>';
+        echo '</tr>';
+    }
+
+    echo '</tbody></table>';
+} else {
+    echo '<tr><td colspan="5">No claim data available.</td></tr>';
+}
