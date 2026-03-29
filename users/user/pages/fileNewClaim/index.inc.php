@@ -1,60 +1,62 @@
 <?php
-declare(strict_types=1);
-
 require_once __DIR__ . '/../../../../includes/auth.php';
 require_once __DIR__ . '/../../../../includes/db.php';
 require_once __DIR__ . '/../../../../includes/functions.php';
 require_once __DIR__ . '/../../queries/claim.queries.php';
 
 require_post();
-require_role(['user', 'claimant']);
+require_role(array('user', 'claimant'));
 
-$userId     = current_user_id();
-$rate       = (float) ($_SESSION['rate']    ?? 0);
-$faculty    = (string) ($_SESSION['faculty'] ?? '');
+$user_id    = current_user_id();
+$rate       = isset($_SESSION['rate'])    ? (float) $_SESSION['rate']    : 0.0;
+$faculty    = isset($_SESSION['faculty']) ? (string) $_SESSION['faculty'] : '';
 
-$department = validated_str($_POST['department'] ?? '');
-$programme  = validated_str($_POST['programme']  ?? '');
-$course     = validated_str($_POST['course']     ?? '');
+$department = validated_str(isset($_POST['department']) ? $_POST['department'] : '');
+$programme  = validated_str(isset($_POST['programme'])  ? $_POST['programme']  : '');
+$course     = validated_str(isset($_POST['course'])     ? $_POST['course']     : '');
 
 if ($department === '' || $programme === '' || $course === '') {
-    json_response(['error' => 'Department, programme, and course are required.'], 400);
+    json_response(array('error' => 'Department, programme, and course are required.'), 400);
 }
 
-$conn->begin_transaction();
+mysqli_begin_transaction($conn);
+$ok = true;
 
-try {
-    $claimId = db_insert_claim($conn, $userId, $faculty, $department, $programme, $course, $rate);
-    db_insert_initial_stage($conn, $claimId);
+$claim_id = db_insert_claim($conn, $user_id, $faculty, $department, $programme, $course, $rate);
+if (!$claim_id) {
+    $ok = false;
+}
 
-    if (isset($_POST['date']) && is_array($_POST['date'])) {
-        $dates      = $_POST['date'];
-        $startTimes = $_POST['startTime']     ?? [];
-        $endTimes   = $_POST['endTime']       ?? [];
-        $periods    = $_POST['period']        ?? [];
-        $subTotals  = $_POST['subTotal']      ?? [];
-        $fuels      = $_POST['fuelComponent'] ?? [];
+if ($ok) {
+    $ok = db_insert_initial_stage($conn, $claim_id);
+}
 
-        foreach ($dates as $i => $rawDate) {
-            $date         = validated_str($rawDate);
-            $startTime    = validated_str($startTimes[$i] ?? '');
-            $endTime      = validated_str($endTimes[$i]   ?? '');
-            $periodVal    = (int) ($periods[$i]   ?? 0);
-            $subTotalVal  = (float) ($subTotals[$i] ?? 0.0);
-            $fuelVal      = isset($fuels[$i]) ? 1 : 0;
+if ($ok && isset($_POST['date']) && is_array($_POST['date'])) {
+    $dates      = $_POST['date'];
+    $start_times = isset($_POST['startTime'])     ? $_POST['startTime']     : array();
+    $end_times   = isset($_POST['endTime'])        ? $_POST['endTime']       : array();
+    $periods_arr = isset($_POST['period'])         ? $_POST['period']        : array();
+    $sub_totals  = isset($_POST['subTotal'])       ? $_POST['subTotal']      : array();
+    $fuels       = isset($_POST['fuelComponent'])  ? $_POST['fuelComponent'] : array();
 
-            db_insert_claim_data_row(
-                $conn, $claimId, $date, $startTime, $endTime,
-                $periodVal, $subTotalVal, $fuelVal
-            );
-        }
+    foreach ($dates as $i => $raw_date) {
+        $date       = validated_str($raw_date);
+        $start_time = validated_str(isset($start_times[$i]) ? $start_times[$i] : '');
+        $end_time   = validated_str(isset($end_times[$i])   ? $end_times[$i]   : '');
+        $period     = (int)   (isset($periods_arr[$i]) ? $periods_arr[$i] : 0);
+        $sub_total  = (float) (isset($sub_totals[$i])  ? $sub_totals[$i]  : 0.0);
+        $fuel       = isset($fuels[$i]) ? 1 : 0;
+
+        $ok = db_insert_claim_data_row($conn, $claim_id, $date, $start_time, $end_time, $period, $sub_total, $fuel);
+        if (!$ok) break;
     }
+}
 
-    $conn->commit();
-    json_response(['success' => 'Claim submitted successfully.']);
-
-} catch (Exception $e) {
-    $conn->rollback();
-    error_log('[fileNewClaim] submit failed: ' . $e->getMessage());
-    json_response(['error' => 'Failed to submit claim. Please try again.'], 500);
+if ($ok) {
+    mysqli_commit($conn);
+    json_response(array('success' => 'Claim submitted successfully.'));
+} else {
+    mysqli_rollback($conn);
+    error_log('[fileNewClaim] submit failed: ' . mysqli_error($conn));
+    json_response(array('error' => 'Failed to submit claim. Please try again.'), 500);
 }

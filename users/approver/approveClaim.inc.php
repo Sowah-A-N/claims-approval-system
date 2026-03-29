@@ -1,39 +1,39 @@
 <?php
-declare(strict_types=1);
-
 require_once __DIR__ . '/../../includes/auth.php';
 require_once __DIR__ . '/../../includes/db.php';
 require_once __DIR__ . '/../../includes/functions.php';
 require_once __DIR__ . '/queries/approval.queries.php';
 
 require_post();
-require_role(['approver', 'Approver']);
+require_role(array('approver', 'Approver'));
 
-$claimId       = validated_int($_POST['claimId'] ?? null, 'claimId');
-$sessionStage  = (int) ($_SESSION['stage'] ?? 0);
+$claim_id      = validated_int(isset($_POST['claimId']) ? $_POST['claimId'] : null, 'claimId');
+$session_stage = isset($_SESSION['stage']) ? (int) $_SESSION['stage'] : 0;
 
-if ($sessionStage === 0) {
-    json_response(['success' => false, 'message' => 'Approver stage not set in session.'], 403);
+if ($session_stage === 0) {
+    json_response(array('success' => false, 'message' => 'Approver stage not set in session.'), 403);
 }
 
-// Stage ownership check: verify the claim's current pending stage matches this
-// approver's assigned stage. Prevents stage-skip and cross-stage manipulation.
-$currentStage = db_get_current_stage($conn, $claimId);
+// Stage ownership check — the claim's current pending stage must match this
+// approver's assigned stage. Prevents stage-skip attacks.
+$current_stage = db_get_current_stage($conn, $claim_id);
 
-if ($currentStage === null) {
-    json_response(['success' => false, 'message' => 'Claim not found.'], 404);
+if ($current_stage === null) {
+    json_response(array('success' => false, 'message' => 'Claim not found.'), 404);
 }
 
-if ($currentStage !== $sessionStage) {
-    json_response([
+if ($current_stage !== $session_stage) {
+    json_response(array(
         'success' => false,
         'message' => 'You are not authorised to approve this claim at its current stage.',
-    ], 403);
+    ), 403);
 }
 
-try {
-    db_advance_claim_stage($conn, $claimId, $currentStage);
-    json_response(['success' => true, 'message' => 'Claim approved and advanced to next stage.']);
-} catch (RuntimeException $e) {
-    json_response(['success' => false, 'message' => $e->getMessage()], 409);
+$error = '';
+$ok    = db_advance_claim_stage($conn, $claim_id, $current_stage, $error);
+
+if ($ok) {
+    json_response(array('success' => true, 'message' => 'Claim approved and advanced to next stage.'));
+} else {
+    json_response(array('success' => false, 'message' => $error), 409);
 }

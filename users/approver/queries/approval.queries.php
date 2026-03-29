@@ -1,193 +1,217 @@
 <?php
-declare(strict_types=1);
-
-/**
+/*
  * Data-layer functions for approver operations.
  *
  * No HTML, no $_POST, no session access lives here.
- * All stage-advancing and flagging operations are atomic (transactions).
+ * All stage-advancing and flagging operations use transactions.
  */
 
 
-// ── Claim listing ──────────────────────────────────────────────────────────────
+// ── Claim listing ─────────────────────────────────────────────────────────────
 
-/**
- * Return all claims currently at $stage with status 'Pending', not flagged.
- * When $department is non-empty, results are scoped to that department.
- *
- * @return array<int, array<string, mixed>>
+/*
+ * Return pending claims at $stage, optionally scoped to $department.
+ * Pass null or empty string for $department to return all departments.
  */
-function db_get_pending_claims_for_stage(mysqli $conn, int $stage, ?string $department): array
-{
-    $base = 'SELECT cd.*, CONCAT(ud.first_name, \' \', ud.last_name) AS full_name
-              FROM claim_details cd
-              INNER JOIN (
-                  SELECT claimId, MAX(stage) AS max_stage
-                  FROM claim_approval_stages
-                  GROUP BY claimId
-              ) ms ON cd.claimId = ms.claimId
-              INNER JOIN claim_approval_stages cas
-                  ON cd.claimId = cas.claimId AND ms.max_stage = cas.stage
-              INNER JOIN user_details ud ON cd.userId = ud.userId
-              WHERE cas.stage = ?
-                AND cas.status = \'Pending\'
-                AND cd.flagged = 0';
+function db_get_pending_claims_for_stage($conn, $stage, $department) {
+    $base =
+        "SELECT cd.*, CONCAT(ud.first_name, ' ', ud.last_name) AS full_name
+         FROM claim_details cd
+         INNER JOIN (
+             SELECT claimId, MAX(stage) AS max_stage
+             FROM claim_approval_stages
+             GROUP BY claimId
+         ) ms ON cd.claimId = ms.claimId
+         INNER JOIN claim_approval_stages cas
+             ON cd.claimId = cas.claimId AND ms.max_stage = cas.stage
+         INNER JOIN user_details ud ON cd.userId = ud.userId
+         WHERE cas.stage = ?
+           AND cas.status = 'Pending'
+           AND cd.flagged = 0";
 
     if ($department !== null && $department !== '') {
-        $stmt = $conn->prepare($base . ' AND cd.department = ?');
-        $stmt->bind_param('is', $stage, $department);
+        $stmt = mysqli_prepare($conn, $base . ' AND cd.department = ?');
+        if (!$stmt) return array();
+        mysqli_stmt_bind_param($stmt, 'is', $stage, $department);
     } else {
-        $stmt = $conn->prepare($base);
-        $stmt->bind_param('i', $stage);
+        $stmt = mysqli_prepare($conn, $base);
+        if (!$stmt) return array();
+        mysqli_stmt_bind_param($stmt, 'i', $stage);
     }
 
-    $stmt->execute();
-    return $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+    mysqli_stmt_execute($stmt);
+    $result = mysqli_stmt_get_result($stmt);
+    $claims = mysqli_fetch_all($result, MYSQLI_ASSOC);
+    mysqli_stmt_close($stmt);
+    return $claims;
 }
 
 
-// ── Claim detail ───────────────────────────────────────────────────────────────
+// ── Claim detail ──────────────────────────────────────────────────────────────
 
-/**
- * Fetch claim_details + all claim_data rows for display in the approver modal.
- * Does not enforce ownership — approvers may view any claim at their stage.
- * Stage ownership is validated at the handler level before displaying.
+/*
+ * Fetch claim_details + all claim_data rows for the approver view modal.
+ * Returns null if the claim does not exist.
  */
-function db_get_claim_details_for_approver(mysqli $conn, int $claimId): ?array
-{
-    $stmt = $conn->prepare('SELECT * FROM claim_details WHERE claimId = ?');
-    $stmt->bind_param('i', $claimId);
-    $stmt->execute();
-    $claim = $stmt->get_result()->fetch_assoc();
-    if ($claim === false || $claim === null) {
-        return null;
-    }
+function db_get_claim_details_for_approver($conn, $claimId) {
+    $stmt = mysqli_prepare($conn, 'SELECT * FROM claim_details WHERE claimId = ?');
+    if (!$stmt) return null;
+    mysqli_stmt_bind_param($stmt, 'i', $claimId);
+    mysqli_stmt_execute($stmt);
+    $result = mysqli_stmt_get_result($stmt);
+    $claim  = mysqli_fetch_assoc($result);
+    mysqli_stmt_close($stmt);
 
-    $stmt2 = $conn->prepare(
+    if (!$claim) return null;
+
+    $stmt2 = mysqli_prepare($conn,
         'SELECT cdata.*, cd.rate
          FROM claim_data cdata
          JOIN claim_details cd ON cd.claimId = cdata.claimId
          WHERE cdata.claimId = ?
          ORDER BY cdata.date'
     );
-    $stmt2->bind_param('i', $claimId);
-    $stmt2->execute();
-    $claim['rows'] = $stmt2->get_result()->fetch_all(MYSQLI_ASSOC);
+    if (!$stmt2) {
+        $claim['rows'] = array();
+        return $claim;
+    }
+    mysqli_stmt_bind_param($stmt2, 'i', $claimId);
+    mysqli_stmt_execute($stmt2);
+    $result2        = mysqli_stmt_get_result($stmt2);
+    $claim['rows']  = mysqli_fetch_all($result2, MYSQLI_ASSOC);
+    mysqli_stmt_close($stmt2);
 
     return $claim;
 }
 
-/**
- * Return the current (latest) stage of a claim, or null if claimId does not exist.
+/*
+ * Return the current (latest) stage number for a claim, or null if not found.
  */
-function db_get_current_stage(mysqli $conn, int $claimId): ?int
-{
-    $stmt = $conn->prepare(
+function db_get_current_stage($conn, $claimId) {
+    $stmt = mysqli_prepare($conn,
         'SELECT stage FROM claim_approval_stages WHERE claimId = ? ORDER BY stageId DESC LIMIT 1'
     );
-    $stmt->bind_param('i', $claimId);
-    $stmt->execute();
-    $row = $stmt->get_result()->fetch_row();
+    if (!$stmt) return null;
+    mysqli_stmt_bind_param($stmt, 'i', $claimId);
+    mysqli_stmt_execute($stmt);
+    $result = mysqli_stmt_get_result($stmt);
+    $row    = mysqli_fetch_row($result);
+    mysqli_stmt_close($stmt);
     return $row ? (int) $row[0] : null;
 }
 
 
-// ── Approve ────────────────────────────────────────────────────────────────────
+// ── Approve ───────────────────────────────────────────────────────────────────
 
-/**
- * Mark the current stage as Approved and insert the next Pending stage.
- * Validates that the claim is actually at $expectedStage with status Pending
- * before making any changes — prevents stage-skip attacks.
+/*
+ * Mark the current stage Approved and insert the next Pending stage.
+ * Verifies the claim is at $expected_stage with status Pending first.
  *
- * @throws RuntimeException on validation failure or DB error.
+ * Returns true on success.
+ * Returns false with $error set on failure.
  */
-function db_advance_claim_stage(mysqli $conn, int $claimId, int $expectedStage): void
-{
-    $conn->begin_transaction();
-    try {
-        // Lock the row and verify the claim is genuinely at the expected stage.
-        $check = $conn->prepare(
-            'SELECT stageId FROM claim_approval_stages
-             WHERE claimId = ? AND stage = ? AND status = \'Pending\'
-             LIMIT 1
-             FOR UPDATE'
-        );
-        $check->bind_param('ii', $claimId, $expectedStage);
-        $check->execute();
-        if ($check->get_result()->num_rows === 0) {
-            throw new RuntimeException('Claim is not at the expected pending stage.');
-        }
+function db_advance_claim_stage($conn, $claimId, $expected_stage, &$error) {
+    mysqli_begin_transaction($conn);
 
-        $approve = $conn->prepare(
-            'UPDATE claim_approval_stages
-             SET status = \'Approved\', time_approved = NOW()
-             WHERE claimId = ? AND stage = ? AND status = \'Pending\''
-        );
-        $approve->bind_param('ii', $claimId, $expectedStage);
-        $approve->execute();
-        if ($approve->affected_rows <= 0) {
-            throw new RuntimeException('Failed to approve stage.');
-        }
+    // Verify the claim is genuinely at the expected pending stage.
+    $check = mysqli_prepare($conn,
+        "SELECT stageId FROM claim_approval_stages
+         WHERE claimId = ? AND stage = ? AND status = 'Pending'
+         LIMIT 1"
+    );
+    mysqli_stmt_bind_param($check, 'ii', $claimId, $expected_stage);
+    mysqli_stmt_execute($check);
+    $check_result = mysqli_stmt_get_result($check);
+    $found        = mysqli_num_rows($check_result) > 0;
+    mysqli_stmt_close($check);
 
-        $nextStage = $expectedStage + 1;
-        $insert = $conn->prepare(
-            'INSERT INTO claim_approval_stages (claimId, stage, status, time_updated)
-             VALUES (?, ?, \'Pending\', NOW())'
-        );
-        $insert->bind_param('ii', $claimId, $nextStage);
-        $insert->execute();
-        if ($insert->affected_rows <= 0) {
-            throw new RuntimeException('Failed to insert next stage.');
-        }
-
-        $conn->commit();
-    } catch (Exception $e) {
-        $conn->rollback();
-        throw $e;
+    if (!$found) {
+        mysqli_rollback($conn);
+        $error = 'Claim is not at the expected pending stage.';
+        return false;
     }
+
+    // Mark current stage Approved.
+    $approve = mysqli_prepare($conn,
+        "UPDATE claim_approval_stages
+         SET status = 'Approved', time_approved = NOW()
+         WHERE claimId = ? AND stage = ? AND status = 'Pending'"
+    );
+    mysqli_stmt_bind_param($approve, 'ii', $claimId, $expected_stage);
+    mysqli_stmt_execute($approve);
+    $affected = mysqli_stmt_affected_rows($approve);
+    mysqli_stmt_close($approve);
+
+    if ($affected <= 0) {
+        mysqli_rollback($conn);
+        $error = 'Failed to approve stage.';
+        return false;
+    }
+
+    // Insert the next Pending stage.
+    $next_stage = $expected_stage + 1;
+    $insert     = mysqli_prepare($conn,
+        "INSERT INTO claim_approval_stages (claimId, stage, status, time_updated)
+         VALUES (?, ?, 'Pending', NOW())"
+    );
+    mysqli_stmt_bind_param($insert, 'ii', $claimId, $next_stage);
+    mysqli_stmt_execute($insert);
+    $inserted = mysqli_stmt_affected_rows($insert);
+    mysqli_stmt_close($insert);
+
+    if ($inserted <= 0) {
+        mysqli_rollback($conn);
+        $error = 'Failed to insert next stage.';
+        return false;
+    }
+
+    mysqli_commit($conn);
+    return true;
 }
 
 
-// ── Flag ───────────────────────────────────────────────────────────────────────
+// ── Flag ──────────────────────────────────────────────────────────────────────
 
-/**
- * Flag a claim: set flagged=1 in claim_details, insert a Flagged approval row,
- * and record a flagged_claims entry.
+/*
+ * Flag a claim: set flagged=1, insert a Flagged approval row, record in flagged_claims.
  * All three writes are atomic.
  *
- * @throws RuntimeException on validation failure or DB error.
+ * Returns true on success.
+ * Returns false with $error set on failure.
  */
-function db_flag_claim(mysqli $conn, int $claimId, int $stage, string $reason): void
-{
-    $conn->begin_transaction();
-    try {
-        $flag = $conn->prepare(
-            'UPDATE claim_details SET flagged = 1
-             WHERE claimId = ? AND flagged = 0'
-        );
-        $flag->bind_param('i', $claimId);
-        $flag->execute();
-        if ($flag->affected_rows <= 0) {
-            throw new RuntimeException('Claim not found or was already flagged.');
-        }
+function db_flag_claim($conn, $claimId, $stage, $reason, &$error) {
+    mysqli_begin_transaction($conn);
 
-        $stageRow = $conn->prepare(
-            'INSERT INTO claim_approval_stages (claimId, stage, status, time_rejected)
-             VALUES (?, ?, \'Flagged\', NOW())'
-        );
-        $stageRow->bind_param('ii', $claimId, $stage);
-        $stageRow->execute();
+    $s1 = mysqli_prepare($conn,
+        'UPDATE claim_details SET flagged = 1 WHERE claimId = ? AND flagged = 0'
+    );
+    mysqli_stmt_bind_param($s1, 'i', $claimId);
+    mysqli_stmt_execute($s1);
+    $affected = mysqli_stmt_affected_rows($s1);
+    mysqli_stmt_close($s1);
 
-        $log = $conn->prepare(
-            'INSERT INTO flagged_claims (claimId, flagged_at_stage, flagged_msg, date_flagged)
-             VALUES (?, ?, ?, NOW())'
-        );
-        $log->bind_param('iis', $claimId, $stage, $reason);
-        $log->execute();
-
-        $conn->commit();
-    } catch (Exception $e) {
-        $conn->rollback();
-        throw $e;
+    if ($affected <= 0) {
+        mysqli_rollback($conn);
+        $error = 'Claim not found or was already flagged.';
+        return false;
     }
+
+    $s2 = mysqli_prepare($conn,
+        "INSERT INTO claim_approval_stages (claimId, stage, status, time_rejected)
+         VALUES (?, ?, 'Flagged', NOW())"
+    );
+    mysqli_stmt_bind_param($s2, 'ii', $claimId, $stage);
+    mysqli_stmt_execute($s2);
+    mysqli_stmt_close($s2);
+
+    $s3 = mysqli_prepare($conn,
+        'INSERT INTO flagged_claims (claimId, flagged_at_stage, flagged_msg, date_flagged)
+         VALUES (?, ?, ?, NOW())'
+    );
+    mysqli_stmt_bind_param($s3, 'iis', $claimId, $stage, $reason);
+    mysqli_stmt_execute($s3);
+    mysqli_stmt_close($s3);
+
+    mysqli_commit($conn);
+    return true;
 }

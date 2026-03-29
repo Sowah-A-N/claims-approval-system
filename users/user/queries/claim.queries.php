@@ -1,137 +1,132 @@
 <?php
-declare(strict_types=1);
-
-/**
+/*
  * Data-layer functions for claimant claim operations.
  *
- * Every function accepts a mysqli $conn and typed parameters.
+ * Every function accepts $conn (procedural mysqli) and plain parameters.
  * No HTML, no $_POST, no session access lives here.
- * Callers are responsible for passing validated input.
+ * Callers pass already-validated input.
  */
 
 
-// ── Course lookup ──────────────────────────────────────────────────────────────
+// ── Course lookup ─────────────────────────────────────────────────────────────
 
-/**
- * Return all non-archived courses for the given department.
- *
- * @return array<int, array{name: string}>
+/*
+ * Return all non-archived courses for a department as an array.
  */
-function db_get_courses_by_department(mysqli $conn, string $department): array
-{
-    $stmt = $conn->prepare('SELECT name FROM course WHERE department = ? AND archived = 0 ORDER BY name');
-    $stmt->bind_param('s', $department);
-    $stmt->execute();
-    return $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+function db_get_courses_by_department($conn, $department) {
+    $stmt = mysqli_prepare($conn, 'SELECT name FROM course WHERE department = ? AND archived = 0 ORDER BY name');
+    mysqli_stmt_bind_param($stmt, 's', $department);
+    mysqli_stmt_execute($stmt);
+    $result = mysqli_stmt_get_result($stmt);
+    $courses = mysqli_fetch_all($result, MYSQLI_ASSOC);
+    mysqli_stmt_close($stmt);
+    return $courses;
 }
 
 
-// ── Claim submission ───────────────────────────────────────────────────────────
+// ── Claim submission ──────────────────────────────────────────────────────────
 
-/**
- * Insert a new claim_details row and return the generated claimId.
+/*
+ * Insert a new claim_details row and return the generated claimId, or false on failure.
  */
-function db_insert_claim(
-    mysqli $conn,
-    int    $userId,
-    string $faculty,
-    string $department,
-    string $programme,
-    string $course,
-    float  $rate
-): int {
-    $stmt = $conn->prepare(
+function db_insert_claim($conn, $userId, $faculty, $department, $programme, $course, $rate) {
+    $stmt = mysqli_prepare($conn,
         'INSERT INTO claim_details (userId, faculty, department, programme, course, rate)
          VALUES (?, ?, ?, ?, ?, ?)'
     );
-    $stmt->bind_param('issssd', $userId, $faculty, $department, $programme, $course, $rate);
-    $stmt->execute();
-    return (int) $conn->insert_id;
+    if (!$stmt) return false;
+    mysqli_stmt_bind_param($stmt, 'issssd', $userId, $faculty, $department, $programme, $course, $rate);
+    $ok = mysqli_stmt_execute($stmt);
+    $id = $ok ? mysqli_insert_id($conn) : false;
+    mysqli_stmt_close($stmt);
+    return $id;
 }
 
-/**
+/*
  * Insert the initial claim_approval_stages row (stage 1, Pending).
+ * Returns true on success, false on failure.
  */
-function db_insert_initial_stage(mysqli $conn, int $claimId): void
-{
+function db_insert_initial_stage($conn, $claimId) {
     $stage = 1;
-    $stmt  = $conn->prepare(
-        'INSERT INTO claim_approval_stages (claimId, stage, status) VALUES (?, ?, \'Pending\')'
+    $stmt  = mysqli_prepare($conn,
+        "INSERT INTO claim_approval_stages (claimId, stage, status) VALUES (?, ?, 'Pending')"
     );
-    $stmt->bind_param('ii', $claimId, $stage);
-    $stmt->execute();
+    if (!$stmt) return false;
+    mysqli_stmt_bind_param($stmt, 'ii', $claimId, $stage);
+    $ok = mysqli_stmt_execute($stmt);
+    mysqli_stmt_close($stmt);
+    return $ok;
 }
 
-/**
+/*
  * Insert a single claim_data row.
- * Type string: i=claimId, s=date, s=start_time, s=end_time, i=periods, d=subTotal, i=fuelComponent
+ * Returns true on success, false on failure.
  */
-function db_insert_claim_data_row(
-    mysqli $conn,
-    int    $claimId,
-    string $date,
-    string $startTime,
-    string $endTime,
-    int    $periods,
-    float  $subTotal,
-    int    $fuelComponent
-): void {
-    $stmt = $conn->prepare(
+function db_insert_claim_data_row($conn, $claimId, $date, $start_time, $end_time, $periods, $sub_total, $fuel_component) {
+    $stmt = mysqli_prepare($conn,
         'INSERT INTO claim_data (claimId, date, start_time, end_time, periods, subTotal, fuelComponent)
          VALUES (?, ?, ?, ?, ?, ?, ?)'
     );
-    $stmt->bind_param('isssidi', $claimId, $date, $startTime, $endTime, $periods, $subTotal, $fuelComponent);
-    $stmt->execute();
+    if (!$stmt) return false;
+    // i=claimId, s=date, s=start, s=end, i=periods, d=subTotal, i=fuelComponent
+    mysqli_stmt_bind_param($stmt, 'isssidi', $claimId, $date, $start_time, $end_time, $periods, $sub_total, $fuel_component);
+    $ok = mysqli_stmt_execute($stmt);
+    mysqli_stmt_close($stmt);
+    return $ok;
 }
 
 
-// ── Claim read ─────────────────────────────────────────────────────────────────
+// ── Claim reads ───────────────────────────────────────────────────────────────
 
-/**
- * Return claim_details for a claim owned by $userId, or null if not found / not owned.
- * Ownership check is enforced in the WHERE clause to prevent IDOR.
+/*
+ * Return a single claim_details row owned by $userId, or null.
+ * Ownership check is in the WHERE clause — prevents IDOR.
  */
-function db_get_claim_by_owner(mysqli $conn, int $claimId, int $userId): ?array
-{
-    $stmt = $conn->prepare('SELECT * FROM claim_details WHERE claimId = ? AND userId = ?');
-    $stmt->bind_param('ii', $claimId, $userId);
-    $stmt->execute();
-    return $stmt->get_result()->fetch_assoc() ?: null;
+function db_get_claim_by_owner($conn, $claimId, $userId) {
+    $stmt = mysqli_prepare($conn, 'SELECT * FROM claim_details WHERE claimId = ? AND userId = ?');
+    if (!$stmt) return null;
+    mysqli_stmt_bind_param($stmt, 'ii', $claimId, $userId);
+    mysqli_stmt_execute($stmt);
+    $result = mysqli_stmt_get_result($stmt);
+    $row    = mysqli_fetch_assoc($result);
+    mysqli_stmt_close($stmt);
+    return $row ? $row : null;
 }
 
-/**
- * Return all claim_data rows for a claim.
+/*
+ * Return all claim_data rows for a claim, ordered by date.
  * Caller must have already verified ownership via db_get_claim_by_owner().
- *
- * @return array<int, array<string, mixed>>
  */
-function db_get_claim_data_rows(mysqli $conn, int $claimId): array
-{
-    $stmt = $conn->prepare('SELECT * FROM claim_data WHERE claimId = ? ORDER BY date');
-    $stmt->bind_param('i', $claimId);
-    $stmt->execute();
-    return $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+function db_get_claim_data_rows($conn, $claimId) {
+    $stmt = mysqli_prepare($conn, 'SELECT * FROM claim_data WHERE claimId = ? ORDER BY date');
+    if (!$stmt) return array();
+    mysqli_stmt_bind_param($stmt, 'i', $claimId);
+    mysqli_stmt_execute($stmt);
+    $result = mysqli_stmt_get_result($stmt);
+    $rows   = mysqli_fetch_all($result, MYSQLI_ASSOC);
+    mysqli_stmt_close($stmt);
+    return $rows;
 }
 
-/**
+/*
  * Return a saved (draft) claim owned by $userId, or null.
  */
-function db_get_saved_claim_by_owner(mysqli $conn, int $claimId, int $userId): ?array
-{
-    $stmt = $conn->prepare('SELECT * FROM saved_claims WHERE claimTempId = ? AND userId = ?');
-    $stmt->bind_param('ii', $claimId, $userId);
-    $stmt->execute();
-    return $stmt->get_result()->fetch_assoc() ?: null;
+function db_get_saved_claim_by_owner($conn, $claimId, $userId) {
+    $stmt = mysqli_prepare($conn, 'SELECT * FROM saved_claims WHERE claimTempId = ? AND userId = ?');
+    if (!$stmt) return null;
+    mysqli_stmt_bind_param($stmt, 'ii', $claimId, $userId);
+    mysqli_stmt_execute($stmt);
+    $result = mysqli_stmt_get_result($stmt);
+    $row    = mysqli_fetch_assoc($result);
+    mysqli_stmt_close($stmt);
+    return $row ? $row : null;
 }
 
-/**
- * Return all claims for $userId with their latest approval stage and status.
- *
- * @return array<int, array<string, mixed>>
+/*
+ * Return all claims for a user with their latest approval stage and status.
  */
-function db_get_user_claims(mysqli $conn, int $userId): array
-{
-    $stmt = $conn->prepare(
+function db_get_user_claims($conn, $userId) {
+    $stmt = mysqli_prepare($conn,
         'SELECT cd.*,
                 cas.stage  AS current_stage,
                 cas.status AS current_status
@@ -146,20 +141,21 @@ function db_get_user_claims(mysqli $conn, int $userId): array
          WHERE cd.userId = ?
          ORDER BY cd.time_submitted DESC'
     );
-    $stmt->bind_param('i', $userId);
-    $stmt->execute();
-    return $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+    if (!$stmt) return array();
+    mysqli_stmt_bind_param($stmt, 'i', $userId);
+    mysqli_stmt_execute($stmt);
+    $result = mysqli_stmt_get_result($stmt);
+    $rows   = mysqli_fetch_all($result, MYSQLI_ASSOC);
+    mysqli_stmt_close($stmt);
+    return $rows;
 }
 
-/**
+/*
  * Fetch all data needed to generate a downloadable claim Word document.
  * Enforces ownership via AND cd.userId = ?.
- *
- * @return array<int, array<string, mixed>>
  */
-function db_get_claim_download_data(mysqli $conn, int $claimId, int $userId): array
-{
-    $stmt = $conn->prepare(
+function db_get_claim_download_data($conn, $claimId, $userId) {
+    $stmt = mysqli_prepare($conn,
         'SELECT cd.claimId,
                 ud.userId,
                 ud.first_name,
@@ -180,45 +176,53 @@ function db_get_claim_download_data(mysqli $conn, int $claimId, int $userId): ar
                 bd.account_number,
                 bd.account_name
          FROM claim_details cd
-         JOIN user_details       ud    ON cd.userId    = ud.userId
-         JOIN claim_data         cdata ON cd.claimId   = cdata.claimId
-         JOIN user_bank_details  bd    ON ud.userId    = bd.userId
+         JOIN user_details      ud    ON cd.userId  = ud.userId
+         JOIN claim_data        cdata ON cd.claimId = cdata.claimId
+         JOIN user_bank_details bd    ON ud.userId  = bd.userId
          WHERE cd.claimId = ? AND cd.userId = ?'
     );
-    $stmt->bind_param('ii', $claimId, $userId);
-    $stmt->execute();
-    return $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+    if (!$stmt) return array();
+    mysqli_stmt_bind_param($stmt, 'ii', $claimId, $userId);
+    mysqli_stmt_execute($stmt);
+    $result = mysqli_stmt_get_result($stmt);
+    $rows   = mysqli_fetch_all($result, MYSQLI_ASSOC);
+    mysqli_stmt_close($stmt);
+    return $rows;
 }
 
 
-// ── Claim deletion ─────────────────────────────────────────────────────────────
+// ── Claim deletion ────────────────────────────────────────────────────────────
 
-/**
+/*
  * Delete a saved claim and its data rows.
- * Ownership is enforced; returns false if the claim does not belong to $userId.
+ * Ownership is verified first — returns false if the claim does not belong to $userId.
  */
-function db_delete_saved_claim(mysqli $conn, int $claimId, int $userId): bool
-{
-    // Verify ownership before deleting.
+function db_delete_saved_claim($conn, $claimId, $userId) {
+    // Verify ownership.
     if (db_get_saved_claim_by_owner($conn, $claimId, $userId) === null) {
         return false;
     }
 
-    $conn->begin_transaction();
-    try {
-        $s1 = $conn->prepare('DELETE FROM saved_claims WHERE claimTempId = ? AND userId = ?');
-        $s1->bind_param('ii', $claimId, $userId);
-        $s1->execute();
+    mysqli_begin_transaction($conn);
 
-        $s2 = $conn->prepare('DELETE FROM claim_data WHERE claimId = ?');
-        $s2->bind_param('i', $claimId);
-        $s2->execute();
+    $s1 = mysqli_prepare($conn, 'DELETE FROM saved_claims WHERE claimTempId = ? AND userId = ?');
+    mysqli_stmt_bind_param($s1, 'ii', $claimId, $userId);
+    $ok = mysqli_stmt_execute($s1);
+    mysqli_stmt_close($s1);
 
-        $conn->commit();
-        return true;
-    } catch (Exception $e) {
-        $conn->rollback();
-        error_log('[claim.queries] db_delete_saved_claim failed: ' . $e->getMessage());
-        return false;
+    if ($ok) {
+        $s2 = mysqli_prepare($conn, 'DELETE FROM claim_data WHERE claimId = ?');
+        mysqli_stmt_bind_param($s2, 'i', $claimId);
+        $ok = mysqli_stmt_execute($s2);
+        mysqli_stmt_close($s2);
     }
+
+    if ($ok) {
+        mysqli_commit($conn);
+    } else {
+        mysqli_rollback($conn);
+        error_log('[claim.queries] db_delete_saved_claim failed: ' . mysqli_error($conn));
+    }
+
+    return $ok;
 }

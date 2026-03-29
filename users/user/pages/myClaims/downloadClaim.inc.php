@@ -1,6 +1,4 @@
 <?php
-declare(strict_types=1);
-
 require_once __DIR__ . '/../../../../vendor/autoload.php';
 require_once __DIR__ . '/../../../../includes/auth.php';
 require_once __DIR__ . '/../../../../includes/db.php';
@@ -10,67 +8,67 @@ require_once __DIR__ . '/../../queries/claim.queries.php';
 use PhpOffice\PhpWord\TemplateProcessor;
 
 require_post();
-require_role(['user', 'claimant']);
+require_role(array('user', 'claimant'));
 
-$claimId = validated_int($_POST['claimId'] ?? null, 'claimId');
-$userId  = current_user_id();
+$claim_id = validated_int(isset($_POST['claimId']) ? $_POST['claimId'] : null, 'claimId');
+$user_id  = current_user_id();
 
-// Ownership enforced in query — empty array if claim belongs to another user.
-$claimDataList = db_get_claim_download_data($conn, $claimId, $userId);
+// Ownership enforced in query — returns empty array if claim belongs to another user.
+$claim_data_list = db_get_claim_download_data($conn, $claim_id, $user_id);
 
-if (empty($claimDataList)) {
+if (empty($claim_data_list)) {
     echo 'Claim not found or you do not have permission to download it.';
     exit;
 }
 
-$templatePath = __DIR__ . '/../../../../uploads/claim_form_template.docx';
-if (!file_exists($templatePath)) {
+$template_path = __DIR__ . '/../../../../uploads/claim_form_template.docx';
+if (!file_exists($template_path)) {
     echo 'Claim template file not found. Please contact the administrator.';
     exit;
 }
 
-$templateProcessor = new TemplateProcessor($templatePath);
-$firstRow          = $claimDataList[0];
+$tp        = new TemplateProcessor($template_path);
+$first_row = $claim_data_list[0];
 
-$templateProcessor->setValue('first_name',      $firstRow['first_name']);
-$templateProcessor->setValue('last_name',       $firstRow['last_name']);
-$templateProcessor->setValue('other_names',     $firstRow['other_names']);
-$templateProcessor->setValue('phone_number',    $firstRow['phone_number']);
-$templateProcessor->setValue('user_department', $firstRow['user_department']);
-$templateProcessor->setValue('rank',            $firstRow['rank']);
-$templateProcessor->setValue('rate',            $firstRow['rate']);
-$templateProcessor->setValue('programme',       $firstRow['programme']);
-$templateProcessor->setValue('course',          $firstRow['course']);
-$templateProcessor->setValue('bank_name',       $firstRow['bank_name']);
-$templateProcessor->setValue('bank_branch',     $firstRow['bank_branch']);
-$templateProcessor->setValue('account_number',  $firstRow['account_number']);
-$templateProcessor->setValue('account_name',    $firstRow['account_name']);
+$tp->setValue('first_name',      $first_row['first_name']);
+$tp->setValue('last_name',       $first_row['last_name']);
+$tp->setValue('other_names',     $first_row['other_names']);
+$tp->setValue('phone_number',    $first_row['phone_number']);
+$tp->setValue('user_department', $first_row['user_department']);
+$tp->setValue('rank',            $first_row['rank']);
+$tp->setValue('rate',            $first_row['rate']);
+$tp->setValue('programme',       $first_row['programme']);
+$tp->setValue('course',          $first_row['course']);
+$tp->setValue('bank_name',       $first_row['bank_name']);
+$tp->setValue('bank_branch',     $first_row['bank_branch']);
+$tp->setValue('account_number',  $first_row['account_number']);
+$tp->setValue('account_name',    $first_row['account_name']);
 
-$grandTotal = 0;
-$templateProcessor->cloneBlock('claim_data_block', 0, true, false, $claimDataList);
+$grand_total = 0;
+$tp->cloneBlock('claim_data_block', 0, true, false, $claim_data_list);
 
-foreach ($claimDataList as $index => $claimData) {
-    $result      = (float) $claimData['periods'] * (float) $firstRow['rate'];
-    $grandTotal += $result;
-    $n           = $index + 1;
+foreach ($claim_data_list as $i => $row) {
+    $result       = (float) $row['periods'] * (float) $first_row['rate'];
+    $grand_total += $result;
+    $n            = $i + 1;
 
-    $templateProcessor->setValue("claim_date#$n",  $claimData['claim_date']);
-    $templateProcessor->setValue("start_time#$n",  $claimData['start_time']);
-    $templateProcessor->setValue("end_time#$n",    $claimData['end_time']);
-    $templateProcessor->setValue("periods#$n",     $claimData['periods']);
-    $templateProcessor->setValue("result#$n",      number_format($result, 2));
+    $tp->setValue('claim_date#' . $n,  $row['claim_date']);
+    $tp->setValue('start_time#' . $n,  $row['start_time']);
+    $tp->setValue('end_time#' . $n,    $row['end_time']);
+    $tp->setValue('periods#' . $n,     $row['periods']);
+    $tp->setValue('result#' . $n,      number_format($result, 2));
 }
 
-$templateProcessor->setValue('grand_total', number_format($grandTotal, 2));
+$tp->setValue('grand_total', number_format($grand_total, 2));
 
-$outputPath = tempnam(sys_get_temp_dir(), 'claim_') . '.docx';
-$templateProcessor->saveAs($outputPath);
+$output_path = tempnam(sys_get_temp_dir(), 'claim_') . '.docx';
+$tp->saveAs($output_path);
 
-// Build a safe filename from DB values — no user-supplied string in headers.
-$lastName  = preg_replace('/[^A-Za-z0-9_\-]/', '_', $firstRow['last_name']);
-$firstName = preg_replace('/[^A-Za-z0-9_\-]/', '_', $firstRow['first_name']);
-$course    = preg_replace('/[^A-Za-z0-9_\-]/', '_', $firstRow['course']);
-$filename  = "{$lastName}_{$firstName}-{$course}.docx";
+// Build a safe filename from DB values — no raw user input in headers.
+$last_name  = preg_replace('/[^A-Za-z0-9_\-]/', '_', $first_row['last_name']);
+$first_name = preg_replace('/[^A-Za-z0-9_\-]/', '_', $first_row['first_name']);
+$course     = preg_replace('/[^A-Za-z0-9_\-]/', '_', $first_row['course']);
+$filename   = $last_name . '_' . $first_name . '-' . $course . '.docx';
 
 header('Content-Description: File Transfer');
 header('Content-Type: application/vnd.openxmlformats-officedocument.wordprocessingml.document');
@@ -79,9 +77,9 @@ header('Content-Transfer-Encoding: binary');
 header('Expires: 0');
 header('Cache-Control: must-revalidate, post-check=0, pre-check=0');
 header('Pragma: public');
-header('Content-Length: ' . filesize($outputPath));
+header('Content-Length: ' . filesize($output_path));
 ob_clean();
 flush();
-readfile($outputPath);
-unlink($outputPath);
+readfile($output_path);
+unlink($output_path);
 exit;

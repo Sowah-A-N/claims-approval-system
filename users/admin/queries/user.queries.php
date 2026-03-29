@@ -1,26 +1,21 @@
 <?php
-declare(strict_types=1);
-
-/**
+/*
  * Data-layer functions for admin user-management operations.
  *
  * No HTML, no $_POST, no session access lives here.
+ * The password column is never returned — callers receive no credentials.
  */
 
 
-// ── User listing ───────────────────────────────────────────────────────────────
+// ── User listing ──────────────────────────────────────────────────────────────
 
-/**
+/*
  * Return all users ordered by creation date (newest first).
- * Excludes the password column — never expose credentials to the view layer.
- *
- * @return array<int, array<string, mixed>>
  */
-function db_get_all_users(mysqli $conn): array
-{
-    $result = $conn->query(
-        'SELECT userId,
-                CONCAT(first_name, \' \', last_name) AS full_name,
+function db_get_all_users($conn) {
+    $result = mysqli_query($conn,
+        "SELECT userId,
+                CONCAT(first_name, ' ', last_name) AS full_name,
                 email,
                 department,
                 phone_number,
@@ -28,47 +23,50 @@ function db_get_all_users(mysqli $conn): array
                 account_status,
                 date_created
          FROM user_details
-         ORDER BY date_created DESC'
+         ORDER BY date_created DESC"
     );
-    return $result->fetch_all(MYSQLI_ASSOC);
+    if (!$result) return array();
+    return mysqli_fetch_all($result, MYSQLI_ASSOC);
 }
 
-/**
+/*
  * Return a single user's details (without password), or null if not found.
  */
-function db_get_user_by_id(mysqli $conn, int $userId): ?array
-{
-    $stmt = $conn->prepare(
-        'SELECT userId, first_name, last_name, other_names, phone_number,
+function db_get_user_by_id($conn, $userId) {
+    $stmt = mysqli_prepare($conn,
+        "SELECT userId, first_name, last_name, other_names, phone_number,
                 gender, email, faculty, department, role, `rank`, rate,
                 account_status, date_created,
-                CONCAT(first_name, \' \', last_name) AS full_name
+                CONCAT(first_name, ' ', last_name) AS full_name
          FROM user_details
-         WHERE userId = ?'
+         WHERE userId = ?"
     );
-    $stmt->bind_param('i', $userId);
-    $stmt->execute();
-    $row = $stmt->get_result()->fetch_assoc();
-    return $row ?: null;
+    if (!$stmt) return null;
+    mysqli_stmt_bind_param($stmt, 'i', $userId);
+    mysqli_stmt_execute($stmt);
+    $result = mysqli_stmt_get_result($stmt);
+    $row    = mysqli_fetch_assoc($result);
+    mysqli_stmt_close($stmt);
+    return $row ? $row : null;
 }
 
 
-// ── Account status ─────────────────────────────────────────────────────────────
+// ── Account status ────────────────────────────────────────────────────────────
 
-/**
- * Set a user's account_status to 'active' or 'disabled'.
- * Returns true if a row was actually updated.
- *
- * @param 'active'|'disabled' $status
+/*
+ * Set account_status to 'active' or 'disabled'.
+ * Returns true if a row was updated, false otherwise.
  */
-function db_set_account_status(mysqli $conn, int $userId, string $status): bool
-{
-    $allowed = ['active', 'disabled'];
-    if (!in_array($status, $allowed, true)) {
+function db_set_account_status($conn, $userId, $status) {
+    $allowed = array('active', 'disabled');
+    if (!in_array($status, $allowed)) {
         return false;
     }
-    $stmt = $conn->prepare('UPDATE user_details SET account_status = ? WHERE userId = ?');
-    $stmt->bind_param('si', $status, $userId);
-    $stmt->execute();
-    return $stmt->affected_rows > 0;
+    $stmt = mysqli_prepare($conn, 'UPDATE user_details SET account_status = ? WHERE userId = ?');
+    if (!$stmt) return false;
+    mysqli_stmt_bind_param($stmt, 'si', $status, $userId);
+    mysqli_stmt_execute($stmt);
+    $affected = mysqli_stmt_affected_rows($stmt);
+    mysqli_stmt_close($stmt);
+    return $affected > 0;
 }
