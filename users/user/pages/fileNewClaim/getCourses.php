@@ -1,16 +1,18 @@
 <?php
-require '../../includes/conn.inc.php'; // Replace with your DB connection file
+declare(strict_types=1);
 
-if (isset($_GET['department'])) {
-    $department = mysqli_real_escape_string($conn, $_GET['department']);
-    $query = "SELECT name FROM course WHERE department = '$department'";
-    $result = mysqli_query($conn, $query);
+require_once __DIR__ . '/../../../../includes/auth.php';
+require_once __DIR__ . '/../../../../includes/db.php';
+require_once __DIR__ . '/../../../../includes/functions.php';
+require_once __DIR__ . '/../../queries/claim.queries.php';
 
-    $courses = [];
-    while ($row = mysqli_fetch_assoc($result)) {
-        $courses[] = $row;
-    }
+require_role(['user', 'claimant']);
 
-    echo json_encode($courses);
+$department = validated_str($_GET['department'] ?? '');
+
+if ($department === '') {
+    json_response([]);
 }
-?>
+
+$courses = db_get_courses_by_department($conn, $department);
+json_response($courses);

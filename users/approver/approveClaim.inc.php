@@ -1,97 +1,39 @@
 <?php
-session_start();
+declare(strict_types=1);
 
-include_once '../../includes/conn.inc.php';
+require_once __DIR__ . '/../../includes/auth.php';
+require_once __DIR__ . '/../../includes/db.php';
+require_once __DIR__ . '/../../includes/functions.php';
+require_once __DIR__ . '/queries/approval.queries.php';
 
-// Get the current approver's stage from the session
-$stage = $_SESSION['stage'] ?? null;
+require_post();
+require_role(['approver', 'Approver']);
 
-// Get the claim ID from the POST request
-$claimId = $_POST['claimId'] ?? null;
+$claimId       = validated_int($_POST['claimId'] ?? null, 'claimId');
+$sessionStage  = (int) ($_SESSION['stage'] ?? 0);
 
-// Validate input
-if ($claimId === null || !filter_var($claimId, FILTER_VALIDATE_INT)) {
-    echo json_encode(['success' => false, 'message' => 'Invalid claim ID.']);
-    exit;
+if ($sessionStage === 0) {
+    json_response(['success' => false, 'message' => 'Approver stage not set in session.'], 403);
 }
 
-$conn->begin_transaction();
+// Stage ownership check: verify the claim's current pending stage matches this
+// approver's assigned stage. Prevents stage-skip and cross-stage manipulation.
+$currentStage = db_get_current_stage($conn, $claimId);
+
+if ($currentStage === null) {
+    json_response(['success' => false, 'message' => 'Claim not found.'], 404);
+}
+
+if ($currentStage !== $sessionStage) {
+    json_response([
+        'success' => false,
+        'message' => 'You are not authorised to approve this claim at its current stage.',
+    ], 403);
+}
 
 try {
-    // Fetch the current stage
-    $stmt = $conn->prepare(
-        'SELECT `stage` 
-         FROM `claim_approval_stages` 
-         WHERE `claimId` = ? 
-         ORDER BY `stageId` DESC 
-         LIMIT 1'
-    );
-
-    if (!$stmt) {
-        throw new Exception("Failed to prepare statement: " . $conn->error);
-    }
-
-    $stmt->bind_param('i', $claimId);
-    $stmt->execute();
-    $stmt->bind_result($currentStage);
-    $stmt->fetch();
-    $stmt->close();
-
-    // Validate the current stage
-    if ($currentStage === null) {
-        throw new Exception('Claim ID not found or invalid stage.');
-    }
-    if ($currentStage >= 5) {
-        throw new Exception('Claim is already fully approved.');
-    }
-
-    // Update the status at the current stage
- $stmt = $conn->prepare(
-    'UPDATE claim_approval_stages
-     SET status = ?
-     WHERE claimId = ? AND stage = ?'
-);
-
-$status = 'Approved'; // or 'Rejected' based on your logic
-$stmt->bind_param('sii', $status, $claimId, $currentStage);
-
-if (!$stmt->execute() || $stmt->affected_rows <= 0) {
-    throw new Exception('Failed to update the status at the current stage.');
-}
-
-$stmt->close();
-
-// Calculate the next stage
-$newStage = $currentStage + 1;
-
-// Insert the new stage into the approval stages
-$stmt = $conn->prepare(
-    'INSERT INTO claim_approval_stages 
-     (claimId, stage, status, time_updated) 
-     VALUES (?, ?, ?, NOW())'
-);
-
-if (!$stmt) {
-    throw new Exception("Failed to prepare statement: " . $conn->error);
-}
-
-$status = 'Pending'; // Assuming new stage is always 'Pending'
-$stmt->bind_param('iis', $claimId, $newStage, $status);
-$stmt->execute();
-
-if ($stmt->affected_rows <= 0) {
-    throw new Exception('Failed to insert the new stage.');
-}
-
-$stmt->close();
-
-
-    // Commit the transaction
-    $conn->commit();
-    echo json_encode(['success' => true, 'message' => 'Status updated and new stage inserted successfully.']);
-
-} catch (Exception $e) {
-    // Roll back the transaction on error
-    $conn->rollback();
-    echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+    db_advance_claim_stage($conn, $claimId, $currentStage);
+    json_response(['success' => true, 'message' => 'Claim approved and advanced to next stage.']);
+} catch (RuntimeException $e) {
+    json_response(['success' => false, 'message' => $e->getMessage()], 409);
 }

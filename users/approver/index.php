@@ -32,7 +32,7 @@
     //                             AND claim_details.flagged = 0";  // Exclude flagged claims
 
 
-	echo '<script>alert("' . $approverStage . ' // ' . $approverDepartment . '");</script>';
+	// Removed: debug alert that was leaking session data to the browser.
 
 	if (isset($approverDepartment) && $approverDepartment !== "") {
 		
@@ -237,10 +237,7 @@
                     </div> <!-- Close card -->
                 </div> <!-- Close col-lg-8 -->
 
-                <?php
-					echo '<pre>';
-                        var_dump($_SESSION);
-					echo '</pre>';
+
 					
 				?>	
 

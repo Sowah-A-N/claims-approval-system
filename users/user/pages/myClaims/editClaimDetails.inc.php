@@ -1,52 +1,24 @@
 <?php
-require_once '../../includes/conn.inc.php';
+declare(strict_types=1);
 
-if (isset($_GET['claimId'])) {
-    $claimId = $_GET['claimId'];
+require_once __DIR__ . '/../../../../includes/auth.php';
+require_once __DIR__ . '/../../../../includes/db.php';
+require_once __DIR__ . '/../../../../includes/functions.php';
+require_once __DIR__ . '/../../queries/claim.queries.php';
 
-    // Query to fetch claim details
-    $claimsDetailsQuery = "SELECT * FROM saved_claims WHERE claimTempId = '$claimId'";
-    $claimsDetailsResult = mysqli_query($conn, $claimsDetailsQuery);
+require_role(['user', 'claimant']);
 
-    if ($claimsDetailsResult && mysqli_num_rows($claimsDetailsResult) > 0) {
-        $row = mysqli_fetch_assoc($claimsDetailsResult);
+$claimId = validated_int($_GET['claimId'] ?? null, 'claimId');
+$userId  = current_user_id();
 
-        echo '<p id="claimId" name="claimId"><strong>Claim ID</strong> : ' . htmlspecialchars($row['claimTempId']) . '</p>';
-        echo '<p id="programme" name="programme"><strong>Programme</strong> :' . htmlspecialchars($row['programme']) . '</p>';
-        echo '<p id="course" name="course"><strong>Course</strong> :' . htmlspecialchars($row['course']) . '</p>';
+// Ownership enforced in query — null if claimId belongs to another user.
+$claim = db_get_saved_claim_by_owner($conn, $claimId, $userId);
 
-        // Fetch and display additional claim data
-        $claimDataQuery = "SELECT * FROM claim_data WHERE claimId = '$claimId'";
-        $claimDataResult = mysqli_query($conn, $claimDataQuery);
-
-        // echo '<tbody id="claimDataRows">';
-        // if($claimDataResult && mysqli_num_rows($claimDataResult) > 0) {
-        //     // Display existing claim data
-        //     while ($row = mysqli_fetch_assoc($claimDataResult)) {
-        //         echo '<tr>';
-        //         echo '<td><input type="time" class="form-control" name="startTime[]" value="' . $row['start_time'] . '" onchange="calculatePeriod()"></td>';
-        //         echo '<td><input type="time" class="form-control" name="endTime[]" value="' . $row['end_time'] . '" onchange="calculatePeriod()"></td>';
-        //         echo '<td><input type="text" class="form-control" name="period[]" value="' . htmlspecialchars($row['periods']) . '" readonly></td>';
-        //         echo '<td><button type="button" class="btn btn-danger btn-sm delete-row">Delete</button></td>';
-        //         echo '</tr>';
-        //     }
-        // } else {
-        //     // Display an empty row for new data
-        //     echo '<tr>';
-        //     echo '<td><input type="time" class="form-control" name="startTime[]" placeholder="Start Time" onchange="calculatePeriod()"></td>';
-        //     echo '<td><input type="time" class="form-control" name="endTime[]" placeholder="End Time" onchange="calculatePeriod()"></td>';
-        //     echo '<td><input type="text" class="form-control" name="period[]" placeholder="Periods" readonly></td>';
-        //     echo '<td><button type="button" class="btn btn-danger btn-sm delete-row">Delete</button></td>';
-        //     echo '</tr>';
-        // }
-        //<!-- Add Row Button -->
-        
-        
-        // echo '</tbody>';
-    } else {
-        echo "<p>No claim found with ID: $claimId</p>";
-    }
-} else {
-    echo "<p>Invalid request. Claim ID parameter is missing.</p>";
+if ($claim === null) {
+    echo '<p>Claim not found.</p>';
+    exit;
 }
 
+echo '<p id="claimId"    name="claimId"><strong>Claim ID</strong>: '  . h($claim['claimTempId']) . '</p>';
+echo '<p id="programme"  name="programme"><strong>Programme</strong>: ' . h($claim['programme'])  . '</p>';
+echo '<p id="course"     name="course"><strong>Course</strong>: '      . h($claim['course'])      . '</p>';
