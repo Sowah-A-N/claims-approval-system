@@ -1,23 +1,28 @@
 <?php
-include_once "./includes/conn.inc.php";
+require_once __DIR__ . '/includes/db.php';
 
-// Check if bank_name is set and not empty
-if (isset($_GET['bank_name']) && !empty($_GET['bank_name'])) {
-    $bank_name = $_GET['bank_name'];
-    
-    // SQL query to select branches for the selected bank
-    $sql = "SELECT bank_branch FROM `banks_branches` WHERE bank_name = '$bank_name' ORDER BY bank_branch";
-    $result = mysqli_query($conn, $sql);
-    
-    if ($result->num_rows > 0) {
-        $branches = array();
-        while ($row = mysqli_fetch_assoc($result)) {
-            $branches[] = $row;
-        }
-        echo json_encode($branches); // Output JSON encoded branches
-    } else {
-        echo json_encode(array()); // Output an empty array if no branches found
-    }
-} else {
-    echo json_encode(array()); // Output an empty array if bank_name parameter is not set
+// Public endpoint — no auth required (called from registration before login).
+// Input is fully parameterised; no SQL injection possible.
+
+$bank_name = isset($_GET['bank_name']) ? trim($_GET['bank_name']) : '';
+
+header('Content-Type: application/json');
+
+if ($bank_name === '') {
+    echo json_encode(array());
+    exit;
 }
+
+$stmt = mysqli_prepare($conn, 'SELECT bank_branch FROM banks_branches WHERE bank_name = ? ORDER BY bank_branch');
+if (!$stmt) {
+    echo json_encode(array());
+    exit;
+}
+
+mysqli_stmt_bind_param($stmt, 's', $bank_name);
+mysqli_stmt_execute($stmt);
+$result   = mysqli_stmt_get_result($stmt);
+$branches = mysqli_fetch_all($result, MYSQLI_ASSOC);
+mysqli_stmt_close($stmt);
+
+echo json_encode($branches);

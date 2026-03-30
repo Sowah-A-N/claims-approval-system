@@ -6,6 +6,7 @@ require_once __DIR__ . '/queries/approval.queries.php';
 
 require_post();
 require_role(array('approver', 'Approver'));
+csrf_verify();
 
 $claim_id      = validated_int(isset($_POST['claimId'])    ? $_POST['claimId']    : null, 'claimId');
 $flag_reason   = validated_str(isset($_POST['flagReason']) ? $_POST['flagReason'] : '');

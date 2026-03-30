@@ -5,6 +5,14 @@ require_once __DIR__ . '/includes/functions.php';
 
 require_post();
 
+$client_ip = isset($_SERVER['REMOTE_ADDR']) ? $_SERVER['REMOTE_ADDR'] : '0.0.0.0';
+
+if (is_login_rate_limited($conn, $client_ip)) {
+    $_SESSION['message'] = 'Too many failed login attempts. Please try again in 15 minutes.';
+    header('Location: ./index.php');
+    exit;
+}
+
 $login_email = validated_str(isset($_POST['email']) ? $_POST['email'] : '');
 $login_pw    = isset($_POST['pw']) ? $_POST['pw'] : '';
 
@@ -29,8 +37,31 @@ $result = mysqli_stmt_get_result($stmt);
 $row    = mysqli_fetch_assoc($result);
 mysqli_stmt_close($stmt);
 
-if (!$row || !password_verify($login_pw, $row['password'])) {
-    // Keep error message generic to prevent username enumeration.
+if (!$row) {
+    record_failed_login($conn, $client_ip);
+    $_SESSION['message'] = 'Invalid email or password.';
+    header('Location: ./index.php');
+    exit;
+}
+
+// Check bcrypt hash (v1.0.1+).
+$password_ok = password_verify($login_pw, $row['password']);
+
+// Legacy plaintext fallback for accounts registered before v1.0.1.
+// On match: silently re-hash and continue so future logins use bcrypt.
+if (!$password_ok && $login_pw === $row['password']) {
+    $new_hash = password_hash($login_pw, PASSWORD_BCRYPT, array('cost' => 12));
+    $upd = mysqli_prepare($conn, 'UPDATE login_details SET password = ? WHERE userId = ?');
+    if ($upd) {
+        mysqli_stmt_bind_param($upd, 'si', $new_hash, $row['userId']);
+        mysqli_stmt_execute($upd);
+        mysqli_stmt_close($upd);
+    }
+    $password_ok = true;
+}
+
+if (!$password_ok) {
+    record_failed_login($conn, $client_ip);
     $_SESSION['message'] = 'Invalid email or password.';
     header('Location: ./index.php');
     exit;
@@ -56,6 +87,9 @@ if ($profile['account_status'] === 'disabled') {
     header('Location: ./index.php?disabled=1');
     exit;
 }
+
+// Clear rate-limit counter on successful authentication.
+clear_failed_logins($conn, $client_ip);
 
 // Populate session.
 $_SESSION['user_id']   = (int) $row['userId'];

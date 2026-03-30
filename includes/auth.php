@@ -140,3 +140,66 @@ function checkUserRole($allowedRole) {
         exit;
     }
 }
+
+
+// ── Login rate limiting ───────────────────────────────────────────────────────
+//
+// Requires the login_attempts table. Create once with:
+//
+//   CREATE TABLE IF NOT EXISTS login_attempts (
+//       id           INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+//       ip_address   VARCHAR(45)  NOT NULL,
+//       attempted_at DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+//       INDEX idx_ip_time (ip_address, attempted_at)
+//   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+//
+// All three functions degrade gracefully (rate limiting disabled) if the
+// table does not yet exist.
+
+define('LOGIN_MAX_ATTEMPTS',    5);
+define('LOGIN_WINDOW_SECONDS', 900);  // 15 minutes
+
+/*
+ * Returns true if $ip has exceeded LOGIN_MAX_ATTEMPTS failures in the rolling
+ * window. Returns false on any DB error (fail-open: never block legitimate users
+ * due to a missing table or transient DB fault).
+ */
+function is_login_rate_limited($conn, $ip) {
+    $window = date('Y-m-d H:i:s', time() - LOGIN_WINDOW_SECONDS);
+    $stmt = mysqli_prepare($conn,
+        'SELECT COUNT(*) FROM login_attempts WHERE ip_address = ? AND attempted_at >= ?'
+    );
+    if (!$stmt) return false;
+    mysqli_stmt_bind_param($stmt, 'ss', $ip, $window);
+    mysqli_stmt_execute($stmt);
+    mysqli_stmt_bind_result($stmt, $count);
+    mysqli_stmt_fetch($stmt);
+    mysqli_stmt_close($stmt);
+    return (int) $count >= LOGIN_MAX_ATTEMPTS;
+}
+
+/*
+ * Record a single failed login attempt for $ip.
+ */
+function record_failed_login($conn, $ip) {
+    $stmt = mysqli_prepare($conn,
+        'INSERT INTO login_attempts (ip_address, attempted_at) VALUES (?, NOW())'
+    );
+    if (!$stmt) return;
+    mysqli_stmt_bind_param($stmt, 's', $ip);
+    mysqli_stmt_execute($stmt);
+    mysqli_stmt_close($stmt);
+}
+
+/*
+ * Remove all failed-login records for $ip (call on successful authentication).
+ */
+function clear_failed_logins($conn, $ip) {
+    $stmt = mysqli_prepare($conn,
+        'DELETE FROM login_attempts WHERE ip_address = ?'
+    );
+    if (!$stmt) return;
+    mysqli_stmt_bind_param($stmt, 's', $ip);
+    mysqli_stmt_execute($stmt);
+    mysqli_stmt_close($stmt);
+}
