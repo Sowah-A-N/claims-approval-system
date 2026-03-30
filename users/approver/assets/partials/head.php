@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/../../../includes/headers.php';
 require_once __DIR__ . '/../../../includes/auth.php';
 require_once __DIR__ . '/../../../includes/db.php';
 checkUserRole(['approver', 'Approver']);
