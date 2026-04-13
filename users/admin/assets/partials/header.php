@@ -1,45 +1,62 @@
-      <!--  Header Start -->
-      <header class="app-header">
-        <nav class="navbar navbar-expand-lg navbar-light">
-          <ul class="navbar-nav">
-            <li class="nav-item d-block d-xl-none">
-              <a class="nav-link sidebartoggler nav-icon-hover" id="headerCollapse" href="#">
-                <i class="ti ti-menu-2"></i>
-              </a>
-            </li>
-           
-          </ul>
-          <div class="navbar-collapse justify-content-end px-0" id="navbarNav">
-            <ul class="navbar-nav flex-row ms-auto align-items-center justify-content-end">
-              <li class="nav-item dropdown">
-                <a class="nav-link nav-icon-hover" href="#" id="drop2" data-bs-toggle="dropdown"
-                  aria-expanded="false">
-                <?php if($pageTitle && $pageTitle == "Admin Dashboard"):?>
-                  <img src="../admin/assets/images/profile/user-1.jpg" alt="" width="35" height="35" class="rounded-circle">
-                <?php else: ?>
-                <img src="../../assets/images/profile/user-1.jpg" alt="" width="35" height="35" class="rounded-circle">
-                <?php endif;?>
-                </a>
-                <div class="dropdown-menu dropdown-menu-end dropdown-menu-animate-up" aria-labelledby="drop2">
-                  <div class="message-body">
-                    <a href="#" class="d-flex align-items-center gap-2 dropdown-item">
-                      <i class="ti ti-user fs-6"></i>
-                      <p class="mb-0 fs-3">My Profile</p>
-                    </a>
-                    <a href="#" class="d-flex align-items-center gap-2 dropdown-item">
-                      <i class="ti ti-mail fs-6"></i>
-                      <p class="mb-0 fs-3">My Account</p>
-                    </a>
-                    <a href="#" class="d-flex align-items-center gap-2 dropdown-item">
-                      <i class="ti ti-list-check fs-6"></i>
-                      <p class="mb-0 fs-3">My Task</p>
-                    </a>
-                    <a href="#" class="btn btn-outline-primary mx-3 mt-2 d-block">Logout</a>
-                  </div>
-                </div>
-              </li>
-            </ul>
-          </div>
-        </nav>
-      </header>
-      <!--  Header End -->
+<?php
+$_admin_name = isset($_SESSION['full_name']) ? htmlspecialchars($_SESSION['full_name'], ENT_QUOTES, 'UTF-8') : 'Admin';
+$_admin_initials = '';
+foreach (explode(' ', trim($_admin_name)) as $p) {
+    if ($p !== '') { $_admin_initials .= strtoupper($p[0]); }
+    if (strlen($_admin_initials) >= 2) break;
+}
+if ($_admin_initials === '') $_admin_initials = 'A';
+?>
+<header class="rmu-header" id="rmu-header">
+
+  <div class="rmu-header__left">
+    <button class="rmu-header__btn" id="sidebar-toggle" title="Toggle sidebar">
+      <i class="ti ti-menu-2"></i>
+    </button>
+    <span class="rmu-header__title"><?php echo isset($pageTitle) ? htmlspecialchars($pageTitle, ENT_QUOTES, 'UTF-8') : 'Admin Dashboard'; ?></span>
+  </div>
+
+  <div class="rmu-header__right">
+    <div class="rmu-dropdown" id="profile-dropdown">
+      <div class="rmu-header__avatar" id="profile-toggle" title="<?php echo $_admin_name; ?>">
+        <?php echo $_admin_initials; ?>
+      </div>
+      <div class="rmu-dropdown__menu">
+        <div style="padding:12px 16px 10px;border-bottom:1px solid rgba(255,255,255,0.08);">
+          <div style="font-size:.85rem;font-weight:600;color:var(--txt-primary);"><?php echo $_admin_name; ?></div>
+          <div style="font-size:.75rem;color:var(--txt-muted);">Administrator</div>
+        </div>
+        <a href="#" class="rmu-dropdown__item">
+          <i class="ti ti-user"></i> My Profile
+        </a>
+        <div class="rmu-dropdown__divider"></div>
+        <a href="/users/admin/pages/logout" class="rmu-dropdown__item">
+          <i class="ti ti-logout"></i> Logout
+        </a>
+      </div>
+    </div>
+  </div>
+
+</header>
+
+<script>
+(function() {
+  var toggle = document.getElementById('profile-toggle');
+  var dd     = document.getElementById('profile-dropdown');
+  if (toggle && dd) {
+    toggle.addEventListener('click', function(e) {
+      e.stopPropagation();
+      dd.classList.toggle('open');
+    });
+    document.addEventListener('click', function() { dd.classList.remove('open'); });
+  }
+
+  var sidebarBtn = document.getElementById('sidebar-toggle');
+  var sidebar    = document.getElementById('rmu-sidebar');
+  if (sidebarBtn && sidebar) {
+    sidebarBtn.addEventListener('click', function() {
+      sidebar.classList.toggle('open');
+    });
+  }
+})();
+</script>

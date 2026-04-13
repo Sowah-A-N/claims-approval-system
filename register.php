@@ -1,261 +1,261 @@
 <?php
-    $pageTitle = "User Registration";
-    include './includes/conn.inc.php';
-?>
+require_once __DIR__ . '/includes/db.php';
 
+$rankResult       = mysqli_query($conn, 'SELECT rank, rate FROM lecturer_rank_rate ORDER BY rank');
+$facultyResult    = mysqli_query($conn, 'SELECT id, name FROM faculty ORDER BY name');
+$deptResult       = mysqli_query($conn, 'SELECT dept_name FROM department ORDER BY dept_name');
+$bankResult       = mysqli_query($conn, "SELECT DISTINCT bank_name FROM banks_branches ORDER BY bank_name");
+
+$ranks    = $rankResult    ? mysqli_fetch_all($rankResult,    MYSQLI_ASSOC) : array();
+$faculties= $facultyResult ? mysqli_fetch_all($facultyResult, MYSQLI_ASSOC) : array();
+$depts    = $deptResult    ? mysqli_fetch_all($deptResult,    MYSQLI_ASSOC) : array();
+$banks    = $bankResult    ? mysqli_fetch_all($bankResult,    MYSQLI_ASSOC) : array();
+
+session_start();
+?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title><?php echo $pageTitle ?></title>
-  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
-  <style>
-    body {
-      background-color: #f8f9fa;
-    }
-    .container {
-      margin-top: 50px;
-    }
-    .form-group {
-      margin-bottom: 20px;
-    }
-	  .invalid-feedback {
-		  display: none;
-	  }
-	  .is-invalid .invalid-feedback {
-		  display: block;
-		  color: red;
-	  }
-  </style>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>RMU Claims System — Register</title>
+  <link rel="icon" type="image/png" href="./login/images/icons/rmu.ico">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.4.0/dist/tabler-icons.min.css">
+  <link rel="stylesheet" href="./assets/css/rmu-glass.css">
 </head>
 <body>
 
-<?php 
-    $rankSelectQuery = "SELECT * FROM lecturer_rank_rate;";
-    $rankSelectResult = mysqli_query($conn, $rankSelectQuery);
-	  // Fetch data from the faculty table
-	$facultySelectQuery = "SELECT id, name FROM faculty";
-	$facultySelectResult = mysqli_query($conn, $facultySelectQuery);
+<div class="rmu-register-page">
+  <div class="rmu-register-container">
 
-    $departmentSelectQuery = "SELECT * FROM department;";
-    $departmentSelectResult = mysqli_query($conn, $departmentSelectQuery);
-?>
-
-<div class="container mt-4">
-	 <div class="d-flex justify-content-between align-items-center mb-4">
-		 <h2 class="mb-0">RMU Claims System - User Registration Form</h2>
-		 <a href="registerApp.php" class="btn btn-primary">Register As Approver</a>
-	</div>  <form action="register.inc.php" method="post">
-    <div class="form-group">
-      <label for="first_name">First Name:</label>
-      <input type="text" class="form-control" id="first_name" placeholder="Enter first name" name="first_name" required>
-    </div>
-    <div class="form-group">
-      <label for="last_name">Last Name:</label>
-      <input type="text" class="form-control" id="last_name" placeholder="Enter last name" name="last_name" required>
-    </div>
-    <div class="form-group">
-      <label for="other_names">Other Names:</label>
-      <input type="text" class="form-control" id="other_names" placeholder="Enter other names" name="other_names">
-    </div>
-    
-    <div class="form-group">
-      <label for="phone_number">Phone Number:</label>
-      <input type="tel" class="form-control" id="phone_number" placeholder="Enter phone number" name="phone_number" required>
-		 <div class="invalid-feedback">
-			 Please enter a valid 10-digit phone number.
-		</div>
-		<small class="form-text text-muted">Please enter exactly 10 digits.</small>            
-    </div>
-    <div class="form-group">
-      <label for="gender">Gender:</label>
-      <select class="form-control" id="gender" name="gender" required>
-        <option value="">Select Gender</option>
-        <option value="Male">Male</option>
-        <option value="Female">Female</option>
-        <option value="Other">Other</option>
-      </select>
-    </div>
-    <div class="form-group">
-      <label for="email">Email:</label>
-      <input type="email" class="form-control" id="email" placeholder="Enter email" name="email" required>
-    </div>
-    <div class="form-group">
-      <label for="password">Password:</label>
-      <input type="password" class="form-control" id="password" placeholder="Enter password" name="password" required>
-    </div>
-    <div class="form-group">
-	   <label for="faculty">Faculty<span class="text-danger"> * </span></label>
-	   <select class="form-control" id="faculty" name="faculty" required>
-		   <option value="" disabled selected>Select a faculty</option>
-		   <?php
-		   if ($facultySelectResult->num_rows > 0) {
-			   // Output data of each row
-			   while($row = $facultySelectResult->fetch_assoc()) {
-				   echo "<option value='" . $row["name"] . "'>" . htmlspecialchars($row["name"]) . "</option>";
-			   }
-		   } else {
-			   echo "<option value='' disabled>No faculties available</option>";
-		   }
-		   ?>
-	   </select>
-	</div>
-    <div class="form-group">
-      <label for="department">Department:</label>
-      <select class="form-control" id="department" placeholder="Enter department" name="department" required>
-        <option value="">Select Department</option>
-        <?php
-                // Check if the query returned results
-                if ($departmentSelectResult && $departmentSelectResult->num_rows > 0) {
-                    // Loop through the results and generate <option> elements
-                    while ($row = mysqli_fetch_assoc($departmentSelectResult)) {
-                        echo "<option value=\"" . htmlspecialchars($row['dept_name']) . "\">" . htmlspecialchars($row['dept_name']) . "</option>";
-                    }
-                } else {
-                    echo "<option value=\"\">No departments available</option>";
-                }
-                ?>
-      </select>
-    </div>
-    <div class="form-group">
-      <div class="row">
-        <div class="col-md-6">
-          <label for="rank">Rank:</label>
-          <select class="form-control" id="rank" name="rank" onchange="updateTextbox()" required>
-            <option value="">Select Rank</option>
-            <?php 
-                if ($rankSelectResult->num_rows > 0) {
-                    while ($row = mysqli_fetch_assoc($rankSelectResult)) {
-                        echo "<option data-value=\"" . $row['rate'] . "\" value=\"" . $row['rank'] . "\">" . $row['rank'] . "</option>";
-
-                    } 
-                } else {
-                    echo "<option value=\"\">". "No options available" ."</option>";
-                }
-            ?>
-          </select>
+    <!-- Page header -->
+    <div class="rmu-register-header">
+      <div>
+        <div class="rmu-register-header__title">
+          <i class="ti ti-user-plus rmu-text-primary"></i> User Registration
         </div>
-
-        <div class="col-md-6">
-          <label for="rate">Rate:</label>
-          <input type="text" class="form-control" id="rate" placeholder="Rate is...." name="rate" readonly>
+        <div style="font-size:.82rem;color:var(--txt-secondary);margin-top:4px;">
+          Create your claimant account — an admin will activate it shortly.
         </div>
       </div>
+      <a href="register.php?type=approver" class="rmu-btn rmu-btn--secondary">
+        <i class="ti ti-shield-check"></i> Register as Approver
+      </a>
     </div>
 
-    <div class="form-group">
-      <div class="row">
-        <div class="col-md-6">
-            <label for="bank_name">Bank Name:</label>
-            <select class="form-control" id="bank_name" name="bank_name" onchange="updateBranches()" required>
-                <option value="">Select Bank</option>
-                <?php 
-                $sql = "SELECT DISTINCT bank_name FROM `banks_branches` ORDER BY bank_name ";
-                $result = mysqli_query($conn, $sql);
-                if ($result->num_rows > 0) {
-                    while ($row = mysqli_fetch_assoc($result)) {
-                        echo "<option value=\"" . $row['bank_name'] . "\">" . $row['bank_name'] . "</option>";
-                    }
-                } else {
-                    echo "<option value=\"\">No banks available</option>";
-                }
-                ?>
-            </select>
-        </div>
+    <?php if (isset($_SESSION['message'])): ?>
+      <div class="rmu-alert rmu-alert--warning">
+        <?php echo htmlspecialchars($_SESSION['message'], ENT_QUOTES, 'UTF-8');
+              unset($_SESSION['message']); ?>
+      </div>
+    <?php endif; ?>
 
-        <div class="col-md-6">
-            <label for="bank_branch">Bank Branch:</label>
-            <select class="form-control" id="bank_branch" name="bank_branch" required>
-                <option value="">Select Branch</option>
-                <!-- Options will be dynamically populated based on selected bank -->
-            </select>
+    <form action="register.inc.php" method="post" novalidate>
+
+      <!-- Personal Information -->
+      <div class="rmu-card rmu-mb-3">
+        <div class="rmu-card__header">
+          <span class="rmu-card__title"><i class="ti ti-user rmu-text-primary"></i> Personal Information</span>
+        </div>
+        <div class="rmu-card__body">
+          <div class="rmu-grid-3">
+            <div class="rmu-form-group">
+              <label class="rmu-label">First Name <span class="required">*</span></label>
+              <input type="text" class="rmu-input" name="first_name" placeholder="First name" required>
+            </div>
+            <div class="rmu-form-group">
+              <label class="rmu-label">Last Name <span class="required">*</span></label>
+              <input type="text" class="rmu-input" name="last_name" placeholder="Last name" required>
+            </div>
+            <div class="rmu-form-group">
+              <label class="rmu-label">Other Names</label>
+              <input type="text" class="rmu-input" name="other_names" placeholder="Middle / other names">
+            </div>
+          </div>
+          <div class="rmu-grid-3">
+            <div class="rmu-form-group">
+              <label class="rmu-label">Phone Number <span class="required">*</span></label>
+              <input type="tel" class="rmu-input" id="phone_number" name="phone_number"
+                     placeholder="0XXXXXXXXX" required>
+              <div class="rmu-form-error" id="phone-error">Enter a valid 10-digit phone number starting with 0.</div>
+              <div class="rmu-form-hint">Format: 0XXXXXXXXX (10 digits)</div>
+            </div>
+            <div class="rmu-form-group">
+              <label class="rmu-label">Gender <span class="required">*</span></label>
+              <select class="rmu-select" name="gender" required>
+                <option value="">Select gender</option>
+                <option value="Male">Male</option>
+                <option value="Female">Female</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
+            <div class="rmu-form-group">
+              <label class="rmu-label">Email Address <span class="required">*</span></label>
+              <input type="email" class="rmu-input" name="email" placeholder="you@example.com" required>
+            </div>
+          </div>
+          <div class="rmu-form-group" style="max-width:340px;">
+            <label class="rmu-label">Password <span class="required">*</span></label>
+            <input type="password" class="rmu-input" name="password" placeholder="Choose a strong password" required>
+          </div>
         </div>
       </div>
-    </div>
 
-
-    <div class="form-group">
-      <div class="row">
-        <div class="col-md-6">
-            <label for="account_name">Account Name:</label>
-            <input type="text" class="form-control" id="account_name" name="account_name" required>
+      <!-- Academic Details -->
+      <div class="rmu-card rmu-mb-3">
+        <div class="rmu-card__header">
+          <span class="rmu-card__title"><i class="ti ti-school rmu-text-primary"></i> Academic Details</span>
         </div>
-
-        <div class="col-md-6">
-            <label for="account_number">Account Number:</label>
-            <input type="text" class="form-control" id="account_number" name="account_number" required>
+        <div class="rmu-card__body">
+          <div class="rmu-grid-3">
+            <div class="rmu-form-group">
+              <label class="rmu-label">Faculty <span class="required">*</span></label>
+              <select class="rmu-select" name="faculty" required>
+                <option value="">Select faculty</option>
+                <?php foreach ($faculties as $f): ?>
+                  <option value="<?php echo htmlspecialchars($f['name'], ENT_QUOTES, 'UTF-8'); ?>">
+                    <?php echo htmlspecialchars($f['name'], ENT_QUOTES, 'UTF-8'); ?>
+                  </option>
+                <?php endforeach; ?>
+              </select>
+            </div>
+            <div class="rmu-form-group">
+              <label class="rmu-label">Department <span class="required">*</span></label>
+              <select class="rmu-select" name="department" required>
+                <option value="">Select department</option>
+                <?php foreach ($depts as $d): ?>
+                  <option value="<?php echo htmlspecialchars($d['dept_name'], ENT_QUOTES, 'UTF-8'); ?>">
+                    <?php echo htmlspecialchars($d['dept_name'], ENT_QUOTES, 'UTF-8'); ?>
+                  </option>
+                <?php endforeach; ?>
+              </select>
+            </div>
+            <div class="rmu-form-group">
+              <label class="rmu-label">Academic Rank <span class="required">*</span></label>
+              <select class="rmu-select" id="rank" name="rank" required>
+                <option value="">Select rank</option>
+                <?php foreach ($ranks as $r): ?>
+                  <option value="<?php echo htmlspecialchars($r['rank'], ENT_QUOTES, 'UTF-8'); ?>"
+                          data-rate="<?php echo (float) $r['rate']; ?>">
+                    <?php echo htmlspecialchars($r['rank'], ENT_QUOTES, 'UTF-8'); ?>
+                  </option>
+                <?php endforeach; ?>
+              </select>
+            </div>
+          </div>
+          <div class="rmu-form-group" style="max-width:260px;">
+            <label class="rmu-label">Hourly Rate (GH&#8373;)</label>
+            <input type="text" class="rmu-input" id="rate" name="rate" placeholder="Auto-filled from rank" readonly>
+            <div class="rmu-form-hint">Filled automatically when you select a rank.</div>
+          </div>
         </div>
       </div>
-    </div>
 
-        <button type="submit" class="btn btn-primary">Submit</button>
-      </form>
-    </div>
+      <!-- Banking Details -->
+      <div class="rmu-card rmu-mb-3">
+        <div class="rmu-card__header">
+          <span class="rmu-card__title"><i class="ti ti-building-bank rmu-text-primary"></i> Banking Details</span>
+        </div>
+        <div class="rmu-card__body">
+          <div class="rmu-grid-2">
+            <div class="rmu-form-group">
+              <label class="rmu-label">Bank <span class="required">*</span></label>
+              <select class="rmu-select" id="bank_name" name="bank_name" required>
+                <option value="">Select bank</option>
+                <?php foreach ($banks as $b): ?>
+                  <option value="<?php echo htmlspecialchars($b['bank_name'], ENT_QUOTES, 'UTF-8'); ?>">
+                    <?php echo htmlspecialchars($b['bank_name'], ENT_QUOTES, 'UTF-8'); ?>
+                  </option>
+                <?php endforeach; ?>
+              </select>
+            </div>
+            <div class="rmu-form-group">
+              <label class="rmu-label">Branch <span class="required">*</span></label>
+              <select class="rmu-select" id="bank_branch" name="bank_branch" required>
+                <option value="">Select branch</option>
+              </select>
+            </div>
+          </div>
+          <div class="rmu-grid-2">
+            <div class="rmu-form-group">
+              <label class="rmu-label">Account Name <span class="required">*</span></label>
+              <input type="text" class="rmu-input" name="account_name" placeholder="Name on account" required>
+            </div>
+            <div class="rmu-form-group">
+              <label class="rmu-label">Account Number <span class="required">*</span></label>
+              <input type="text" class="rmu-input" name="account_number" placeholder="Account number" required>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="d-flex" style="justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">
+        <a href="index.php" class="rmu-btn rmu-btn--secondary">
+          <i class="ti ti-arrow-left"></i> Back to Login
+        </a>
+        <button type="submit" class="rmu-btn rmu-btn--primary" style="min-width:160px;">
+          <i class="ti ti-user-check"></i> Submit Registration
+        </button>
+      </div>
+
+    </form>
+  </div>
+</div>
 
 <script>
-	 document.addEventListener('DOMContentLoaded', function() {
-            const phoneInput = document.getElementById('phone_number');
+/* Phone validation */
+document.getElementById('phone_number').addEventListener('input', function() {
+  var el = this;
+  var err = document.getElementById('phone-error');
+  if (/^0\d{9}$/.test(el.value)) {
+    el.classList.remove('is-invalid');
+    err.style.display = 'none';
+  } else {
+    el.classList.add('is-invalid');
+    err.style.display = 'block';
+  }
+});
 
-            phoneInput.addEventListener('input', function() {
-                const phoneValue = phoneInput.value;
-                const regex = /^0\d{9}$/;
+/* Rank → rate auto-fill */
+document.getElementById('rank').addEventListener('change', function() {
+  var opt = this.options[this.selectedIndex];
+  document.getElementById('rate').value = opt.getAttribute('data-rate') || '';
+});
 
-                if (regex.test(phoneValue)) {
-                    phoneInput.classList.remove('is-invalid');
-                } else {
-                    phoneInput.classList.add('is-invalid');
-                }
-            });
+/* Dynamic branch loading */
+document.getElementById('bank_name').addEventListener('change', function() {
+  var bankName = encodeURIComponent(this.value);
+  var branchSel = document.getElementById('bank_branch');
+  branchSel.innerHTML = '<option value="">Loading...</option>';
+  if (!bankName) { branchSel.innerHTML = '<option value="">Select branch</option>'; return; }
+
+  var xhr = new XMLHttpRequest();
+  xhr.onreadystatechange = function() {
+    if (xhr.readyState !== XMLHttpRequest.DONE) return;
+    branchSel.innerHTML = '';
+    if (xhr.status === 200) {
+      var branches = JSON.parse(xhr.responseText);
+      if (branches.length === 0) {
+        branchSel.innerHTML = '<option value="">No branches available</option>';
+      } else {
+        branches.forEach(function(b) {
+          var opt = document.createElement('option');
+          opt.value = b.bank_branch;
+          opt.textContent = b.bank_branch;
+          branchSel.appendChild(opt);
         });
-	
-    function updateTextbox() {
-      var rankDropdown = document.getElementById("rank");
-      var rateTextbox = document.getElementById("rate");
-      var selectedOption = rankDropdown.options[rankDropdown.selectedIndex].getAttribute('data-value');
-      rateTextbox.value = selectedOption;
+      }
+    } else {
+      branchSel.innerHTML = '<option value="">Error loading branches</option>';
     }
-
-    function updateBranches() {
-    var bank_name = encodeURIComponent(document.getElementById('bank_name').value); // Get selected bank_name
-    var xhr = new XMLHttpRequest(); // Create a new XMLHttpRequest object
-    
-    xhr.onreadystatechange = function() {
-        if (xhr.readyState === XMLHttpRequest.DONE) {
-            if (xhr.status === 200) {
-                var branches = JSON.parse(xhr.responseText); // Parse JSON response
-                var branchSelect = document.getElementById('bank_branch');
-                branchSelect.innerHTML = ''; // Clear current options
-                
-                // Populate new options
-                if (branches.length > 0) {
-                    branches.forEach(function(branch) {
-                        var option = document.createElement('option');
-                        option.value = branch.bank_branch;
-                        option.textContent = branch.bank_branch;
-                        branchSelect.appendChild(option);
-                    });
-                } else {
-                    var option = document.createElement('option');
-                    option.value = '';
-                    option.textContent = 'No branches available';
-                    branchSelect.appendChild(option);
-                }
-            } else {
-                // Handle error
-                console.error('Error fetching branches: ' + xhr.status);
-            }
-        }
-    };
-    
-    xhr.open('GET', 'updateBranches.inc.php?bank_name=' + bank_name, true); // Specify the request type and URL
-    xhr.send(); // Send the request
-}
-
+  };
+  xhr.open('GET', 'updateBranches.inc.php?bank_name=' + bankName, true);
+  xhr.send();
+});
 </script>
-<script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.1/dist/umd/popper.min.js"></script>
-<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
 
 </body>
 </html>

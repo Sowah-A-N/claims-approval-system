@@ -120,6 +120,7 @@
 			<div class="container-fluid">
 				<h1>Update Lecturer Claim Rates</h1>
 				<form id="updateForm" method="post" action="updateRates.inc.php">
+					<input type="hidden" name="csrf_token" value="<?php echo h(csrf_token()); ?>">
 					<div class="row">
 						<?php
 						$sql = "SELECT * FROM lecturer_rank_rate";
@@ -154,6 +155,7 @@
 					<!-- Other Settings for Claims -->
 				<h2>General Settings</h2>
 					<form method="post" class="mb-4" action="updateSettings.inc.php">
+						<input type="hidden" name="csrf_token" value="<?php echo h(csrf_token()); ?>">
 						<div class="row align-items-end">
 							<div class="col-md-3 form-check">
 								<input type="checkbox" class="form-check-input" name="fuelComponent" id="fuelComponent" value="1" <?php echo $fuelComponent == 1 ? 'checked' : ''; ?>>

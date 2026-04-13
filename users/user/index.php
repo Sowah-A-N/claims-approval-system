@@ -1,139 +1,114 @@
-<?php 
-	$pageTitle = "Dashboard";
-    include './assets/partials/_head.php';
+<?php
+$pageTitle = 'Dashboard';
+include './assets/partials/_head.php';
 
-	//Assign user id to variable
-    $userId = $_SESSION['user_id'] ?? "";
+$userId = isset($_SESSION['user_id']) ? (int) $_SESSION['user_id'] : 0;
 
-	// Function to output full name stored in the session (if available)
-    function outputFullName() {
-        echo isset($_SESSION['full_name']) ? $_SESSION['full_name'] : '';
+// Dashboard counts using prepared statements
+function dash_count($conn, $sql, $param_types, $params) {
+    $stmt = mysqli_prepare($conn, $sql);
+    if (!$stmt) return 0;
+    if ($params) {
+        mysqli_stmt_bind_param($stmt, $param_types, ...$params);
     }
+    mysqli_stmt_execute($stmt);
+    mysqli_stmt_bind_result($stmt, $count);
+    mysqli_stmt_fetch($stmt);
+    mysqli_stmt_close($stmt);
+    return (int) $count;
+}
+
+$totalClaims     = dash_count($conn, 'SELECT COUNT(*) FROM claim_details WHERE userId = ?',    'i', [$userId]);
+$savedClaims     = dash_count($conn, 'SELECT COUNT(*) FROM saved_claims WHERE userId = ?',     'i', [$userId]);
+$inProgressClaims= dash_count($conn, 'SELECT COUNT(*) FROM claim_details WHERE userId = ? AND completed = 0 AND flagged = 0', 'i', [$userId]);
+$flaggedClaims   = dash_count($conn, 'SELECT COUNT(*) FROM claim_details WHERE userId = ? AND completed = 0 AND flagged = 1', 'i', [$userId]);
+$completedClaims = dash_count($conn, 'SELECT COUNT(*) FROM completed_claims WHERE userId = ?', 'i', [$userId]);
 ?>
 
-<body>    
-    <div class="container-scroller">
+<body>
+<div id="app-wrapper">
 
-        <?php
-            include './assets/partials/_navbar.php';
-        ?>
+  <?php include './assets/partials/_sidebar.php'; ?>
 
-        <div class="container-fluid page-body-wrapper">
+  <div class="rmu-main">
 
-            <?php 
-                include './assets/partials/_sidebar.php';
-            ?>
+    <?php include './assets/partials/_navbar.php'; ?>
 
-            <div class="main-panel">
-                
-                <div class="content-wrapper">
-					<?php
-						 // Execute queries
-						$userClaimCountQuery = "SELECT COUNT(*) FROM claim_details WHERE userId = '{$userId}';";
-						$userClaimCountResult = mysqli_query($conn, $userClaimCountQuery);
+    <div class="rmu-content">
 
-						$userFlaggedClaimCount = "SELECT COUNT(*) FROM claim_details WHERE userId = '{$userId}' 																					AND completed = 0 AND flagged = 1;";
-						$userFlaggedClaimCountResult = mysqli_query($conn, $userFlaggedClaimCount);
-
-						$userCompletedClaimCount = "SELECT COUNT(*) FROM completed_claims WHERE userId = '{$userId}';";
-						$userCompletedClaimCountResult = mysqli_query($conn, $userCompletedClaimCount);
-
-						$userInProgressClaimCount = "SELECT COUNT(*) FROM claim_details WHERE userId = '{$userId}'
-													AND completed = 0 AND flagged = 0;";
-						$userInProgressClaimCountResult = mysqli_query($conn, $userInProgressClaimCount);
-
-						$userSavedClaimCount = "SELECT COUNT(*) FROM saved_claims WHERE userId = '{$userId}';";
-						$userSavedClaimCountResult = mysqli_query($conn, $userSavedClaimCount);
-
-						// Fetch results and handle errors
-						$totalClaimsCount = 0;
-						if ($userClaimCountResult) {
-							$totalClaimsCountResult = mysqli_fetch_array($userClaimCountResult);
-							$totalClaimsCount = !empty($totalClaimsCountResult[0]) ? $totalClaimsCountResult[0] : 0;
-						}
-
-						$flaggedClaimsCount = 0;
-						if ($userFlaggedClaimCountResult) {
-							$flaggedClaimsCountResult = mysqli_fetch_array($userFlaggedClaimCountResult);
-							$flaggedClaimsCount = !empty($flaggedClaimsCountResult[0]) ? $flaggedClaimsCountResult[0] : 0;
-						}
-
-						$completedClaimsCount = 0;
-						if ($userCompletedClaimCountResult) {
-							$completedClaimsCountResult = mysqli_fetch_array($userCompletedClaimCountResult);
-							$completedClaimsCount = !empty($completedClaimsCountResult[0]) ? $completedClaimsCountResult[0] : 0;
-						}
-
-						$inProgressClaimsCount = 0;
-						if ($userInProgressClaimCountResult) {
-							$inProgressClaimsCountResult = mysqli_fetch_array($userInProgressClaimCountResult);
-							$inProgressClaimsCount = !empty($inProgressClaimsCountResult[0]) ? $inProgressClaimsCountResult[0] : 0;
-						}
-
-						$savedClaimsCount = 0;
-						if ($userSavedClaimCountResult) {
-							$savedClaimsCountResult = mysqli_fetch_array($userSavedClaimCountResult);
-							$savedClaimsCount = !empty($savedClaimsCountResult[0]) ? $savedClaimsCountResult[0] : 0;
-						}
-					?>
-					
-					 <div class="row">
-						<div class="col-xl col-sm-6 stretch-card transparent">
-							<div class="card card-tale">
-								<div class="card-body">
-									<p class="mb-4">Total Claims</p>
-									<p class="fs-30 mb-2"><?php echo $totalClaimsCount; ?></p>
-								</div>
-							</div>
-						</div>
-						<div class="col-xl col-sm-6 stretch-card transparent">
-							<div class="card card-dark-blue">
-								<div class="card-body">
-									<p class="mb-4">Saved Claims</p>
-									<p class="fs-30 mb-2"><?php echo $savedClaimsCount; ?></p>
-								</div>
-							</div>
-						</div>					
-                        <div class="col-xl col-sm-6 stretch-card transparent">
-                            <div class="card card-tale">
-                                <div class="card-body">
-                                    <p class="mb-4">In-Progress Claims</p>
-                                    <p class="fs-30 mb-2"><?php echo $inProgressClaimsCount; ?></p>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-xl col-sm-6 stretch-card transparent">
-                            <div class="card card-light-danger">
-                                <div class="card-body">
-                                    <p class="mb-4">Flagged Claims</p>
-                                    <p class="fs-30 mb-2"><?php echo $flaggedClaimsCount; ?></p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-					
-               	 </div>
-                <!-- content-wrapper ends -->
-				
-				<!--footer_partial-->
-				<?php 
-                    include './assets/partials/_footer.php'; 
-                ?>
-			</div>
-
-                <!-- partial:../../partials/_footer.html -->
-                
-                
-               
-                    <!-- partial -->
-            </div>
-            <!-- main-panel ends -->
-            
+      <div class="rmu-page-header">
+        <div class="rmu-page-header__title">Dashboard</div>
+        <div class="rmu-page-header__sub">
+          Welcome back, <?php echo isset($_SESSION['full_name']) ? htmlspecialchars($_SESSION['full_name'], ENT_QUOTES, 'UTF-8') : 'Claimant'; ?>
         </div>
-        <!-- page-body-wrapper ends -->
+      </div>
 
-    <?php 
-        include './assets/partials/_plugins.php';
-    ?>
+      <!-- Stat cards -->
+      <div class="rmu-stats">
 
+        <div class="rmu-stat-card rmu-stat-card--primary">
+          <div class="rmu-stat-card__icon rmu-stat-card__icon--primary">
+            <i class="ti ti-files"></i>
+          </div>
+          <div class="rmu-stat-card__value"><?php echo $totalClaims; ?></div>
+          <div class="rmu-stat-card__label">Total Claims</div>
+        </div>
+
+        <div class="rmu-stat-card rmu-stat-card--secondary">
+          <div class="rmu-stat-card__icon rmu-stat-card__icon--secondary">
+            <i class="ti ti-device-floppy"></i>
+          </div>
+          <div class="rmu-stat-card__value"><?php echo $savedClaims; ?></div>
+          <div class="rmu-stat-card__label">Saved Drafts</div>
+        </div>
+
+        <div class="rmu-stat-card rmu-stat-card--info">
+          <div class="rmu-stat-card__icon rmu-stat-card__icon--info">
+            <i class="ti ti-clock"></i>
+          </div>
+          <div class="rmu-stat-card__value"><?php echo $inProgressClaims; ?></div>
+          <div class="rmu-stat-card__label">In Progress</div>
+        </div>
+
+        <div class="rmu-stat-card rmu-stat-card--warning">
+          <div class="rmu-stat-card__icon rmu-stat-card__icon--warning">
+            <i class="ti ti-flag"></i>
+          </div>
+          <div class="rmu-stat-card__value"><?php echo $flaggedClaims; ?></div>
+          <div class="rmu-stat-card__label">Flagged</div>
+        </div>
+
+        <div class="rmu-stat-card rmu-stat-card--success">
+          <div class="rmu-stat-card__icon rmu-stat-card__icon--success">
+            <i class="ti ti-circle-check"></i>
+          </div>
+          <div class="rmu-stat-card__value"><?php echo $completedClaims; ?></div>
+          <div class="rmu-stat-card__label">Completed</div>
+        </div>
+
+      </div>
+
+      <!-- Quick actions -->
+      <div class="rmu-card">
+        <div class="rmu-card__header">
+          <span class="rmu-card__title">Quick Actions</span>
+        </div>
+        <div class="rmu-card__body" style="display:flex;gap:12px;flex-wrap:wrap;">
+          <a href="./pages/fileNewClaim" class="rmu-btn rmu-btn--primary">
+            <i class="ti ti-file-plus"></i> File New Claim
+          </a>
+          <a href="./pages/myClaims" class="rmu-btn rmu-btn--secondary">
+            <i class="ti ti-files"></i> View My Claims
+          </a>
+          <a href="./pages/settings" class="rmu-btn rmu-btn--secondary">
+            <i class="ti ti-settings"></i> Account Settings
+          </a>
+        </div>
+      </div>
+
+    </div><!-- .rmu-content -->
+  </div><!-- .rmu-main -->
+
+</div><!-- #app-wrapper -->
 </body>
+</html>

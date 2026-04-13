@@ -1,318 +1,209 @@
 <?php
-    //Session include goes here
-    $pageTitle = "Admin Dashboard";
+$pageTitle = 'Admin Dashboard';
 ?>
-
 <!DOCTYPE html>
 <html lang="en">
-
 <?php
-    include "./assets/partials/head.php";
-      
-    $disabledUserQuery = "SELECT * FROM user_details WHERE account_status = 'disabled';";
-    $disabledUserResult = mysqli_query($conn, $disabledUserQuery);
+include './assets/partials/head.php';
 
-    $totalUsersQuery = "SELECT COUNT(*) AS 'total_users' FROM user_details";
-    $totalUsersResult = mysqli_query($conn, $totalUsersQuery);
+// Dashboard counts
+$totalUsers    = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) AS n FROM user_details"))['n'] ?? 0;
+$activeUsers   = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) AS n FROM user_details WHERE account_status = 'active'"))['n'] ?? 0;
+$disabledUsers = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) AS n FROM user_details WHERE account_status = 'disabled'"))['n'] ?? 0;
+$totalClaims   = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) AS n FROM claim_details"))['n'] ?? 0;
+$flaggedClaims = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) AS n FROM claim_details WHERE flagged = 1"))['n'] ?? 0;
 
-    $activeUsersQuery = "SELECT COUNT(*) AS 'active_users' FROM user_details WHERE `account_status` = 'active';";
-    $activeUsersResult = mysqli_query($conn, $activeUsersQuery);
-
-    $disabledUsersQuery = "SELECT COUNT(*) AS 'disabled_users' FROM user_details WHERE `account_status` = 'disabled'; ";
-    $disabledUsersResult = mysqli_query($conn, $disabledUsersQuery);
-
-    $totalClaimsQuery = "SELECT COUNT(*) AS 'total_claims' FROM claim_details";
-    $totalClaimsResult = mysqli_query($conn, $totalClaimsQuery);
-
-    $flaggedClaimsQuery = "SELECT COUNT(*) AS 'flagged_claims' FROM claim_details WHERE `flagged` = 1";
-    $flaggedClaimsResult = mysqli_query($conn, $flaggedClaimsQuery);
-
-    $approverRanksQuery = "SELECT * FROM approver_ranks";
-    $approverRanksResult = mysqli_query($conn, $approverRanksQuery);
-    $approverRanks = array();
-    while ($approverRankRow = mysqli_fetch_assoc($approverRanksResult)) {
-        $approverRanks[] = $approverRankRow;
-    }
-
-
+$disabledUserResult = mysqli_query($conn, "SELECT * FROM user_details WHERE account_status = 'disabled'");
 ?>
-
 <body>
-    <?php include './assets/partials/sidebar.php' ?>
 
-    <!--Body Wrapper -->
-    <div class="page-wrapper" id="main-wrapper" data-layout="vertical" data-navbarbg="skin6" data-sidebartype="full"
-        data-sidebar-position="fixed" data-header-position="fixed">
+<?php include './assets/partials/sidebar.php'; ?>
 
+<div class="rmu-main">
 
-        <div class="body-wrapper">
+  <?php include './assets/partials/header.php'; ?>
 
-                <?php
-                    include './assets/partials/header.php';
-                ?>
+  <div class="rmu-content">
 
-            <!--User Details Modal -->
-            <div class="modal fade" id="userDetailsModal" tabindex="-1" role="dialog" aria-labelledby="userDetailsModalLabel" aria-hidden="true">
-                <div class="modal-dialog">
-                    <div class="modal-content">
-                        <div class="modal-header">
-                            <h5 class="modal-title" id="userDetailsModalLabel">User Details</h5>
-                            <button type="button" class="btn-close" data-dismiss="modal" aria-label="Close"></button>
-                        </div>
-                        <div class="modal-body">
-                            <div class="form-group">
-                                <label for="first_name" class="col-form-label">First Name:</label>
-                                <input type="text" class="form-control" id="first_name" readonly>
-                                <!-- <p id="first_name"></p> -->
-                            </div>
-                            <div class="form-group">
-                                <label for="last_name" class="col-form-label">Last Name:</label>
-                                <input type="text" class="form-control" id="last_name" readonly>
-                            </div>
-                            <div class="form-group">
-                                <label for="phone_number" class="col-form-label">Phone Number:</label>
-                                <input type="text" class="form-control" id="phone_number" readonly>
-                            </div>
-                            <div class="form-group">
-                                <label for="gender" class="col-form-label">Gender</label>
-                                <input type="text" class="form-control" id="gender" readonly>
-                            </div>
-                            <div class="form-group">
-                                <label for="email" class="col-form-label">Email:</label>
-                                <input type="text" class="form-control" id="email" readonly>
-                            </div>
-                            <div class="form-group">
-                                <label for="department" class="col-form-label">Department:</label>
-                                <input type="text" class="form-control" id="department" readonly>
-                            </div>
-                            <div class="form-group">
-                                <label for="role" class="col-form-label">Role:</label>
-                                <input type="text" class="form-control" id="role" readonly>
-                            </div>
-                            <div class="form-group">
-                                <label for="rank" class="col-form-label">Rank:</label>
-                                <input type="text" class="form-control" id="rank" readonly>
-                            </div>
-                            <div class="form-group">
-                                <label for="account_status" class="col-form-label">Account Status:</label>
-                                <input type="text" class="form-control" id="account_status" readonly>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="container-fluid">
-    <div class="row">
-    <div class="container-fluid">
-    <div class="row">
-    <div class="container-fluid">
-    <div class="row">
-        <?php
-            // Define an array of queries and their corresponding display titles
-            $queries = [
-                [
-                    'query' => $totalUsersQuery,
-                    'field' => 'total_users',
-                    'title' => 'Total Users'
-                ],
-                [
-                    'query' => $activeUsersQuery,
-                    'field' => 'active_users',
-                    'title' => 'Active Users'
-                ],
-                [
-                    'query' => $disabledUsersQuery,
-                    'field' => 'disabled_users',
-                    'title' => 'Disabled Users'
-                ],
-                [
-                    'query' => $totalClaimsQuery,
-                    'field' => 'total_claims',
-                    'title' => 'Total Claims'
-                ],
-                [
-                    'query' => $flaggedClaimsQuery,
-                    'field' => 'flagged_claims',
-                    'title' => 'Flagged Claims'
-                ]
-            ];
-
-            // Loop through each query to fetch and display the data
-            foreach ($queries as $queryInfo) {
-                // Execute the query
-                $result = mysqli_query($conn, $queryInfo['query']);
-
-                // Check if the query was successful
-                if (!$result) {
-                    echo '<div class="col-12 col-sm-6 col-md-4 col-lg-2 mb-4">
-                            <div class="card">
-                                <div class="card-body">
-                                    <h1 class="card-title">Error</h1>
-                                    <p class="card-text">Failed to retrieve ' . $queryInfo['title'] . '</p>
-                                    <p class="text-danger">Error: ' . mysqli_error($conn) . '</p>
-                                </div>
-                            </div>
-                        </div>';
-                } else {
-                    // Fetch the result and display the data
-                    $row = mysqli_fetch_assoc($result);
-                    if ($row) {
-                        echo '<div class="col-12 col-sm-6 col-md-4 col-lg-2 mb-4">
-                                <div class="card">
-                                    <div class="card-body">
-                                        <h1 class="card-title">' . htmlspecialchars($row[$queryInfo['field']]) . '</h1>
-                                        <p class="card-text">' . htmlspecialchars($queryInfo['title']) . '</p>
-                                    </div>
-                                </div>
-                            </div>';
-                    } else {
-                        echo '<div class="col-12 col-sm-6 col-md-4 col-lg-2 mb-4">
-                                <div class="card">
-                                    <div class="card-body">
-                                        <h1 class="card-title">No Data</h1>
-                                        <p class="card-text">No data available for ' . htmlspecialchars($queryInfo['title']) . '</p>
-                                    </div>
-                                </div>
-                            </div>';
-                    }
-                }
-            }
-        ?>
+    <div class="rmu-page-header">
+      <div class="rmu-page-header__title">Admin Dashboard</div>
+      <div class="rmu-page-header__sub">System overview and pending actions</div>
     </div>
-</div>
 
+    <!-- Stats -->
+    <div class="rmu-stats">
+      <div class="rmu-stat-card rmu-stat-card--primary">
+        <div class="rmu-stat-card__icon rmu-stat-card__icon--primary"><i class="ti ti-users"></i></div>
+        <div class="rmu-stat-card__value"><?php echo (int) $totalUsers; ?></div>
+        <div class="rmu-stat-card__label">Total Users</div>
+      </div>
+      <div class="rmu-stat-card rmu-stat-card--success">
+        <div class="rmu-stat-card__icon rmu-stat-card__icon--success"><i class="ti ti-user-check"></i></div>
+        <div class="rmu-stat-card__value"><?php echo (int) $activeUsers; ?></div>
+        <div class="rmu-stat-card__label">Active Users</div>
+      </div>
+      <div class="rmu-stat-card rmu-stat-card--warning">
+        <div class="rmu-stat-card__icon rmu-stat-card__icon--warning"><i class="ti ti-user-x"></i></div>
+        <div class="rmu-stat-card__value"><?php echo (int) $disabledUsers; ?></div>
+        <div class="rmu-stat-card__label">Disabled Users</div>
+      </div>
+      <div class="rmu-stat-card rmu-stat-card--secondary">
+        <div class="rmu-stat-card__icon rmu-stat-card__icon--secondary"><i class="ti ti-files"></i></div>
+        <div class="rmu-stat-card__value"><?php echo (int) $totalClaims; ?></div>
+        <div class="rmu-stat-card__label">Total Claims</div>
+      </div>
+      <div class="rmu-stat-card rmu-stat-card--danger">
+        <div class="rmu-stat-card__icon rmu-stat-card__icon--danger"><i class="ti ti-flag"></i></div>
+        <div class="rmu-stat-card__value"><?php echo (int) $flaggedClaims; ?></div>
+        <div class="rmu-stat-card__label">Flagged Claims</div>
+      </div>
     </div>
-</div>
 
-    </div>
-</div>
-
-
-                <?php
-                  if ($disabledUserResult->num_rows > 0) {
-                    echo '<h5 class="card-title fw-semibold mb-4">Disabled Users</h5>';
-
-                    echo '<div class="col-lg-8 d-flex w-100 align-items-stretch">';
-                    echo '<div class="card w-100">';
-                    echo '<div class="card-body p-4">';
-                    echo '<div class="table-responsive">';
-                    echo '<table class="table text-nowrap mb-0 align-middle">';
-                    echo '<thead class="text-dark fs-4">';
-                    echo '<tr>';
-                    echo '<th class="border-bottom-0">User ID</th>';
-                    echo '<th class="border-bottom-0">First Name</th>';
-                    echo '<th class="border-bottom-0">Last Name</th>';
-                    echo '<th class="border-bottom-0">Account Type</th>';
-                    echo '<th class="border-bottom-0">Activate Account</th>';
-                    echo '<th class="border-bottom-0">View Details</th>';
-                    echo '</tr>';
-                    echo '</thead>';
-                    echo '<tbody>';
-                
-                    // Inside the while loop for disabled users
-                    while ($row = mysqli_fetch_assoc($disabledUserResult)) {
-                        echo "<tr id='". $row['userId'] . "'>";
-                        echo "<td>" . $row['userId'] . "</td>";
-                        echo "<td>" . $row['first_name'] . "</td>";
-                        echo "<td>" . $row['last_name'] . "</td>";
-                        echo "<td>" . $row['role'] . "</td>";
-                       
-                        echo "<td>" . 
-                            "<span class='btn btn-outline-success m-1' style='cursor: pointer;' onclick='activateAccount(". $row['userId'] .")'
-                                id='activate-btn-". $row['userId'] . "' data-user-id='" . $row['userId'] . "'>Activate</span>" . 
-                            "</td>";
-
-                        // Assuming you have another similar block for viewing account details
-                        echo "<td>" . 
-                            "<span class='btn btn-outline-primary m-1' style='cursor: pointer;' onclick='viewAcctDetails(". $row['userId'] .")'
-                                id='view-btn-". $row['userId'] . "' data-user-id='" . $row['userId'] . "'>View Details</span>" . 
-                            "</td>";
-
-                        echo "</tr>";
-                    }
-
-                
-                    echo '</tbody>';
-                    echo '</table>';
-                    echo '</div>'; // Close table-responsive
-                    echo '</div>'; // Close card-body
-                    echo '</div>'; // Close card
-                    echo '</div>'; // Close col-lg-8
-                
-                }
-                ?>
-                <?php ?>
+    <!-- Disabled users table -->
+    <?php if ($disabledUserResult && mysqli_num_rows($disabledUserResult) > 0): ?>
+    <div class="rmu-card">
+      <div class="rmu-card__header">
+        <span class="rmu-card__title"><i class="ti ti-user-x rmu-text-warning"></i> Pending Account Activations</span>
+        <span class="rmu-badge rmu-badge--warning"><?php echo (int) $disabledUsers; ?> pending</span>
+      </div>
+      <div class="rmu-card__body" style="padding:0;">
+        <div class="rmu-table-wrap">
+          <table class="rmu-table">
+            <thead>
+              <tr>
+                <th>User ID</th>
+                <th>First Name</th>
+                <th>Last Name</th>
+                <th>Role</th>
+                <th>Activate</th>
+                <th>Details</th>
+              </tr>
+            </thead>
+            <tbody>
+              <?php while ($row = mysqli_fetch_assoc($disabledUserResult)): ?>
+              <tr id="user-row-<?php echo (int) $row['userId']; ?>">
+                <td><?php echo (int) $row['userId']; ?></td>
+                <td><?php echo htmlspecialchars($row['first_name'], ENT_QUOTES, 'UTF-8'); ?></td>
+                <td><?php echo htmlspecialchars($row['last_name'],  ENT_QUOTES, 'UTF-8'); ?></td>
+                <td><span class="rmu-badge rmu-badge--neutral"><?php echo htmlspecialchars($row['role'], ENT_QUOTES, 'UTF-8'); ?></span></td>
+                <td>
+                  <button class="rmu-btn rmu-btn--success rmu-btn--sm"
+                          onclick="activateAccount(<?php echo (int) $row['userId']; ?>)"
+                          id="activate-btn-<?php echo (int) $row['userId']; ?>">
+                    <i class="ti ti-user-check"></i> Activate
+                  </button>
+                </td>
+                <td>
+                  <button class="rmu-btn rmu-btn--secondary rmu-btn--sm"
+                          onclick="viewAcctDetails(<?php echo (int) $row['userId']; ?>)">
+                    <i class="ti ti-eye"></i> View
+                  </button>
+                </td>
+              </tr>
+              <?php endwhile; ?>
+            </tbody>
+          </table>
         </div>
-    </div>    
+      </div>
+    </div>
+    <?php else: ?>
+    <div class="rmu-alert rmu-alert--success">
+      <i class="ti ti-circle-check"></i> No accounts pending activation.
+    </div>
+    <?php endif; ?>
 
- 
-</body>
+  </div><!-- .rmu-content -->
+</div><!-- .rmu-main -->
 
+<!-- User Details Modal -->
+<div class="rmu-modal-backdrop" id="userDetailsModal">
+  <div class="rmu-modal">
+    <div class="rmu-modal__header">
+      <span class="rmu-modal__title">User Details</span>
+      <button class="rmu-modal__close" onclick="document.getElementById('userDetailsModal').classList.remove('open')">
+        <i class="ti ti-x"></i>
+      </button>
+    </div>
+    <div class="rmu-modal__body">
+      <div class="rmu-grid-2">
+        <div class="rmu-form-group">
+          <label class="rmu-label">First Name</label>
+          <input type="text" class="rmu-input" id="ud_first_name" readonly>
+        </div>
+        <div class="rmu-form-group">
+          <label class="rmu-label">Last Name</label>
+          <input type="text" class="rmu-input" id="ud_last_name" readonly>
+        </div>
+        <div class="rmu-form-group">
+          <label class="rmu-label">Phone Number</label>
+          <input type="text" class="rmu-input" id="ud_phone_number" readonly>
+        </div>
+        <div class="rmu-form-group">
+          <label class="rmu-label">Gender</label>
+          <input type="text" class="rmu-input" id="ud_gender" readonly>
+        </div>
+        <div class="rmu-form-group">
+          <label class="rmu-label">Email</label>
+          <input type="text" class="rmu-input" id="ud_email" readonly>
+        </div>
+        <div class="rmu-form-group">
+          <label class="rmu-label">Department</label>
+          <input type="text" class="rmu-input" id="ud_department" readonly>
+        </div>
+        <div class="rmu-form-group">
+          <label class="rmu-label">Role</label>
+          <input type="text" class="rmu-input" id="ud_role" readonly>
+        </div>
+        <div class="rmu-form-group">
+          <label class="rmu-label">Rank</label>
+          <input type="text" class="rmu-input" id="ud_rank" readonly>
+        </div>
+        <div class="rmu-form-group" style="grid-column:1/-1;">
+          <label class="rmu-label">Account Status</label>
+          <input type="text" class="rmu-input" id="ud_account_status" readonly>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
 
 <script>
-    function activateAccount(userId) {
-        alert("Activating user ID : " + userId);
-        const xhr = new XMLHttpRequest();
-        xhr.open('POST', 'index.inc.php', true); // Replace 'index.inc.php' with your actual PHP script URL
-        xhr.setRequestHeader('Content-type', 'application/x-www-form-urlencoded');
-        xhr.onload = function() {
-            if (xhr.status === 200) {
-                alert(xhr.responseText); // Show success message
-                // You can perform any other actions here after successful update
-                window.location.reload(); // Refresh the page
-
-            } else {
-                alert("Error activating account.");
-            }
-        };
-        xhr.send('action=activateAccount&userId=' + userId);
+function activateAccount(userId) {
+  var xhr = new XMLHttpRequest();
+  xhr.open('POST', 'index.inc.php', true);
+  xhr.setRequestHeader('Content-type', 'application/x-www-form-urlencoded');
+  xhr.onload = function() {
+    if (xhr.status === 200) {
+      window.location.reload();
+    } else {
+      alert('Error activating account.');
     }
+  };
+  xhr.send('action=activateAccount&userId=' + userId);
+}
 
-    function viewAcctDetails(userId) {
-        //alert("Viewing details for user ID : " + userId);
-
-        // AJAX request to fetch additional information about the user details
-        $.ajax({
-            url: 'index.inc.php', // Replace 'index.inc.php' with your actual PHP script URL
-            type: 'POST',
-            data: {
-                action: 'viewAccountDetails',
-                userId: userId
-            },
-            success: function(response) {
-                // Assuming the response contains JSON data for user details
-                var userDetails = JSON.parse(response);
-                // Example: Update modal content with user details
-                $('#first_name').val(userDetails.first_name);
-                $('#last_name').val(userDetails.last_name);
-                $('#phone_number').val(userDetails.phone_number);
-                $('#gender').val(userDetails.gender);
-                $('#email').val(userDetails.email);
-                $('#department').val(userDetails.department);
-                $('#role').val(userDetails.role);
-                $('#rank').val(userDetails.rank);
-                $('#account_status').val(userDetails.account_status);
-
-                //$('#userDetailsModal .modal-body').html('<p>User Name: ' + userDetails.username + '</p>'); // Adjust this as per your response structure
-                //$('#userDetailsModal .modal-body').html(userDetails);
-                $('#userDetailsModal').modal('show');
-                //console.log(response);
-                //alert(userDetails);
-            },
-            error: function(xhr, status, error) {
-                console.error(error);
-                alert('An error occurred while fetching user details.');
-            }
-        });
-    }   
+function viewAcctDetails(userId) {
+  $.ajax({
+    url: 'index.inc.php',
+    type: 'POST',
+    data: { action: 'viewAccountDetails', userId: userId },
+    success: function(response) {
+      var u = JSON.parse(response);
+      document.getElementById('ud_first_name').value    = u.first_name    || '';
+      document.getElementById('ud_last_name').value     = u.last_name     || '';
+      document.getElementById('ud_phone_number').value  = u.phone_number  || '';
+      document.getElementById('ud_gender').value        = u.gender        || '';
+      document.getElementById('ud_email').value         = u.email         || '';
+      document.getElementById('ud_department').value    = u.department    || '';
+      document.getElementById('ud_role').value          = u.role          || '';
+      document.getElementById('ud_rank').value          = u.rank          || '';
+      document.getElementById('ud_account_status').value= u.account_status|| '';
+      document.getElementById('userDetailsModal').classList.add('open');
+    },
+    error: function() { alert('An error occurred while fetching user details.'); }
+  });
+}
 </script>
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js" 
-            integrity="sha384-MrcW6ZMFYlzcLA8Nl+NtUVF0sA7MsXsP1UyJoMp4YLEuNSfAP+JcXn/tWtIaxVXM"
-             crossorigin="anonymous"></script>
-
-
-
-
+</body>
 </html>

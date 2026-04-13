@@ -1,21 +1,19 @@
 <?php
-declare(strict_types=1);
-
 require_once __DIR__ . '/includes/auth.php';
 require_once __DIR__ . '/includes/db.php';
 require_once __DIR__ . '/includes/functions.php';
 
 require_post();
 
-$first_name   = validated_str($_POST['first_name']   ?? '');
-$last_name    = validated_str($_POST['last_name']    ?? '');
-$other_names  = validated_str($_POST['other_names']  ?? '');
-$phone_number = validated_str($_POST['phone_number'] ?? '');
-$gender       = validated_str($_POST['gender']       ?? '');
-$email        = validated_str($_POST['email']        ?? '');
-$raw_password = $_POST['password'] ?? '';
-$department   = validated_str($_POST['department']   ?? '');
-$rank         = validated_str($_POST['rank']         ?? '');
+$first_name   = validated_str(isset($_POST['first_name'])   ? $_POST['first_name']   : '');
+$last_name    = validated_str(isset($_POST['last_name'])    ? $_POST['last_name']    : '');
+$other_names  = validated_str(isset($_POST['other_names'])  ? $_POST['other_names']  : '');
+$phone_number = validated_str(isset($_POST['phone_number']) ? $_POST['phone_number'] : '');
+$gender       = validated_str(isset($_POST['gender'])       ? $_POST['gender']       : '');
+$email        = validated_str(isset($_POST['email'])        ? $_POST['email']        : '');
+$raw_password =               isset($_POST['password'])     ? $_POST['password']     : '';
+$department   = validated_str(isset($_POST['department'])   ? $_POST['department']   : '');
+$rank         = validated_str(isset($_POST['rank'])         ? $_POST['rank']         : '');
 
 if ($first_name === '' || $last_name === '' || $email === '' || $raw_password === '') {
     $_SESSION['message'] = 'Please fill in all required fields.';
@@ -23,47 +21,56 @@ if ($first_name === '' || $last_name === '' || $email === '' || $raw_password ==
     exit;
 }
 
-$password_hash  = password_hash($raw_password, PASSWORD_BCRYPT, ['cost' => 12]);
+$password_hash  = password_hash($raw_password, PASSWORD_BCRYPT, array('cost' => 12));
 $role           = 'approver';
 $rate           = 0.0;
 $account_status = 'disabled';
 $date_created   = date('Y-m-d H:i:s');
 
-$conn->begin_transaction();
+mysqli_begin_transaction($conn);
+$ok = true;
 
-try {
-    $s1 = $conn->prepare(
-        'INSERT INTO user_details
-             (first_name, last_name, other_names, phone_number, gender, email,
-              `password`, department, `role`, `rank`, `rate`, account_status, date_created)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
-    );
-    $s1->bind_param(
-        'ssssssssssdss',
+$s1 = mysqli_prepare($conn,
+    'INSERT INTO user_details
+         (first_name, last_name, other_names, phone_number, gender, email,
+          `password`, department, `role`, `rank`, `rate`, account_status, date_created)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+);
+if ($s1) {
+    mysqli_stmt_bind_param($s1, 'ssssssssssdss',
         $first_name, $last_name, $other_names, $phone_number, $gender,
         $email, $password_hash, $department, $role, $rank,
         $rate, $account_status, $date_created
     );
-    $s1->execute();
-    $userId = (int) $conn->insert_id;
+    $ok      = mysqli_stmt_execute($s1);
+    $user_id = $ok ? (int) mysqli_insert_id($conn) : 0;
+    mysqli_stmt_close($s1);
+} else {
+    $ok = false;
+}
 
-    $s2 = $conn->prepare(
+if ($ok) {
+    $s2 = mysqli_prepare($conn,
         'INSERT INTO login_details (userId, email, `password`, `role`, `rank`)
          VALUES (?, ?, ?, ?, ?)'
     );
-    $s2->bind_param('issss', $userId, $email, $password_hash, $role, $rank);
-    $s2->execute();
+    if ($s2) {
+        mysqli_stmt_bind_param($s2, 'issss', $user_id, $email, $password_hash, $role, $rank);
+        $ok = mysqli_stmt_execute($s2);
+        mysqli_stmt_close($s2);
+    } else {
+        $ok = false;
+    }
+}
 
-    $conn->commit();
-
+if ($ok) {
+    mysqli_commit($conn);
     $_SESSION['message'] = 'Registration successful! You will be notified when your account is activated.';
     header('Location: ./index.php');
-    exit;
-
-} catch (Exception $e) {
-    $conn->rollback();
-    error_log('[registerApp] failed: ' . $e->getMessage());
+} else {
+    mysqli_rollback($conn);
+    error_log('[registerApp] failed: ' . mysqli_error($conn));
     $_SESSION['message'] = 'Registration failed. Please try again.';
     header('Location: ./registerApp.php');
-    exit;
 }
+exit;

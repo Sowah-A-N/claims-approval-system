@@ -1,20 +1,18 @@
 <?php
-declare(strict_types=1);
-
 require_once __DIR__ . '/../../../../includes/auth.php';
 require_once __DIR__ . '/../../../../includes/db.php';
 require_once __DIR__ . '/../../../../includes/functions.php';
 require_once __DIR__ . '/../../queries/user.queries.php';
 
 require_post();
-require_role(['admin', 'Admin']);
+require_role(array('admin', 'Admin'));
 
-$userId = validated_int($_POST['userId'] ?? null, 'userId');
+$user_id = validated_int(isset($_POST['userId']) ? $_POST['userId'] : null, 'userId');
 
-$updated = db_set_account_status($conn, $userId, 'disabled');
+$updated = db_set_account_status($conn, $user_id, 'disabled');
 
 if ($updated) {
-    json_response(['success' => true, 'message' => 'Account disabled successfully.']);
+    json_response(array('success' => true, 'message' => 'Account disabled successfully.'));
 } else {
-    json_response(['success' => false, 'message' => 'User not found or status unchanged.'], 404);
+    json_response(array('success' => false, 'message' => 'User not found or status unchanged.'), 404);
 }

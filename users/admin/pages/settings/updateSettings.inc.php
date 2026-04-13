@@ -1,30 +1,27 @@
 <?php
-session_start();
-include_once '../../includes/conn.inc.php'; // Ensure you include your database connection
+require_once __DIR__ . '/../../../../includes/auth.php';
+require_once __DIR__ . '/../../../../includes/db.php';
+require_once __DIR__ . '/../../../../includes/functions.php';
 
-// Check if the form is submitted
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    // Get the value of the checkbox (1 if checked, 0 if not)
-    $fuelComponentValue = isset($_POST['fuelComponent']) ? 1 : 0;
+require_post();
+require_role(array('admin', 'Admin'));
+csrf_verify();
 
-    // Prepare the SQL statement to update the settings
-    $stmt = $conn->prepare("UPDATE settings SET settingValue = ? WHERE settingName = 'fuelComponent'");
+$fuelComponentValue = isset($_POST['fuelComponent']) ? 1 : 0;
 
-    // Bind the parameter
-    $stmt->bind_param('i', $fuelComponentValue);
-
-    // Execute the statement
-    if ($stmt->execute()) {
-        echo json_encode(['success' => true, 'message' => 'Settings updated successfully.']);
-		header("Location: ./");
-    } else {
-        echo json_encode(['success' => false, 'message' => 'Failed to update settings.']);
-    }
-
-    // Close the statement
-    $stmt->close();
+$stmt = mysqli_prepare($conn, "UPDATE settings SET settingValue = ? WHERE settingName = 'fuelComponent'");
+if (!$stmt) {
+    error_log('[updateSettings] prepare failed: ' . mysqli_error($conn));
+    header('Location: ./');
+    exit;
 }
 
-// Close the database connection
-$conn->close();
-?>
+mysqli_stmt_bind_param($stmt, 'i', $fuelComponentValue);
+
+if (!mysqli_stmt_execute($stmt)) {
+    error_log('[updateSettings] execute failed: ' . mysqli_error($conn));
+}
+
+mysqli_stmt_close($stmt);
+header('Location: ./');
+exit;

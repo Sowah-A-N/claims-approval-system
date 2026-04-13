@@ -1,50 +1,65 @@
 <?php
-  // Define the base URL dynamically
-  $base_url = isset($_SERVER['HTTP_HOST']) && strpos($_SERVER['HTTP_HOST'], 'localhost') !== false
-      ? '/claims_system/' // Local environment
-      : '/'; // Live environment
+$base_url = (isset($_SERVER['HTTP_HOST']) && strpos($_SERVER['HTTP_HOST'], 'localhost') !== false)
+    ? '/claims_system/'
+    : '/';
+
+$full_name    = isset($_SESSION['full_name']) ? htmlspecialchars($_SESSION['full_name'], ENT_QUOTES, 'UTF-8') : 'User';
+$initials     = '';
+$parts = explode(' ', trim($full_name));
+foreach ($parts as $p) { if ($p !== '') { $initials .= strtoupper($p[0]); } if (strlen($initials) >= 2) break; }
+if ($initials === '') $initials = 'U';
 ?>
+<header class="rmu-header" id="rmu-header">
 
-<nav class="navbar col-lg-12 col-12 p-0 fixed-top d-flex flex-row">
-  <div class="text-center navbar-brand-wrapper d-flex align-items-center justify-content-start">
-    <a class="navbar-brand brand-logo me-5" href="../index.html"><img src="../assets/images/logo.svg" class="me-2" alt="logo" /></a>
-    <a class="navbar-brand brand-logo-mini" href="../index.html"><img src="../assets/images/logo-mini.svg" alt="logo" /></a>
-  </div>
-  <div class="navbar-menu-wrapper d-flex align-items-center justify-content-end">
-    <button class="navbar-toggler navbar-toggler align-self-center" type="button" data-toggle="minimize">
-      <span class="icon-menu"></span>
+  <div class="rmu-header__left">
+    <!-- Sidebar toggle (mobile) -->
+    <button class="rmu-header__btn" id="sidebar-toggle" title="Toggle sidebar">
+      <i class="ti ti-menu-2"></i>
     </button>
-   
-    <ul class="navbar-nav navbar-nav-right">
-      <li class="nav-item dropdown">
-        <a class="nav-link count-indicator dropdown-toggle" id="notificationDropdown" href="#" data-bs-toggle="dropdown">
-          <i class="icon-bell mx-0"></i>
-          <span class="count"></span>
-        </a>
-       
-      </li>
-      <li class="nav-item nav-profile dropdown">
-        <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown" id="profileDropdown">
-          <img src="../assets/images/faces/face28.jpg" alt="profile" />
-        </a>
-        <div class="dropdown-menu dropdown-menu-right navbar-dropdown" aria-labelledby="profileDropdown">
-			<a class="dropdown-item" href="<?php echo $base_url; ?>users/user/pages/settings">
-				<i class="ti-settings text-primary"></i> Settings
-			</a>
-			<a class="dropdown-item" href="<?php echo $base_url; ?>users/user/pages/logout">
-				<i class="ti-power-off text-primary"></i> Logout
-			</a>
-		</div>
+    <span class="rmu-header__title"><?php echo isset($pageTitle) ? htmlspecialchars($pageTitle, ENT_QUOTES, 'UTF-8') : 'Dashboard'; ?></span>
+  </div>
 
-      </li>
-      <li class="nav-item nav-settings d-none d-lg-flex">
-        <a class="nav-link" href="#">
-          <i class="icon-ellipsis"></i>
+  <div class="rmu-header__right">
+    <div class="rmu-dropdown" id="profile-dropdown">
+      <div class="rmu-header__avatar" id="profile-toggle" title="<?php echo $full_name; ?>">
+        <?php echo $initials; ?>
+      </div>
+      <div class="rmu-dropdown__menu">
+        <div style="padding:12px 16px 10px; border-bottom:1px solid rgba(255,255,255,0.08);">
+          <div style="font-size:.85rem;font-weight:600;color:var(--txt-primary);"><?php echo $full_name; ?></div>
+          <div style="font-size:.75rem;color:var(--txt-muted);">Claimant</div>
+        </div>
+        <a class="rmu-dropdown__item" href="<?php echo $base_url; ?>users/user/pages/settings">
+          <i class="ti ti-settings"></i> Settings
         </a>
-      </li>
-    </ul>
-    <button class="navbar-toggler navbar-toggler-right d-lg-none align-self-center" type="button" data-toggle="offcanvas">
-      <span class="icon-menu"></span>
-    </button>
+        <div class="rmu-dropdown__divider"></div>
+        <a class="rmu-dropdown__item" href="<?php echo $base_url; ?>users/user/pages/logout">
+          <i class="ti ti-logout"></i> Logout
+        </a>
+      </div>
+    </div>
   </div>
-</nav>
+
+</header>
+
+<script>
+(function() {
+  var toggle = document.getElementById('profile-toggle');
+  var dd     = document.getElementById('profile-dropdown');
+  if (toggle && dd) {
+    toggle.addEventListener('click', function(e) {
+      e.stopPropagation();
+      dd.classList.toggle('open');
+    });
+    document.addEventListener('click', function() { dd.classList.remove('open'); });
+  }
+
+  var sidebarBtn = document.getElementById('sidebar-toggle');
+  var sidebar    = document.getElementById('rmu-sidebar');
+  if (sidebarBtn && sidebar) {
+    sidebarBtn.addEventListener('click', function() {
+      sidebar.classList.toggle('open');
+    });
+  }
+})();
+</script>
