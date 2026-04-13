@@ -1,124 +1,95 @@
 <?php
-    //Session include goes here
-    $pageTitle = "Finance Dashboard";
+$pageTitle = 'Finance Dashboard';
 ?>
-
 <!DOCTYPE html>
 <html lang="en">
-
 <?php
-    include "./assets/partials/head.php";
+include './assets/partials/head.php';
 
-	$completedClaimsQuery = "SELECT 
-								cd.claimId,
-								cd.department, 
-								cd.programme, 
-								cd.course, 
-								'COMPLETED' AS status, 
-								CONCAT(user_details.first_name, ' ', user_details.last_name) AS full_name 
-							FROM 
-								claim_details cd 
-							INNER JOIN 
-								user_details ON cd.userId = user_details.userId 
-							WHERE 
-								cd.completed = 1;
-						";
-	$completedClaimsResult = $conn->query($completedClaimsQuery);
+$completedClaimsResult = mysqli_query($conn,
+    "SELECT cd.claimId,
+            cd.department,
+            cd.programme,
+            cd.course,
+            CONCAT(ud.first_name, ' ', ud.last_name) AS full_name
+     FROM claim_details cd
+     INNER JOIN user_details ud ON cd.userId = ud.userId
+     WHERE cd.completed = 1"
+);
 ?>
-
 <body>
-    <?php include './assets/partials/sidebar.php' ?>
 
-    <!--Body Wrapper -->
-    <div class="page-wrapper" id="main-wrapper" data-layout="vertical" data-navbarbg="skin6" data-sidebartype="full"
-        data-sidebar-position="fixed" data-header-position="fixed">
+<?php include './assets/partials/sidebar.php'; ?>
 
+<div class="rmu-main">
 
-        <div class="body-wrapper">
-			<?php
-				include './assets/partials/header.php';
-			?>
-			<div class="container-fluid">
+  <?php include './assets/partials/header.php'; ?>
 
-                <?php
-					if ($completedClaimsResult->num_rows > 0) {
-						// Start the HTML table
-						echo '<div class="table-responsive">';
-						echo '<table class="table table-striped table-bordered">';
-						echo '<thead class="thead-light">';
-						echo '<tr>';
-						echo '<th>Full Name</th>';
-						echo '<th>Department</th>';
-						echo '<th>Programme</th>';
-						echo '<th>Course</th>';
-						echo '<th>Status</th>';	
-						echo '<th>Payment Approval</th>';
-						echo '</tr>';
-						echo '</thead>';
-						echo '<tbody>';
+  <div class="rmu-content">
 
-						// Fetch each row and output it
-						while ($row = $completedClaimsResult->fetch_assoc()) {
-							echo '<tr>';
-							echo '<td>' . htmlspecialchars($row['full_name']) . '</td>';
-							echo '<td>' . htmlspecialchars($row['department']) . '</td>';
-							echo '<td>' . htmlspecialchars($row['programme']) . '</td>';
-							echo '<td>' . htmlspecialchars($row['course']) . '</td>';
-							echo '<td>' . htmlspecialchars($row['status']) . '</td>';	
-							
-							/* Approve Payment button
-							echo '<td>';
-							echo '<form method="post" action="approvePayment.inc.php">'; // Replace with your action
-							echo '<input type="hidden" name="claimId" value="' . htmlspecialchars($row['claimId']) . '">'; // Hidden input to send the claimId
-							echo '<button type="submit" class="btn btn-success">Approve Payment</button>';
-							echo '</form>';
-							echo '</td>';
-							*/
-							
-							// Approve Payment button
-							echo '<td>';
-							echo '<button type="button" class="btn btn-success" onclick="approvePayment(' . htmlspecialchars($row['claimId']) . ')">Process</button>';
-							echo '</td>';
-							echo '</tr>';
-						}
-
-						echo '</tbody>';
-						echo '</table>';
-						echo '</div>'; // Close the table-responsive div
-					} else {
-						echo '<div class="alert alert-warning" role="alert">No completed claims found.</div>';
-					}
-
-					// Close the database connection
-					$conn->close();
-
-				?>
-                <?php ?>
-                <?php ?>
-				
-			</div>
-        </div>
+    <div class="rmu-page-header">
+      <div class="rmu-page-header__title">Finance Dashboard</div>
+      <div class="rmu-page-header__sub">Completed claims awaiting payment processing</div>
     </div>
-	
-	
-	<script>
-	function approvePayment(claimId) {
-		alert("Payment approved for Claim ID: " + claimId);
-	}
-	</script>
-    
-    
-    <script src="./assets/libs/jquery/dist/jquery.min.js"></script>
-    <script src="./assets/libs/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="./assets/js/sidebarmenu.js"></script>
-    <script src="./assets/js/app.min.js"></script>
-    <script src="./assets/libs/simplebar/dist/simplebar.js"></script>
+
+    <?php if ($completedClaimsResult && mysqli_num_rows($completedClaimsResult) > 0): ?>
+
+    <div class="rmu-card">
+      <div class="rmu-card__header">
+        <span class="rmu-card__title"><i class="ti ti-circle-check rmu-text-success"></i> Completed Claims</span>
+        <span class="rmu-badge rmu-badge--success"><?php echo mysqli_num_rows($completedClaimsResult); ?> records</span>
+      </div>
+      <div class="rmu-card__body" style="padding:0;">
+        <div class="rmu-table-wrap">
+          <table class="rmu-table">
+            <thead>
+              <tr>
+                <th>Full Name</th>
+                <th>Department</th>
+                <th>Programme</th>
+                <th>Course</th>
+                <th>Status</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              <?php while ($row = mysqli_fetch_assoc($completedClaimsResult)): ?>
+              <tr>
+                <td><?php echo htmlspecialchars($row['full_name'],   ENT_QUOTES, 'UTF-8'); ?></td>
+                <td><?php echo htmlspecialchars($row['department'],  ENT_QUOTES, 'UTF-8'); ?></td>
+                <td><?php echo htmlspecialchars($row['programme'],   ENT_QUOTES, 'UTF-8'); ?></td>
+                <td><?php echo htmlspecialchars($row['course'],      ENT_QUOTES, 'UTF-8'); ?></td>
+                <td><span class="rmu-badge rmu-badge--success">Completed</span></td>
+                <td>
+                  <button class="rmu-btn rmu-btn--primary rmu-btn--sm"
+                          onclick="approvePayment(<?php echo (int) $row['claimId']; ?>)">
+                    <i class="ti ti-credit-card"></i> Process Payment
+                  </button>
+                </td>
+              </tr>
+              <?php endwhile; ?>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <?php else: ?>
+
+    <div class="rmu-alert rmu-alert--info">
+      <i class="ti ti-info-circle"></i> No completed claims found.
+    </div>
+
+    <?php endif; ?>
+
+  </div><!-- .rmu-content -->
+</div><!-- .rmu-main -->
+
+<script>
+function approvePayment(claimId) {
+  alert('Payment approved for Claim ID: ' + claimId);
+}
+</script>
+
 </body>
-
-<?php
-
-?>
-
-
-
 </html>

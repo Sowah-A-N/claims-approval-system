@@ -1,53 +1,49 @@
 <?php
-// Define the base URL dynamically
-$base_url = isset($_SERVER['HTTP_HOST']) && strpos($_SERVER['HTTP_HOST'], 'localhost') !== false
-    ? '/claims_system/' // Local environment
-    : '/'; // Live environment
+$base_url = (isset($_SERVER['HTTP_HOST']) && strpos($_SERVER['HTTP_HOST'], 'localhost') !== false)
+    ? '/claims_system/'
+    : '/';
 ?>
+<aside class="rmu-sidebar" id="rmu-sidebar">
 
+  <div class="rmu-sidebar__brand">
+    <div class="rmu-sidebar__brand-icon">
+      <i class="ti ti-file-invoice"></i>
+    </div>
+    <div class="rmu-sidebar__brand-text">
+      <span class="rmu-sidebar__brand-name">RMU Claims</span>
+      <span class="rmu-sidebar__brand-sub">Claimant Portal</span>
+    </div>
+  </div>
 
-<nav class="sidebar sidebar-offcanvas" id="sidebar">
-  <ul class="nav">
-    <li class="nav-item">
-      <a class="nav-link" href="<?php echo $base_url; ?>users/user/">
-        <i class="icon-grid menu-icon"></i>
-        <span class="menu-title">Dashboard</span>
-      </a>
-    </li> 
-    <li class="nav-item">
-      <a class="nav-link" href="<?php echo $base_url; ?>users/user/pages/fileNewClaim" aria-expanded="false" aria-controls="">
-        <i class="mdi mdi-file-document menu-icon"></i>
-        <span class="menu-title">File New Claim</span>
-        <i class="menu-arrow"></i>
-      </a>
-    </li>
-    <li class="nav-item">
-      <a class="nav-link" href="<?php echo $base_url; ?>users/user/pages/myClaims" aria-expanded="false" aria-controls="">
-        <i class="icon-bar-graph menu-icon"></i>
-        <span class="menu-title">My Claims</span>
-        <i class="menu-arrow"></i>
-      </a>     
-    </li>
-    <li class="nav-item">
-      <a class="nav-link" href="<?php echo $base_url; ?>users/user/pages/settings" aria-expanded="false" aria-controls="">
-        <i class="ti ti-settings menu-icon"></i>
-        <span class="menu-title">Settings</span>
-        <i class="menu-arrow"></i>
-      </a>      
-    </li>
-    <li class="nav-item">
-      <a class="nav-link" href="<?php echo $base_url; ?>users/user/pages/logout" aria-expanded="false" aria-controls="">
-        <i class="mdi mdi-exit-to-app menu-icon"></i>
-        <span class="menu-title">Logout</span>
-        <i class="menu-arrow"></i>
-      </a>
-    </li>
-    <!--li class="nav-item">
-      <a class="nav-link" href="" aria-expanded="false" aria-controls="">
-        <i class="icon-head menu-icon"></i>
-        <span class="menu-title"></span>
-        <i class="menu-arrow"></i>
-      </a>
-    </li--> 
-  </ul>
-</nav>
+  <nav class="rmu-sidebar__nav">
+    <div class="rmu-sidebar__section">Main</div>
+
+    <a class="rmu-sidebar__link" href="<?php echo $base_url; ?>users/user/">
+      <i class="ti ti-layout-dashboard"></i>
+      <span>Dashboard</span>
+    </a>
+
+    <a class="rmu-sidebar__link" href="<?php echo $base_url; ?>users/user/pages/fileNewClaim">
+      <i class="ti ti-file-plus"></i>
+      <span>File New Claim</span>
+    </a>
+
+    <a class="rmu-sidebar__link" href="<?php echo $base_url; ?>users/user/pages/myClaims">
+      <i class="ti ti-files"></i>
+      <span>My Claims</span>
+    </a>
+
+    <div class="rmu-sidebar__section">Account</div>
+
+    <a class="rmu-sidebar__link" href="<?php echo $base_url; ?>users/user/pages/settings">
+      <i class="ti ti-settings"></i>
+      <span>Settings</span>
+    </a>
+
+    <a class="rmu-sidebar__link" href="<?php echo $base_url; ?>users/user/pages/logout">
+      <i class="ti ti-logout"></i>
+      <span>Logout</span>
+    </a>
+  </nav>
+
+</aside>
