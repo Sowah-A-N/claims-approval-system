@@ -1,6 +1,6 @@
 <?php
     // Include database connection
-    include_once '../../../../includes/conn.inc.php'; // Adjust the path as needed
+    require_once __DIR__ . '/../../../../includes/db.php';
 
     // Check if 'bank_name' is set in the request
     if (isset($_GET['bank_name'])) {

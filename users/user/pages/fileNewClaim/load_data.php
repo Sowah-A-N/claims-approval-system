@@ -1,5 +1,5 @@
 <?php
-include '../../../../includes/conn.inc.php';
+require_once __DIR__ . '/../../../../includes/db.php';
 
 // Check if the department dropdown value is set
 if(isset($_POST['department_dropdown_value'])) {

@@ -4,8 +4,6 @@
 
     include "./assets/partials/head.php";
 
-    include_once '../../includes/conn.inc.php';
-
 	// Check if the form was submitted via POST
 	if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 		// Sanitize and validate user input

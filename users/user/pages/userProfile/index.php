@@ -6,7 +6,7 @@
     session_start();
 
     // Include head partial
-    include_once "../../assets/partials/head.php"; 
+    require_once __DIR__ . '/../../assets/partials/_head.php';
 
     $userId = isset($_SESSION['user_id']) ? $_SESSION['user_id'] : 4;
 
@@ -252,7 +252,7 @@
             
             // Create a new XMLHttpRequest
             var xhr = new XMLHttpRequest();
-            xhr.open('GET', 'fetch_branches.inc.php?bank_name=' + encodeURIComponent(bankName), true);
+            xhr.open('GET', '../settings/fetch_branches.inc.php?bank_name=' + encodeURIComponent(bankName), true);
             xhr.onload = function() {
                 if (xhr.status === 200) {
                     // Clear existing options in branch dropdown
@@ -287,7 +287,7 @@
 </script>
 </body>
 
-<?php include "../../assets/partials/_footer.html"; ?>
+<?php include "../../assets/partials/_footer.php"; ?>
 
     <!-- plugins:js -->
     <script src="../../assets/vendors/js/vendor.bundle.base.js"></script>

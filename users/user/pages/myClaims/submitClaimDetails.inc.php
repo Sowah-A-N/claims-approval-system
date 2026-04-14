@@ -1,5 +1,5 @@
 <?php
-require_once '../../includes/conn.inc.php';
+require_once __DIR__ . '/../../../../includes/db.php';
 
 if (isset($_POST['claimId'])) {
     $claimId = $_POST['claimId'];
