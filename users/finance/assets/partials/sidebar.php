@@ -1,3 +1,8 @@
+<?php
+$base_url = (isset($_SERVER['HTTP_HOST']) && strpos($_SERVER['HTTP_HOST'], 'localhost') !== false)
+    ? '/claims_system/'
+    : '/';
+?>
 <aside class="rmu-sidebar" id="rmu-sidebar">
 
   <div class="rmu-sidebar__brand">
@@ -13,14 +18,14 @@
   <nav class="rmu-sidebar__nav">
     <div class="rmu-sidebar__section">Main</div>
 
-    <a class="rmu-sidebar__link" href="/users/finance">
+    <a class="rmu-sidebar__link" href="<?php echo $base_url; ?>users/finance">
       <i class="ti ti-layout-dashboard"></i>
       <span>Dashboard</span>
     </a>
 
     <div class="rmu-sidebar__section">Account</div>
 
-    <a class="rmu-sidebar__link" href="/users/finance/pages/logout">
+    <a class="rmu-sidebar__link" href="<?php echo $base_url; ?>users/finance/pages/logout">
       <i class="ti ti-logout"></i>
       <span>Logout</span>
     </a>

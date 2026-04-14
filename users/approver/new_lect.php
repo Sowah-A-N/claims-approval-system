@@ -19,8 +19,8 @@
 		}
 
 		// Check if the email already exists in the database
-		$query = "SELECT * FROM users WHERE email = ?";
-		if ($stmt = mysqli_prepare($connection, $query)) {
+		$query = "SELECT * FROM login_details WHERE email = ?";
+		if ($stmt = mysqli_prepare($conn, $query)) {
 			// Bind the email parameter
 			mysqli_stmt_bind_param($stmt, "s", $email);
 
@@ -43,12 +43,12 @@
 		$hashedPassword = password_hash($password, PASSWORD_DEFAULT);
 
 		// Insert the new user into the database
-		$query = "INSERT INTO users (username, email, password, role) VALUES (?, ?, ?, ?)";
+		$query = "INSERT INTO login_details (email, password, role) VALUES (?, ?, ?)";
 
 		// Prepare the SQL statement
-		if ($stmt = mysqli_prepare($connection, $query)) {
+		if ($stmt = mysqli_prepare($conn, $query)) {
 			// Bind parameters to the SQL query
-			mysqli_stmt_bind_param($stmt, "ssss", $username, $email, $hashedPassword, $role);
+			mysqli_stmt_bind_param($stmt, "sss", $email, $hashedPassword, $role);
 
 			// Execute the query
 			if (mysqli_stmt_execute($stmt)) {
@@ -56,12 +56,12 @@
 				mysqli_stmt_close($stmt);
 				exit();
 			} else {
-				echo "Error executing query: " . mysqli_error($connection);
+				echo "Error executing query: " . mysqli_error($conn);
 				mysqli_stmt_close($stmt);
 				exit();
 			}
 		} else {
-			echo "Error preparing the query: " . mysqli_error($connection);
+			echo "Error preparing the query: " . mysqli_error($conn);
 			exit();
 		}
 	}
@@ -124,7 +124,7 @@
 						// Send the data via AJAX to the PHP handler
 						$.ajax({
 							type: 'POST',
-							url: 'add_user_backend.php', // PHP script that handles form submission
+							url: 'new_lect.php',
 							data: formData,
 							success: function(response) {
 								// If the user is added successfully, show success message

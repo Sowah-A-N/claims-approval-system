@@ -1,6 +1,6 @@
 <?php
 session_start();
-include "datacon.php";
+require_once __DIR__ . '/../../includes/db.php';
 
 if (isset($_POST['login']))
 {
