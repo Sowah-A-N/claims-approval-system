@@ -1,6 +1,6 @@
 <?php
 
-include "datacon.php";
+require_once __DIR__ . '/../../includes/db.php';
     
  if(mysqli_connect_errno())
  {

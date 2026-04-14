@@ -3,7 +3,7 @@
     $pageTitle = "Reports";
 
     $approverStage;
-    include_once '../../includes/conn.inc.php';
+    require_once __DIR__ . '/../../includes/db.php';
 
 	$dateSelectQuery = "SELECT DISTINCT DATE(time_submitted) AS time_submitted FROM `claim_details`; ";
 

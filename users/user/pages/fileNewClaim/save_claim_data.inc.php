@@ -2,7 +2,7 @@
 
     session_start();
     // Include the database connection file
-    include '../../../../includes/conn.inc.php';
+    require_once __DIR__ . '/../../../../includes/db.php';
 
     // Function to sanitize input data to prevent SQL injection
     function sanitizeInput($conn, $input) {

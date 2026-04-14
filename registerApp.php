@@ -10,7 +10,7 @@
 
 <?php 
     $pageTitle = "Approver Registration";
-    include './includes/conn.inc.php';
+    require_once __DIR__ . '/includes/db.php';
 
     $rankSelectQuery = "SELECT * FROM approver_ranks;";
     $rankSelectResult = mysqli_query($conn, $rankSelectQuery);

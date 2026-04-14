@@ -1,5 +1,5 @@
 <?php
-include_once "../../includes/conn.inc.php";
+require_once __DIR__ . '/../../../../includes/db.php';
 
 // Building the SQL query with filters
 $query = "SELECT cd.*, cas.stage, cas.status, cas.time_approved, cas.time_rejected 

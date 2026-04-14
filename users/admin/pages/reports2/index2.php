@@ -6,7 +6,7 @@
     $pageTitle = "Reports";
 
     // Include database connection
-    include_once "../../includes/conn.inc.php";
+    require_once __DIR__ . '/../../../../includes/db.php';
 
     // Query to fetch daily submitted claims
     $dailySubmittedClaimsQuery = "SELECT date, COUNT(*) AS total_submitted

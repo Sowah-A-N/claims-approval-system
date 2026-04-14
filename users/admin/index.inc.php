@@ -1,7 +1,8 @@
 <?php
 
-// Include your database connection script or define $conn here
-include_once "../../includes/conn.inc.php";
+require_once __DIR__ . '/../../includes/auth.php';
+require_once __DIR__ . '/../../includes/db.php';
+require_once __DIR__ . '/../../includes/functions.php';
 
 // Handle AJAX request if received
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['action'])) {
@@ -26,29 +27,20 @@ function activateAccount() {
         exit;
     }
 
-    $userId = $_POST['userId'];
-    //$stage = $_POST['stage'];
+    $userId = (int) $_POST['userId'];
 
-    // Perform the update query
-    $sql = "UPDATE user_details SET account_status = 'active' WHERE userId = $userId";
+    $stmt = mysqli_prepare($conn, "UPDATE user_details SET account_status = 'active' WHERE userId = ?");
+    mysqli_stmt_bind_param($stmt, 'i', $userId);
 
-    if ($conn->query($sql) === TRUE) {
-        // Update login details stage
-        //$updateLoginDetailsSql = "UPDATE login_details SET stage = '$stage' WHERE userId = $userId";
-
-       // if ($conn->query($updateLoginDetailsSql) === TRUE) {
-            http_response_code(200);
-            echo "Account activated successfully.";
-        // } else {
-        //     http_response_code(500);
-        //     echo "Error updating login details: " . $conn->error;
-        //}
+    if (mysqli_stmt_execute($stmt)) {
+        http_response_code(200);
+        echo "Account activated successfully.";
     } else {
         http_response_code(500);
-        echo "Error activating account: " . $conn->error;
+        echo "Error activating account: " . mysqli_error($conn);
     }
 
-    $conn->close();
+    mysqli_stmt_close($stmt);
     exit;
 }
 
@@ -61,21 +53,21 @@ function changeStage() {
         exit;
     }
 
-    $userId = $_POST['userId'];
-    $stage = $_POST['stage'];
+    $userId = (int) $_POST['userId'];
+    $stage  = (int) $_POST['stage'];
 
-    // Perform the update query
-    $sql = "UPDATE user_details SET stage = '$stage' WHERE userId = $userId";
+    $stmt = mysqli_prepare($conn, "UPDATE user_details SET stage = ? WHERE userId = ?");
+    mysqli_stmt_bind_param($stmt, 'ii', $stage, $userId);
 
-    if ($conn->query($sql) === TRUE) {
+    if (mysqli_stmt_execute($stmt)) {
         http_response_code(200);
         echo "Stage changed successfully!";
     } else {
         http_response_code(500);
-        echo "Error changing stage: " . $conn->error;
+        echo "Error changing stage: " . mysqli_error($conn);
     }
 
-    $conn->close();
+    mysqli_stmt_close($stmt);
     exit;
 }
 
@@ -88,24 +80,22 @@ function viewAccountDetails() {
         exit;
     }
 
-    $userId = $_POST['userId'];
+    $userId = (int) $_POST['userId'];
 
-    // Perform the select query
-    $userDetailsSelectQuery = "SELECT * FROM user_details WHERE userId = $userId";
-
-    $result = $conn->query($userDetailsSelectQuery);
+    $stmt = mysqli_prepare($conn, "SELECT * FROM user_details WHERE userId = ?");
+    mysqli_stmt_bind_param($stmt, 'i', $userId);
+    mysqli_stmt_execute($stmt);
+    $result = mysqli_stmt_get_result($stmt);
 
     if ($result) {
-        $row = $result->fetch_assoc();
+        $row = mysqli_fetch_assoc($result);
         http_response_code(200);
-        echo json_encode($row); // Assuming you want to return details as JSON
+        echo json_encode($row);
     } else {
         http_response_code(500);
-        echo "Error retrieving user details: " . $conn->error;
+        echo "Error retrieving user details: " . mysqli_error($conn);
     }
 
-    $conn->close();
+    mysqli_stmt_close($stmt);
     exit;
 }
-
-
