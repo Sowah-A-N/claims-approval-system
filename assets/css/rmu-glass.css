@@ -326,6 +326,23 @@ a:hover { color: var(--clr-secondary); }
   padding: 28px 32px;
 }
 
+/* Legacy Bootstrap layout wrappers used by claimant/admin/finance portal pages */
+.page-body-wrapper {
+  margin-left: var(--sidebar-w);
+}
+.main-panel {
+  padding-top: var(--header-h);
+  min-height: 100vh;
+}
+.content-wrapper {
+  padding: 28px 32px;
+}
+/* Bootstrap template wrappers used by admin/approver pages */
+.body-wrapper {
+  margin-left: var(--sidebar-w);
+  padding-top: var(--header-h);
+}
+
 /* ============================================================
    PAGE HEADER
    ============================================================ */

@@ -155,7 +155,7 @@
                     <div class="form-group row">
                         <label class="col-sm-3 col-form-label" for="bank_name">Bank Name</label>
                         <div class="col-sm-9">
-                            <select name="bank_name" class="form-control" id="bank_name" style="width:70%">
+                            <select name="bank_name" class="form-select" id="bank_name" style="width:70%">
                             <?php
                                 // Generate bank options from the query result
                                 if ($banksAvailableResult && mysqli_num_rows($banksAvailableResult) > 0) {
@@ -174,7 +174,7 @@
                     <div class="form-group row">
                         <label class="col-sm-3 col-form-label" for="branch_name">Bank Branch</label>
                         <div class="col-sm-9">
-                            <select name="branch_name" class="form-control" id="branch_name" style="width:70%">
+                            <select name="branch_name" class="form-select" id="branch_name" style="width:70%">
                                 <?php
                                     if (!empty($existingBranchName)) {
                                         echo "<option value=\"$existingBranchName\" selected>$existingBranchName</option>";
