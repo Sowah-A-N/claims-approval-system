@@ -1,5 +1,5 @@
 <?php
-$pageTitle = 'Multi Claims Trial';
+$pageTitle = 'File New Claim';
 
 // Start the session
 session_start();
@@ -20,9 +20,6 @@ $departmentSelectQuery = 'SELECT * FROM department ORDER BY dept_name ASC; ';
 // Execute the query
 $departmentSelectResult = mysqli_query($conn, $departmentSelectQuery);
 
-$currentDepartment = 'ICT';  // Replace with your test value
-$currentProgramme = 'BME';
-
 function outputFullName()
 {
     if (isset($_SESSION['full_name'])) {
@@ -30,33 +27,29 @@ function outputFullName()
     }
 }
 
-$currentRate = $_SESSION['rate'] ?? '';
+$currentRate = isset($_SESSION['rate']) ? (float) $_SESSION['rate'] : 0;
 
-// Query to select all programmes from the database
-$programmeSelectQuery = 'SELECT * FROM programme;';
-// Execute the query
-$programmeSelectResult = mysqli_query($conn, $programmeSelectQuery);
+$programmeSelectResult = mysqli_query($conn, 'SELECT * FROM programme ORDER BY name ASC');
+$departmentSelectResult = mysqli_query($conn, 'SELECT * FROM department ORDER BY dept_name ASC');
 
-// Query to select all departments from the database
-$departmentSelectQuery = 'SELECT * FROM department ORDER BY dept_name ASC; ';
-// Execute the query
-$departmentSelectResult = mysqli_query($conn, $departmentSelectQuery);
+// Fuel component toggle
+$fuelStmt = mysqli_prepare($conn, "SELECT settingValue FROM settings WHERE settingName = ?");
+mysqli_stmt_bind_param($fuelStmt, 's', $k);
+$k = 'fuelComponent';
+mysqli_stmt_execute($fuelStmt);
+mysqli_stmt_bind_result($fuelStmt, $fuelComponent);
+mysqli_stmt_fetch($fuelStmt);
+mysqli_stmt_close($fuelStmt);
 
-// Query to check if the fuel reimbursement option is available
-$fuelComponentStmt = $conn->prepare("SELECT settingValue FROM settings WHERE settingName = 'fuelComponent'");
-$fuelComponentStmt->execute();
-$fuelComponentStmt->bind_result($fuelComponent);
-$fuelComponentStmt->fetch();
-$fuelComponentStmt->close();
-
-// Check if fuelComponent is set to 1
+$fuelValue = 0;
 if ($fuelComponent == 1) {
-    // Query to fetch the value of another component
-    $fuelValueStmt = $conn->prepare("SELECT settingValue FROM settings WHERE settingName = 'fuelAmount'");
-    $fuelValueStmt->execute();
-    $fuelValueStmt->bind_result($fuelValue);
-    $fuelValueStmt->fetch();
-    $fuelValueStmt->close();
+    $fuelStmt2 = mysqli_prepare($conn, "SELECT settingValue FROM settings WHERE settingName = ?");
+    mysqli_stmt_bind_param($fuelStmt2, 's', $k2);
+    $k2 = 'fuelAmount';
+    mysqli_stmt_execute($fuelStmt2);
+    mysqli_stmt_bind_result($fuelStmt2, $fuelValue);
+    mysqli_stmt_fetch($fuelStmt2);
+    mysqli_stmt_close($fuelStmt2);
 }
 
 ?>
@@ -93,7 +86,7 @@ function getClaimFieldValue($field)
                             <label class="col-sm-3 col-form-label" for="rate">Rate (GH₵)</label>
                             <div class="col-sm-9">
                                 <input type="text" name="rate" class="form-control" id="rate" style="width:50%" 
-                                        value="<?php echo $currentRate ?>" readonly>
+                                        value="<?php echo h($currentRate); ?>" readonly>
                             </div>
                         </div>		
                     
@@ -289,9 +282,9 @@ function getClaimFieldValue($field)
             detailsRow.appendChild(fuelCol);
             <?php endif; ?>
 
-            const detailsDiv = document.getElementById('detailsRow');
-            //timeSlotDiv.appendChild(detailsRow);
-            detailsRowsDiv.appendChild(detailsRow);
+            detailsRow.insertBefore(periodsCol, detailsRow.firstChild);
+            detailsRow.insertBefore(subTotalCol, detailsRow.children[1] || null);
+            document.getElementById('detailsRowsDiv').appendChild(detailsRow);
 
             // Add dates under the time slot
             const dateContainer = document.createElement("div");
@@ -439,7 +432,7 @@ function getClaimFieldValue($field)
                     const endTime = slotDiv.querySelector('input[name^="endTime"]').value;
                     const periods = 30;//slotDiv.querySelector('input[name^="period"]').value;
                     const subTotal = 450; //slotDiv.querySelector('input[name^="subTotal"]').value;
-                    const fuelComponent = slotDiv.querySelector('input[name^="fuelComponent"]')?.checked ? "Yes" : "No";
+                    const fuelComponent = slotDiv.querySelector('input[name^="fuelComponent"]')?.checked ? 1 : 0;
 
                     // Collect dates for this time slot
                     const dates = Array.from(slotDiv.querySelectorAll('input[name^="dates"]')).map(
