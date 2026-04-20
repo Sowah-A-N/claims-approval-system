@@ -1,4 +1,7 @@
 <?php
+$base_url = (isset($_SERVER['HTTP_HOST']) && strpos($_SERVER['HTTP_HOST'], 'localhost') !== false)
+    ? '/claims-approval-system/'
+    : '/';
 $_finance_name = isset($_SESSION['full_name']) ? htmlspecialchars($_SESSION['full_name'], ENT_QUOTES, 'UTF-8') : 'Finance';
 $_finance_initials = '';
 foreach (explode(' ', trim($_finance_name)) as $p) {
@@ -26,7 +29,7 @@ if ($_finance_initials === '') $_finance_initials = 'F';
           <div style="font-size:.85rem;font-weight:600;color:var(--txt-primary);"><?php echo $_finance_name; ?></div>
           <div style="font-size:.75rem;color:var(--txt-muted);">Finance Officer</div>
         </div>
-        <a href="/users/finance/pages/logout" class="rmu-dropdown__item">
+        <a href="<?php echo $base_url; ?>logout.php" class="rmu-dropdown__item">
           <i class="ti ti-logout"></i> Logout
         </a>
       </div>

@@ -1,6 +1,6 @@
 <?php
 $base_url = (isset($_SERVER['HTTP_HOST']) && strpos($_SERVER['HTTP_HOST'], 'localhost') !== false)
-    ? '/claims_system/'
+    ? '/claims-approval-system/'
     : '/';
 
 $full_name    = isset($_SESSION['full_name']) ? htmlspecialchars($_SESSION['full_name'], ENT_QUOTES, 'UTF-8') : 'User';
@@ -29,11 +29,11 @@ if ($initials === '') $initials = 'U';
           <div style="font-size:.85rem;font-weight:600;color:var(--txt-primary);"><?php echo $full_name; ?></div>
           <div style="font-size:.75rem;color:var(--txt-muted);">Claimant</div>
         </div>
-        <a class="rmu-dropdown__item" href="<?php echo $base_url; ?>users/user/pages/settings">
+        <a class="rmu-dropdown__item" href="<?php echo $base_url; ?>users/user/pages/settings/">
           <i class="ti ti-settings"></i> Settings
         </a>
         <div class="rmu-dropdown__divider"></div>
-        <a class="rmu-dropdown__item" href="<?php echo $base_url; ?>users/user/pages/logout">
+        <a class="rmu-dropdown__item" href="<?php echo $base_url; ?>logout.php">
           <i class="ti ti-logout"></i> Logout
         </a>
       </div>

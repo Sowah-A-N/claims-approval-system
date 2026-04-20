@@ -1,4 +1,7 @@
 <?php
+$base_url = (isset($_SERVER['HTTP_HOST']) && strpos($_SERVER['HTTP_HOST'], 'localhost') !== false)
+    ? '/claims-approval-system/'
+    : '/';
 $_admin_name = isset($_SESSION['full_name']) ? htmlspecialchars($_SESSION['full_name'], ENT_QUOTES, 'UTF-8') : 'Admin';
 $_admin_initials = '';
 foreach (explode(' ', trim($_admin_name)) as $p) {
@@ -30,7 +33,7 @@ if ($_admin_initials === '') $_admin_initials = 'A';
           <i class="ti ti-user"></i> My Profile
         </a>
         <div class="rmu-dropdown__divider"></div>
-        <a href="/users/admin/pages/logout" class="rmu-dropdown__item">
+        <a href="<?php echo $base_url; ?>logout.php" class="rmu-dropdown__item">
           <i class="ti ti-logout"></i> Logout
         </a>
       </div>

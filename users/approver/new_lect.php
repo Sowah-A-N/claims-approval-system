@@ -97,7 +97,7 @@
 						</div>
 						<div class="form-group">
 							<label for="role">Role</label>
-							<select class="form-control" id="role" name="role" required>
+							<select class="form-select" id="role" name="role" required>
 								<option value="admin">Admin</option>
 								<option value="user">User</option>
 							</select>

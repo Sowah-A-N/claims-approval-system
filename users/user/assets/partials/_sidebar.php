@@ -1,6 +1,6 @@
 <?php
 $base_url = (isset($_SERVER['HTTP_HOST']) && strpos($_SERVER['HTTP_HOST'], 'localhost') !== false)
-    ? '/claims_system/'
+    ? '/claims-approval-system/'
     : '/';
 ?>
 <aside class="rmu-sidebar" id="rmu-sidebar">
@@ -40,7 +40,7 @@ $base_url = (isset($_SERVER['HTTP_HOST']) && strpos($_SERVER['HTTP_HOST'], 'loca
       <span>Settings</span>
     </a>
 
-    <a class="rmu-sidebar__link" href="<?php echo $base_url; ?>users/user/pages/logout">
+    <a class="rmu-sidebar__link" href="<?php echo $base_url; ?>logout.php">
       <i class="ti ti-logout"></i>
       <span>Logout</span>
     </a>

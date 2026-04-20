@@ -198,7 +198,7 @@
 				<form method="post" class="mb-4">
 					<div class="form-group">
 						<label for="bank_name">Select Bank:</label>
-						<select id="bank_name" name="bank_name" class="form-control" onchange="this.form.submit()">
+						<select id="bank_name" name="bank_name" class="form-select" onchange="this.form.submit()">
 							<option value="">-- Select a Bank --</option>
 							<?php
 							if ($uniqueBanksResult->num_rows > 0) {
