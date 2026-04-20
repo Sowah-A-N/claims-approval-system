@@ -105,128 +105,105 @@
     <?php include "../../assets/partials/_navbar.php"; ?>
 
     <div class="container-fluid page-body-wrapper">
-		<?php include "../../assets/partials/_sidebar.php" ?>
-        
+        <?php include "../../assets/partials/_sidebar.php" ?>
 
         <div class="main-panel">
             <div class="content-wrapper">
 
-            <?php if (isset($_SESSION['message'])): ?>
-                <div class="alert alert-<?php echo ($_SESSION['message_type'] == 'success') ? 'success' : 'danger'; ?>" role="alert">
-                    <?php echo $_SESSION['message']; ?>
+                <?php if (isset($_SESSION['message'])): ?>
+                <div class="rmu-alert rmu-alert--<?php echo ($_SESSION['message_type'] === 'success') ? 'success' : 'danger'; ?>" style="margin-bottom:20px;">
+                    <?php echo h($_SESSION['message']); unset($_SESSION['message'], $_SESSION['message_type']); ?>
                 </div>
-                <?php 
-                    // Clear the message after displaying it
-                    unset($_SESSION['message']);
-                    unset($_SESSION['message_type']);
-                ?>
-            <?php endif; ?>
+                <?php endif; ?>
 
+                <div class="rmu-page-header">
+                    <div class="rmu-page-header__title">Settings</div>
+                    <div class="rmu-page-header__sub">Manage your account password and bank details</div>
+                </div>
 
-                <!-- Change Password Section -->
-                <h4>Change Password</h4>
-                <form method="POST" action="">
-                    <div class="form-group row">
-                        <label class="col-sm-3 col-form-label" for="old_password">Old Password</label>
-                        <div class="col-sm-9">
-                            <input type="password" name="old_password" class="form-control" id="old_password" style="width:70%" placeholder="***********************" required>
-                        </div>
+                <!-- Change Password -->
+                <div class="rmu-card" style="margin-bottom:24px;">
+                    <div class="rmu-card__header">
+                        <span class="rmu-card__title">Change Password</span>
                     </div>
-                    <div class="form-group row">
-                        <label class="col-sm-3 col-form-label" for="new_password">New Password</label>
-                        <div class="col-sm-9">
-                            <input type="password" name="new_password" class="form-control" id="new_password" style="width:70%" placeholder="***********************" required>
-                        </div>
+                    <div class="rmu-card__body">
+                        <form method="POST" action="" style="max-width:540px;">
+                            <div class="rmu-form-group">
+                                <label class="rmu-label" for="old_password">Current Password <span class="required">*</span></label>
+                                <input type="password" name="old_password" class="rmu-input" id="old_password" required>
+                            </div>
+                            <div class="rmu-form-group">
+                                <label class="rmu-label" for="new_password">New Password <span class="required">*</span></label>
+                                <input type="password" name="new_password" class="rmu-input" id="new_password" required>
+                            </div>
+                            <div class="rmu-form-group">
+                                <label class="rmu-label" for="confirm_password">Confirm New Password <span class="required">*</span></label>
+                                <input type="password" name="confirm_password" class="rmu-input" id="confirm_password" required>
+                            </div>
+                            <button type="submit" name="update_password" class="rmu-btn rmu-btn--primary">Update Password</button>
+                        </form>
                     </div>
-                    <div class="form-group row">
-                        <label class="col-sm-3 col-form-label" for="confirm_password">Confirm New Password</label>
-                        <div class="col-sm-9">
-                            <input type="password" name="confirm_password" class="form-control" id="confirm_password" style="width:70%" placeholder="***********************" required>
-                        </div>
-                    </div>
-                    <div>
-                        <button type="submit" name="update_password" class="btn btn-primary">Update Password</button>
-                    </div>
-                </form>
-                <br /><br />
+                </div>
 
-                <!-- Bank Account Details Section -->
-                <h4>Bank Account Details</h4>
-                <form method="POST" action="">
-                    <div class="form-group row">
-                        <label class="col-sm-3 col-form-label" for="bank_name">Bank Name</label>
-                        <div class="col-sm-9">
-                            <select name="bank_name" class="form-select" id="bank_name" style="width:70%">
-                            <?php
-                                // Generate bank options from the query result
-                                if ($banksAvailableResult && mysqli_num_rows($banksAvailableResult) > 0) {
-                                    while ($row = mysqli_fetch_assoc($banksAvailableResult)) {
-                                        $bankName = $row['bank_name'];
-                                        $selected = ($existingBankName == $bankName) ? 'selected' : '';
-                                        echo "<option value=\"$bankName\" $selected>$bankName</option>";
-                                    }
-                                } else {
-                                    echo '<option value="">No banks available</option>';
-                                }
-                            ?>
-                            </select>
-                        </div>
+                <!-- Bank Account Details -->
+                <div class="rmu-card" style="margin-bottom:24px;">
+                    <div class="rmu-card__header">
+                        <span class="rmu-card__title">Bank Account Details</span>
                     </div>
-                    <div class="form-group row">
-                        <label class="col-sm-3 col-form-label" for="branch_name">Bank Branch</label>
-                        <div class="col-sm-9">
-                            <select name="branch_name" class="form-select" id="branch_name" style="width:70%">
-                                <?php
-                                    if (!empty($existingBranchName)) {
-                                        echo "<option value=\"$existingBranchName\" selected>$existingBranchName</option>";
-                                    }
-                                ?>
-                            </select>
-                        </div>
+                    <div class="rmu-card__body">
+                        <form method="POST" action="" style="max-width:540px;">
+                            <div class="rmu-form-group">
+                                <label class="rmu-label" for="bank_name">Bank Name</label>
+                                <select name="bank_name" class="rmu-select" id="bank_name">
+                                    <?php if ($banksAvailableResult && mysqli_num_rows($banksAvailableResult) > 0):
+                                        while ($row = mysqli_fetch_assoc($banksAvailableResult)):
+                                            $bn = $row['bank_name'];
+                                            $sel = ($existingBankName === $bn) ? 'selected' : '';
+                                            echo '<option value="' . h($bn) . '" ' . $sel . '>' . h($bn) . '</option>';
+                                        endwhile;
+                                    else: ?>
+                                        <option value="">No banks available</option>
+                                    <?php endif; ?>
+                                </select>
+                            </div>
+                            <div class="rmu-form-group">
+                                <label class="rmu-label" for="branch_name">Branch</label>
+                                <select name="branch_name" class="rmu-select" id="branch_name">
+                                    <?php if (!empty($existingBranchName)): ?>
+                                        <option value="<?php echo h($existingBranchName); ?>" selected><?php echo h($existingBranchName); ?></option>
+                                    <?php endif; ?>
+                                </select>
+                            </div>
+                            <div class="rmu-form-group">
+                                <label class="rmu-label" for="account_name">Account Name <span class="required">*</span></label>
+                                <input type="text" name="account_name" class="rmu-input" id="account_name" value="<?php echo h($existingAccountName); ?>" required>
+                            </div>
+                            <div class="rmu-form-group">
+                                <label class="rmu-label" for="account_number">Account Number <span class="required">*</span></label>
+                                <input type="text" name="account_number" class="rmu-input" id="account_number" value="<?php echo h($existingAccountNumber); ?>" required>
+                            </div>
+                            <button type="submit" name="update_bank_details" class="rmu-btn rmu-btn--primary">Update Bank Details</button>
+                        </form>
                     </div>
-                    <div class="form-group row">
-                        <label class="col-sm-3 col-form-label" for="account_name">Account Name</label>
-                        <div class="col-sm-9">
-                            <input type="text" name="account_name" class="form-control" id="account_name" style="width:70%" value="<?php echo $existingAccountName ?? ''; ?>" required>
-                        </div>
-                    </div>
-                    <div class="form-group row">
-                        <label class="col-sm-3 col-form-label" for="account_number">Account Number</label>
-                        <div class="col-sm-9">
-                            <input type="text" name="account_number" class="form-control" id="account_number" style="width:70%" value="<?php echo $existingAccountNumber ?? ''; ?>" required>
-                        </div>
-                    </div>
-                    <div>
-                        <button type="submit" name="update_bank_details" class="btn btn-primary">Update Bank Details</button>
-                    </div>
-                </form>
+                </div>
+
             </div>
-			<?php include "../../assets/partials/_footer.php"; ?>
+            <?php include "../../assets/partials/_footer.php"; ?>
         </div>
     </div>
 </div>
 
-
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        // When the bank dropdown value changes
         document.getElementById('bank_name').addEventListener('change', function() {
             var bankName = this.value;
-            
-            // Create a new XMLHttpRequest
             var xhr = new XMLHttpRequest();
             xhr.open('GET', 'fetch_branches.inc.php?bank_name=' + encodeURIComponent(bankName), true);
             xhr.onload = function() {
                 if (xhr.status === 200) {
-                    // Clear existing options in branch dropdown
                     var branchDropdown = document.getElementById('branch_name');
                     branchDropdown.innerHTML = '';
-                    
-                    // Parse the JSON response
-                    console.log(xhr.responseText);
                     var branches = JSON.parse(xhr.responseText);
-                    
-                    // Append new options to branch dropdown
                     if (branches.length > 0) {
                         branches.forEach(function(branch) {
                             var option = document.createElement('option');
@@ -246,7 +223,7 @@
         });
     });
 </script>
-	
+
 </body>
 
 
