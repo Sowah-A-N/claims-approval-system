@@ -35,240 +35,233 @@ $results = [
 
 <body>
     <div class="container-scroller">
-            <?php include "../../assets/partials/_navbar.php"; ?>
+        <?php include "../../assets/partials/_navbar.php"; ?>
 
         <div class="container-fluid page-body-wrapper">
-			<?php include "../../assets/partials/_sidebar.php"; ?>
-
+            <?php include "../../assets/partials/_sidebar.php"; ?>
 
             <div class="main-panel">
                 <div class="content-wrapper">
-                    <h2>My Claims</h2>
+
+                    <div class="rmu-page-header">
+                        <div class="rmu-page-header__title">My Claims</div>
+                        <div class="rmu-page-header__sub">View and manage all your submitted, saved and completed claims</div>
+                    </div>
 
                     <?php
-					
-					// Display Flagged Claims
-                    echo '<div class="col-lg-12 stretch-card">
-                            <div class="card">
-                                <div class="card-body">
-                                    <h4 class="card-title">Flagged Claims</h4>
-                                    <div class="table-responsive">
-                                        <table class="table table-bordered table-contextual">
-                                            <thead>
-                                                <tr>
-                                                    <th>#</th>
-                                                    <th>Department</th>
-                                                    <th>Programme</th>
-                                                    <th>Course</th>
-                                                    <th>Status</th>
-                                                    <th>Actions</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>';
+
+                    // ── Flagged Claims ──────────────────────────────────────────
+                    echo '<div class="rmu-card" style="margin-bottom:24px;">
+                            <div class="rmu-card__header">
+                                <span class="rmu-card__title">Flagged Claims</span>
+                            </div>
+                            <div class="rmu-card__body" style="padding:0;">
+                                <div class="rmu-table-wrap">
+                                    <table class="rmu-table">
+                                        <thead>
+                                            <tr>
+                                                <th>#</th>
+                                                <th>Department</th>
+                                                <th>Programme</th>
+                                                <th>Course</th>
+                                                <th>Status</th>
+                                                <th>Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>';
 
                     if ($results['flaggedClaims']->num_rows > 0) {
                         while ($row = $results['flaggedClaims']->fetch_assoc()) {
-                            echo '<tr id="' . $row['claimId'] . '">';
-                            echo '<td>' . $row['claimId'] . '</td>';
-                            echo '<td>' . $row['department'] . '</td>';
-                            echo '<td>' . $row['programme'] . '</td>';
-                            echo '<td>' . $row['course'] . '</td>';
-                            echo '<td>' . $row['status'] . '</td>';
+                            echo '<tr>';
+                            echo '<td>' . h($row['claimId']) . '</td>';
+                            echo '<td>' . h($row['department']) . '</td>';
+                            echo '<td>' . h($row['programme']) . '</td>';
+                            echo '<td>' . h($row['course']) . '</td>';
+                            echo '<td><span class="rmu-badge rmu-badge--danger">Flagged</span></td>';
                             echo '<td>
-                                    <span class="mdi mdi-eye-outline" style="font-size:1.8rem; cursor:pointer;" onclick="viewClaimDetails(' . $row['claimId'] . ')"></span>
+                                    <button class="rmu-btn rmu-btn--secondary" style="padding:5px 9px;" onclick="viewClaimDetails(' . (int)$row['claimId'] . ')" title="View">
+                                        <i class="ti ti-eye"></i>
+                                    </button>
                                   </td>';
                             echo '</tr>';
                         }
                     } else {
-                        echo '<tr><td colspan="6">No Flagged Claims Found</td></tr>';
+                        echo '<tr><td colspan="6" style="text-align:center;color:var(--txt-muted);padding:20px;">No flagged claims</td></tr>';
                     }
 
-                    echo '   </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-            </div><br />';
-					
-					 // Display Pending Claims
-                    echo '<div class="col-lg-12 stretch-card">
-                            <div class="card">
-                                <div class="card-body">
-                                    <h4 class="card-title">Pending Claims</h4>
-                                    <div class="table-responsive">
-                                        <table class="table table-bordered table-contextual">
-                                            <thead>
-                                                <tr>
-                                                    <th>#</th>
-                                                    <th>Department</th>
-                                                    <th>Programme</th>
-                                                    <th>Course</th>
-													<th>Date Submitted</th>
-                                                    <th>Actions</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>';
+                    echo '      </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>';
 
-                    if ($results['pendingClaims']->num_rows > 0){ 
-						$index = 1;
+                    // ── Pending Claims ──────────────────────────────────────────
+                    echo '<div class="rmu-card" style="margin-bottom:24px;">
+                            <div class="rmu-card__header">
+                                <span class="rmu-card__title">Pending Claims</span>
+                            </div>
+                            <div class="rmu-card__body" style="padding:0;">
+                                <div class="rmu-table-wrap">
+                                    <table class="rmu-table">
+                                        <thead>
+                                            <tr>
+                                                <th>#</th>
+                                                <th>Department</th>
+                                                <th>Programme</th>
+                                                <th>Course</th>
+                                                <th>Date Submitted</th>
+                                                <th>Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>';
+
+                    if ($results['pendingClaims']->num_rows > 0) {
+                        $index = 1;
                         while ($row = $results['pendingClaims']->fetch_assoc()) {
-                            echo '<tr id="' . $row['claimId'] . '">';
+                            echo '<tr>';
                             echo '<td>' . $index . '</td>';
-                            echo '<td>' . $row['department'] . '</td>';
-                            echo '<td>' . $row['programme'] . '</td>';
-                            echo '<td>' . $row['course'] . '</td>';
-							echo '<td>' . date('d-m-Y', strtotime($row['time_submitted'])) . '</td>';
-							echo '<td>
-                                    <span class="mdi mdi-eye-outline" style="font-size:1.8rem; cursor:pointer;" 			onclick="viewClaimDetails(' . $row['claimId'] . ')"></span>
+                            echo '<td>' . h($row['department']) . '</td>';
+                            echo '<td>' . h($row['programme']) . '</td>';
+                            echo '<td>' . h($row['course']) . '</td>';
+                            echo '<td>' . date('d M Y', strtotime($row['time_submitted'])) . '</td>';
+                            echo '<td>
+                                    <button class="rmu-btn rmu-btn--secondary" style="padding:5px 9px;" onclick="viewClaimDetails(' . (int)$row['claimId'] . ')" title="View">
+                                        <i class="ti ti-eye"></i>
+                                    </button>
                                   </td>';
                             echo '</tr>';
-							$index++;
+                            $index++;
                         }
                     } else {
-                        echo '<tr><td colspan="6">No Pending Claims Found</td></tr>';
+                        echo '<tr><td colspan="6" style="text-align:center;color:var(--txt-muted);padding:20px;">No pending claims</td></tr>';
                     }
 
-                    echo '   </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-            </div><br />';
-						
-					// Display Saved Claims
-					echo '<div class="col-lg-12 stretch-card">
-								<div class="card">
-									<div class="card-body">
-										<h4 class="card-title">Saved Claims</h4>
-										<div class="table-responsive">
-											<table class="table table-bordered table-contextual">
-												<thead>
-													<tr>
-														<th>#</th>
-														<th>Department</th>
-														<th>Programme</th>
-														<th>Course</th>
-														<th>Date Saved</th>
-														<th>Status</th>
-														<th>Actions</th>
-													</tr>
-												</thead>
-												<tbody>';
-			
-					if ($results['savedClaims']->num_rows > 0) {
-						while ($row = $results['savedClaims']->fetch_assoc()) {
-							echo '<tr id="' . $row['claimTempId'] . '">';
-							echo '<td>' . $row['claimTempId'] . '</td>';
-							echo '<td>' . $row['department'] . '</td>';
-							echo '<td>' . $row['programme'] . '</td>';
-							echo '<td>' . $row['course'] . '</td>';
-							echo '<td>' . date('d-m-Y', strtotime($row['date_saved'])) . '</td>';
-							echo '<td>' . $row['status'] . '</td>';
-							echo '<td>
-									<span class="mdi mdi-file-edit-outline" style="font-size:2rem; cursor:pointer;" onclick="editClaim(' . $row['claimTempId'] . ')"></span>
-									<span class="mdi mdi-delete" style="font-size:2rem; cursor:pointer;" onclick="deleteClaim(' . $row['claimTempId'] . ')"></span>
-								  </td>';
-							echo '</tr>';
-						}
-						
-					} else {
-						echo '<tr><td colspan="6">No Saved Claims Found</td><tr>';
-					}
-					
-					echo '   </tbody>
-								</table>
-							</div>
-						</div>
-					</div>
-					</div><br />';
+                    echo '      </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>';
 
-					// Display Completed Claims
-					echo '<div class="col-lg-12 stretch-card">
-							<div class="card">
-								<div class="card-body">
-									<h4 class="card-title">Completed Claims</h4>
-									<div class="table-responsive">
-										<table class="table table-bordered table-contextual">
-											<thead>
-												<tr>
-													<th>#</th>
-													<th>Department</th>
-													<th>Programme</th>
-													<th>Course</th>
-													<th>Status</th>
-													<th>Date Completed</th>
-													<th>Actions</th>
-												</tr>
-											</thead>
-											<tbody>';
+                    // ── Saved Claims ────────────────────────────────────────────
+                    echo '<div class="rmu-card" style="margin-bottom:24px;">
+                            <div class="rmu-card__header">
+                                <span class="rmu-card__title">Saved Claims</span>
+                            </div>
+                            <div class="rmu-card__body" style="padding:0;">
+                                <div class="rmu-table-wrap">
+                                    <table class="rmu-table">
+                                        <thead>
+                                            <tr>
+                                                <th>#</th>
+                                                <th>Department</th>
+                                                <th>Programme</th>
+                                                <th>Course</th>
+                                                <th>Date Saved</th>
+                                                <th>Status</th>
+                                                <th>Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>';
 
-					if ($results['completedClaims']->num_rows > 0) {
-						while ($row = $results['completedClaims']->fetch_assoc()) {
-							echo '<tr id="' . $row['claimId'] . '">';
-							echo '<td>' . $row['claimId'] . '</td>';
-							echo '<td>' . $row['department'] . '</td>';
-							echo '<td>' . $row['programme'] . '</td>';
-							echo '<td>' . $row['course'] . '</td>';
-							echo '<td>' . $row['status'] . '</td>';
-							echo '<td>' . date('d/m/Y', strtotime($row['time_submitted'])) . '</td>';
-							echo '<td>
-									<span class="mdi mdi-eye-outline" style="font-size:2rem; cursor:pointer;" onclick="viewClaimDetails(' . $row['claimId'] . ')"></span>
-									<span class="mdi mdi-download" style="font-size:2rem; cursor:pointer;" onclick="downloadClaimDetails(' . $row['claimId'] . ')"></span>
-								  </td>';
-							echo '</tr>';
-						}
-					} else {
-						echo '<tr><td colspan="6">No Completed Claims Found</td></tr>';
-					}
+                    if ($results['savedClaims']->num_rows > 0) {
+                        while ($row = $results['savedClaims']->fetch_assoc()) {
+                            echo '<tr>';
+                            echo '<td>' . h($row['claimTempId']) . '</td>';
+                            echo '<td>' . h($row['department']) . '</td>';
+                            echo '<td>' . h($row['programme']) . '</td>';
+                            echo '<td>' . h($row['course']) . '</td>';
+                            echo '<td>' . date('d M Y', strtotime($row['date_saved'])) . '</td>';
+                            echo '<td><span class="rmu-badge rmu-badge--neutral">' . h($row['status']) . '</span></td>';
+                            echo '<td style="white-space:nowrap;">
+                                    <button class="rmu-btn rmu-btn--secondary" style="padding:5px 9px;margin-right:4px;" onclick="editClaim(' . (int)$row['claimTempId'] . ')" title="Edit">
+                                        <i class="ti ti-edit"></i>
+                                    </button>
+                                    <button class="rmu-btn rmu-btn--danger" style="padding:5px 9px;" onclick="deleteClaim(' . (int)$row['claimTempId'] . ')" title="Delete">
+                                        <i class="ti ti-trash"></i>
+                                    </button>
+                                  </td>';
+                            echo '</tr>';
+                        }
+                    } else {
+                        echo '<tr><td colspan="7" style="text-align:center;color:var(--txt-muted);padding:20px;">No saved claims</td></tr>';
+                    }
 
-					echo '   </tbody>
-							</table>
-						</div>
-					</div>
-					</div>
-					</div><br />';
+                    echo '      </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>';
 
+                    // ── Completed Claims ────────────────────────────────────────
+                    echo '<div class="rmu-card" style="margin-bottom:24px;">
+                            <div class="rmu-card__header">
+                                <span class="rmu-card__title">Completed Claims</span>
+                            </div>
+                            <div class="rmu-card__body" style="padding:0;">
+                                <div class="rmu-table-wrap">
+                                    <table class="rmu-table">
+                                        <thead>
+                                            <tr>
+                                                <th>#</th>
+                                                <th>Department</th>
+                                                <th>Programme</th>
+                                                <th>Course</th>
+                                                <th>Status</th>
+                                                <th>Date Completed</th>
+                                                <th>Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>';
 
-                   
+                    if ($results['completedClaims']->num_rows > 0) {
+                        while ($row = $results['completedClaims']->fetch_assoc()) {
+                            echo '<tr>';
+                            echo '<td>' . h($row['claimId']) . '</td>';
+                            echo '<td>' . h($row['department']) . '</td>';
+                            echo '<td>' . h($row['programme']) . '</td>';
+                            echo '<td>' . h($row['course']) . '</td>';
+                            echo '<td><span class="rmu-badge rmu-badge--success">' . h($row['status']) . '</span></td>';
+                            echo '<td>' . date('d M Y', strtotime($row['time_submitted'])) . '</td>';
+                            echo '<td style="white-space:nowrap;">
+                                    <button class="rmu-btn rmu-btn--secondary" style="padding:5px 9px;margin-right:4px;" onclick="viewClaimDetails(' . (int)$row['claimId'] . ')" title="View">
+                                        <i class="ti ti-eye"></i>
+                                    </button>
+                                    <button class="rmu-btn rmu-btn--secondary" style="padding:5px 9px;" onclick="downloadClaimDetails(' . (int)$row['claimId'] . ')" title="Download">
+                                        <i class="ti ti-download"></i>
+                                    </button>
+                                  </td>';
+                            echo '</tr>';
+                        }
+                    } else {
+                        echo '<tr><td colspan="7" style="text-align:center;color:var(--txt-muted);padding:20px;">No completed claims</td></tr>';
+                    }
 
-                    ;
+                    echo '      </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>';
+
                     ?>
 
-                    <!--Claim Details Modal -->
-                    <div class="modal fade" id="detailsModal" tabindex="-1" role="dialog" aria-labelledby="detailsModalLabel" aria-hidden="true">
-                        <div class="modal-dialog modal-lg" role="document">
-                            <div class="modal-content">
-                                <div class="modal-header">
+                    <!-- Claim Details Modal -->
+                    <div class="modal fade" id="detailsModal" tabindex="-1" aria-labelledby="detailsModalLabel" aria-hidden="true">
+                        <div class="modal-dialog modal-lg">
+                            <div class="modal-content" style="background:var(--bg-glass);backdrop-filter:blur(20px);border:var(--border-glass);color:var(--txt-primary);">
+                                <div class="modal-header" style="border-bottom:var(--border-glass);">
                                     <h5 class="modal-title" id="detailsModalLabel">Claim Details</h5>
-                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                                 </div>
-                                <div class="modal-body">
-                                    <!--div class="form-group">
-                                        <label for="claimId" class="col-form-label">Claim ID:</label>
-                                        <input type="text" class="form-control" id="claimId" readonly>
-                                    </div>
-                                    <div class="form-group">
-                                        <label for="programme" class="col-form-label">Programme:</label>
-                                        <input type="text" class="form-control" id="programme" readonly>
-                                    </div>
-                                    <div class="form-group">
-                                        <label for="course" class="col-form-label">Course:</label>
-                                        <input type="course" class="form-control" id="course" readonly>
-									</div-->
-                                    <!-- Add more input fields for additional user details -->
-                                </div>
+                                <div class="modal-body" id="detailsModalBody"></div>
                             </div>
                         </div>
                     </div>
 
-						<div>
-					</div>
-				</div>
-			</div>
-		</div>
-					<?php include "../../assets/partials/_footer.php"; ?>
-
-	</div>
+                </div>
+            </div>
+        </div>
+        <?php include "../../assets/partials/_footer.php"; ?>
+    </div>
 
 
 
