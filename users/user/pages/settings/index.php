@@ -6,134 +6,96 @@
     session_start();
 
     // Include head partial
-    include_once "../../assets/partials/_head.php"; 
+    include_once "../../assets/partials/_head.php";
 
-    $userId = isset($_SESSION['user_id']) ? $_SESSION['user_id'] : 4;
+    $userId = current_user_id();
 
-    // Function to output full name stored in the session (if available)
     function outputFullName() {
-        if(isset($_SESSION['full_name'])) {
-            echo $_SESSION['full_name'];
-        }
+        echo isset($_SESSION['full_name']) ? h($_SESSION['full_name']) : '';
     }
 
-    // Fetch user details
-    if ($userId) {
-        $userDetailsQuery = "SELECT * FROM user_details WHERE userId = $userId;";
-        $userDetailsResult = mysqli_query($conn, $userDetailsQuery);
-        $userDetailsRow = mysqli_fetch_assoc($userDetailsResult);
-    }
-
-    // Fetch user's existing bank details
-    $bankDetailsQuery = "SELECT bank_name, bank_branch, account_name, account_number 
-                        FROM user_bank_details WHERE userId = $userId;";
-    $bankDetailsResult = mysqli_query($conn, $bankDetailsQuery);
-    $bankDetails = mysqli_fetch_assoc($bankDetailsResult);
-
-    // Store existing details in variables
-    $existingBankName = $bankDetails['bank_name'] ?? '';
-    $existingBranchName = $bankDetails['bank_branch'] ?? '';
-    $existingAccountName = $bankDetails['account_name'] ?? '';
-    $existingAccountNumber = $bankDetails['account_number'] ?? '';
-
-
-    // Handle form submission for updating user details
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-        // if (isset($_POST['update_password'])) {
-        //     // Handle updating password
-        //     $newPassword = $_POST['new_password'];
-
-        //     // Example update query (sanitize and validate inputs in a real scenario)
-        //     $updatePasswordQuery = "UPDATE user_details SET password = '$newPassword' WHERE userId = $userId;";
-        //     mysqli_query($conn, $updatePasswordQuery);
-
-        //     // Redirect or show success message
-        //     // Example redirect after update
-        //     //header("Location: profile.php");
-        //     exit();
-        // }
 
         if (isset($_POST['update_password'])) {
-            $oldPassword = mysqli_real_escape_string($conn, $_POST['old_password']);
-            $newPassword = mysqli_real_escape_string($conn, $_POST['new_password']);
-            $confirmPassword = mysqli_real_escape_string($conn, $_POST['confirm_password']);
-        
-            // Fetch the current password from the database
-            $passwordQuery = "SELECT password FROM login_details WHERE userId = $userId;";
-            $passwordResult = mysqli_query($conn, $passwordQuery);
-            $passwordRow = mysqli_fetch_assoc($passwordResult);
-            $currentPassword = $passwordRow['password'];
-            echo $currentPassword;
-        
-            // Verify the old password matches
-            //if (password_verify($oldPassword, $currentPassword)) {
-            if($oldPassword == $currentPassword){
-                // Check if new password matches confirm password
-                if ($newPassword === $confirmPassword) {
-                    // Hash the new password before updating
-                    //$hashedNewPassword = password_hash($newPassword, PASSWORD_DEFAULT);
-                    $hashedNewPassword = $newPassword;
+            $stmt = mysqli_prepare($conn, "SELECT password FROM login_details WHERE userId = ?");
+            mysqli_stmt_bind_param($stmt, 'i', $userId);
+            mysqli_stmt_execute($stmt);
+            $result = mysqli_stmt_get_result($stmt);
+            $row = mysqli_fetch_assoc($result);
+            mysqli_stmt_close($stmt);
+            $currentHash = $row['password'] ?? '';
 
-                    // Update the password in the database
-                    $updatePasswordQuery = "UPDATE login_details SET password = '$hashedNewPassword' WHERE userId = $userId;";
-                    mysqli_query($conn, $updatePasswordQuery);
-        
-                    // Set success message
-                    $_SESSION['message'] = "Password updated successfully!";
-                    $_SESSION['message_type'] = "success";
-                } else {
-                    // Set error message for non-matching passwords
-                    $_SESSION['message'] = "New passwords do not match!";
-                    $_SESSION['message_type'] = "error";
-                }
-            } else {
-                // Set error message for incorrect old password
-                $_SESSION['message'] = "Old password is incorrect!";
+            $oldPassword     = $_POST['old_password']     ?? '';
+            $newPassword     = $_POST['new_password']     ?? '';
+            $confirmPassword = $_POST['confirm_password'] ?? '';
+
+            if (!password_verify($oldPassword, $currentHash)) {
+                $_SESSION['message']      = "Old password is incorrect!";
                 $_SESSION['message_type'] = "error";
+            } elseif ($newPassword !== $confirmPassword) {
+                $_SESSION['message']      = "New passwords do not match!";
+                $_SESSION['message_type'] = "error";
+            } else {
+                $hash = password_hash($newPassword, PASSWORD_DEFAULT);
+                $stmt = mysqli_prepare($conn, "UPDATE login_details SET password = ? WHERE userId = ?");
+                mysqli_stmt_bind_param($stmt, 'si', $hash, $userId);
+                mysqli_stmt_execute($stmt);
+                mysqli_stmt_close($stmt);
+                $_SESSION['message']      = "Password updated successfully!";
+                $_SESSION['message_type'] = "success";
             }
-
-             // Redirect to the same page to show the message
             header("Location: " . $_SERVER['PHP_SELF']);
             exit();
         }
-        
 
         if (isset($_POST['update_bank_details'])) {
-            // Handle updating bank details
-            $bankName = mysqli_real_escape_string($conn, $_POST['bank_name']);
-            $branchName = mysqli_real_escape_string($conn, $_POST['branch_name']);
-            $accountName = mysqli_real_escape_string($conn, $_POST['account_name']);
-            $accountNumber = mysqli_real_escape_string($conn, $_POST['account_number']);
-        
-            // Check if the user's bank details already exist
-            $checkQuery = "SELECT * FROM user_bank_details WHERE userId = $userId";
-            $checkResult = mysqli_query($conn, $checkQuery);
-        
-            if (mysqli_num_rows($checkResult) > 0) {
-                // Record exists, perform an update
-                $updateBankDetailsQuery = "UPDATE user_bank_details SET 
-                                            bank_name = '$bankName', 
-                                            bank_branch = '$branchName', 
-                                            account_name = '$accountName', 
-                                            account_number = '$accountNumber' 
-                                            WHERE userId = $userId";
-                mysqli_query($conn, $updateBankDetailsQuery);
-            } else {
-                // Record does not exist, insert a new one
-                $insertBankDetailsQuery = "INSERT INTO user_bank_details (userId, bank_name, bank_branch, account_name, account_number) 
-                                           VALUES ($userId, '$bankName', '$branchName', '$accountName', '$accountNumber')";
-                mysqli_query($conn, $insertBankDetailsQuery);
-            }
-        
-            // Redirect or show success message
-            // Example redirect after update
-            header("Location: .");
-            //exit();
-        }
-    } 
+            $bankName      = $_POST['bank_name']      ?? '';
+            $branchName    = $_POST['branch_name']    ?? '';
+            $accountName   = $_POST['account_name']   ?? '';
+            $accountNumber = $_POST['account_number'] ?? '';
 
-    $banksAvailableQuery = "SELECT DISTINCT bank_name FROM `banks_branches`;";
-    $banksAvailableResult = mysqli_query($conn, $banksAvailableQuery);
+            $chk = mysqli_prepare($conn, "SELECT 1 FROM user_bank_details WHERE userId = ?");
+            mysqli_stmt_bind_param($chk, 'i', $userId);
+            mysqli_stmt_execute($chk);
+            $chkResult = mysqli_stmt_get_result($chk);
+            $exists = mysqli_num_rows($chkResult) > 0;
+            mysqli_stmt_close($chk);
+
+            if ($exists) {
+                $stmt = mysqli_prepare($conn,
+                    "UPDATE user_bank_details SET bank_name=?, bank_branch=?, account_name=?, account_number=? WHERE userId=?");
+                mysqli_stmt_bind_param($stmt, 'ssssi', $bankName, $branchName, $accountName, $accountNumber, $userId);
+            } else {
+                $stmt = mysqli_prepare($conn,
+                    "INSERT INTO user_bank_details (userId, bank_name, bank_branch, account_name, account_number) VALUES (?,?,?,?,?)");
+                mysqli_stmt_bind_param($stmt, 'issss', $userId, $bankName, $branchName, $accountName, $accountNumber);
+            }
+            mysqli_stmt_execute($stmt);
+            mysqli_stmt_close($stmt);
+            header("Location: .");
+            exit();
+        }
+    }
+
+    $stmt = mysqli_prepare($conn, "SELECT * FROM user_details WHERE userId = ?");
+    mysqli_stmt_bind_param($stmt, 'i', $userId);
+    mysqli_stmt_execute($stmt);
+    $userDetailsRow = mysqli_fetch_assoc(mysqli_stmt_get_result($stmt));
+    mysqli_stmt_close($stmt);
+
+    $stmt = mysqli_prepare($conn,
+        "SELECT bank_name, bank_branch, account_name, account_number FROM user_bank_details WHERE userId = ?");
+    mysqli_stmt_bind_param($stmt, 'i', $userId);
+    mysqli_stmt_execute($stmt);
+    $bankDetails = mysqli_fetch_assoc(mysqli_stmt_get_result($stmt));
+    mysqli_stmt_close($stmt);
+
+    $existingBankName    = $bankDetails['bank_name']      ?? '';
+    $existingBranchName  = $bankDetails['bank_branch']    ?? '';
+    $existingAccountName = $bankDetails['account_name']   ?? '';
+    $existingAccountNumber = $bankDetails['account_number'] ?? '';
+
+    $banksAvailableResult = mysqli_query($conn, "SELECT DISTINCT bank_name FROM banks_branches ORDER BY bank_name ASC");
 
 ?>
 
@@ -288,19 +250,4 @@
 </body>
 
 
-    <!-- plugins:js -->
-    <script src="../../assets/vendors/js/vendor.bundle.base.js"></script>
-    <!-- endinject -->
-    <!-- Plugin js for this page -->
-    <script src="../../assets/vendors/progressbar.js/progressbar.min.js"></script>
-    <script src="../../assets/vendors/jvectormap/jquery-jvectormap.min.js"></script>
-    <script src="../../assets/vendors/jvectormap/jquery-jvectormap-world-mill-en.js"></script>
-    <!-- End plugin js for this page -->
-    <!-- inject:js -->
-    <script src="../../assets/js/off-canvas.js"></script>
-    <script src="../../assets/js/misc.js"></script>
-    <script src="../../assets/js/settings.js"></script>
-    <script src="../../assets/js/todolist.js"></script>
-    <!-- endinject -->
-    <!-- Custom js for this page -->
 

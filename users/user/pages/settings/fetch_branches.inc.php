@@ -1,27 +1,22 @@
 <?php
-    // Include database connection
-    require_once __DIR__ . '/../../../../includes/db.php';
+require_once __DIR__ . '/../../../../includes/db.php';
 
-    // Check if 'bank_name' is set in the request
-    if (isset($_GET['bank_name'])) {
-        $bankName = mysqli_real_escape_string($conn, $_GET['bank_name']);
-        
-        // Query to fetch branches based on the bank name
-        $branchesQuery = "SELECT bank_branch FROM banks_branches WHERE bank_name = \"$bankName\";";
-        $branchesResult = mysqli_query($conn, $branchesQuery);
-        
-        // Prepare the response
-        $branches = [];
-        while ($row = mysqli_fetch_assoc($branchesResult)) {
-            $branches[] = $row['bank_branch'];
-        }
-        
-        // Return the JSON response
-        echo json_encode($branches);
-    } else {
-        // If 'bank_name' is not set, return an empty array
-        echo json_encode([]);
-    }
+header('Content-Type: application/json');
 
-    // Close the database connection
-    mysqli_close($conn);
+if (!isset($_GET['bank_name'])) {
+    echo json_encode([]);
+    exit;
+}
+
+$stmt = mysqli_prepare($conn, "SELECT bank_branch FROM banks_branches WHERE bank_name = ?");
+mysqli_stmt_bind_param($stmt, 's', $_GET['bank_name']);
+mysqli_stmt_execute($stmt);
+$result = mysqli_stmt_get_result($stmt);
+
+$branches = [];
+while ($row = mysqli_fetch_assoc($result)) {
+    $branches[] = $row['bank_branch'];
+}
+mysqli_stmt_close($stmt);
+
+echo json_encode($branches);

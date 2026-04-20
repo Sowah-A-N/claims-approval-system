@@ -2,38 +2,35 @@
   session_start();
 
 $pageTitle = "My Claims";
-$userId = $_SESSION['user_id'] ?? "";
-// Include head partial
-include_once "../../assets/partials/_head.php"; 
+include_once "../../assets/partials/_head.php";
 
-// Function to output full name stored in the session (if available)
+$userId = current_user_id();
+
 function outputFullName() {
-    echo isset($_SESSION['full_name']) ? $_SESSION['full_name'] : '';
+    echo isset($_SESSION['full_name']) ? h($_SESSION['full_name']) : '';
 }
 
-// Query strings
-$queries = [
-    'inProgressClaims' => "SELECT * FROM claim_details WHERE userId = '{$userId}'",
-    'savedClaims' => "SELECT *, 'Saved' AS status FROM saved_claims WHERE userId = '{$userId}'",
-    'flaggedClaims' => "SELECT *, 'Flagged' AS status FROM claim_details WHERE userId = '{$userId}' AND flagged = 1",
-    'pendingClaims' => "SELECT * FROM claim_details 
-						WHERE userId = '{$userId}' 
-						AND flagged <> 1 
-						AND completed <> 1  
-						ORDER BY claimId DESC;
-						",
-    'completedClaims' => "SELECT *, 'Forwarded to Finance' AS status FROM claim_details WHERE userId = '{$userId}' AND completed = 1"
+function run_claim_query($conn, $sql, $userId) {
+    $stmt = mysqli_prepare($conn, $sql);
+    mysqli_stmt_bind_param($stmt, 'i', $userId);
+    mysqli_stmt_execute($stmt);
+    return mysqli_stmt_get_result($stmt);
+}
+
+$results = [
+    'flaggedClaims'   => run_claim_query($conn,
+        "SELECT *, 'Flagged' AS status FROM claim_details WHERE userId = ? AND flagged = 1",
+        $userId),
+    'pendingClaims'   => run_claim_query($conn,
+        "SELECT * FROM claim_details WHERE userId = ? AND flagged <> 1 AND completed <> 1 ORDER BY claimId DESC",
+        $userId),
+    'savedClaims'     => run_claim_query($conn,
+        "SELECT *, 'Saved' AS status FROM saved_claims WHERE userId = ?",
+        $userId),
+    'completedClaims' => run_claim_query($conn,
+        "SELECT *, 'Forwarded to Finance' AS status FROM claim_details WHERE userId = ? AND completed = 1",
+        $userId),
 ];
-
-$results = [];
-
-foreach ($queries as $key => $query) {
-    $results[$key] = $conn->query($query);
-
-    if (!$results[$key]) {
-        die("Query failed: " . $conn->error);
-    }
-}
 ?>
 
 <body>
@@ -243,9 +240,7 @@ foreach ($queries as $key => $query) {
                             <div class="modal-content">
                                 <div class="modal-header">
                                     <h5 class="modal-title" id="detailsModalLabel">Claim Details</h5>
-                                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                                        <span aria-hidden="true">&times;</span>
-                                    </button>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                                 </div>
                                 <div class="modal-body">
                                     <!--div class="form-group">
@@ -402,30 +397,10 @@ foreach ($queries as $key => $query) {
 }
 
 
-   document.getElementById('modalNewRow').addEventListener("click", function(e){
-    e.preventDefault();
-    alert("New row added in modal...");
-   })
-
 
 </script>
 
 
-    <!-- plugins:js -->
-    <script src="../../assets/vendors/js/vendor.bundle.base.js"></script>
-    <!-- endinject -->
-    <!-- Plugin js for this page -->
-    <script src="../../assets/vendors/progressbar.js/progressbar.min.js"></script>
-    <script src="../../assets/vendors/jvectormap/jquery-jvectormap.min.js"></script>
-    <script src="../../assets/vendors/jvectormap/jquery-jvectormap-world-mill-en.js"></script>
-    <!-- End plugin js for this page -->
-    <!-- inject:js -->
-    <script src="../../assets/js/off-canvas.js"></script>
-    <script src="../../assets/js/misc.js"></script>
-    <script src="../../assets/js/settings.js"></script>
-    <script src="../../assets/js/todolist.js"></script>
-    <!-- endinject -->
-    <!-- Custom js for this page -->
 
 
     
