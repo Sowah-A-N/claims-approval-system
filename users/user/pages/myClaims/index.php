@@ -244,16 +244,18 @@ $results = [
 
                     ?>
 
-                    <!-- Claim Details Modal -->
-                    <div class="modal fade" id="detailsModal" tabindex="-1" aria-labelledby="detailsModalLabel" aria-hidden="true">
-                        <div class="modal-dialog modal-lg">
-                            <div class="modal-content" style="background:var(--bg-glass);backdrop-filter:blur(20px);border:var(--border-glass);color:var(--txt-primary);">
-                                <div class="modal-header" style="border-bottom:var(--border-glass);">
-                                    <h5 class="modal-title" id="detailsModalLabel">Claim Details</h5>
-                                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-                                </div>
-                                <div class="modal-body" id="detailsModalBody"></div>
+                    <!-- Claim Details Modal (rmu-glass) -->
+                    <div class="rmu-modal-backdrop" id="detailsBackdrop">
+                        <div class="rmu-modal" style="max-width:860px;width:calc(100% - 48px);">
+                            <div class="rmu-modal__header">
+                                <span class="rmu-modal__title">
+                                    <i class="ti ti-file-description" style="margin-right:8px;"></i>Claim Details
+                                </span>
+                                <button class="rmu-modal__close" onclick="closeDetailsModal()" title="Close">
+                                    <i class="ti ti-x"></i>
+                                </button>
                             </div>
+                            <div class="rmu-modal__body" id="detailsModalBody"></div>
                         </div>
                     </div>
 
@@ -288,54 +290,14 @@ $results = [
         window.location.assign("../fileNewClaim/index.php?claimTempId=" + claimId);
     }
 
-    function addNewRow() {
-        const newRow = `
-            <tr>
-                <td><input type="time" class="form-control" name="start_time[]"></td>
-                <td><input type="time" class="form-control" name="end_time[]"></td>
-                <td><input type="text" class="form-control" name="periods[]"></td>
-                <td><button type="button" class="btn btn-danger btn-sm delete-row">Delete</button></td>
-            </tr>`;
-        $('#claimDataRows').append(newRow);
-    }
-
-    function saveClaimDetails() {
-        $.ajax({
-            url: 'saveClaimDetails.inc.php',
-            type: 'POST',
-            data: $('#claimDetailsForm').serialize(),
-            success: function(response) {
-                alert("Changes saved successfully!");
-                $('#detailsModal').modal('hide');
-            },
-            error: function(xhr, status, error) {
-                alert("An error occurred while saving the claim details.");
-            }
-        });
-    }
-
-    function submitClaimDetails() {
-        $.ajax({
-            url: 'submitClaimDetails.inc.php',
-            type: 'POST',
-            data: $('#claimDetailsForm').serialize(),
-            success: function(response) {
-                alert("Claim submitted successfully!");
-                $('#detailsModal').modal('hide');
-            },
-            error: function(xhr, status, error) {
-                alert("An error occurred while submitting the claim.");
-            }
-        });
-    }
-
     function viewClaimDetails(claimId) {
-        const body = document.getElementById('detailsModalBody');
-        body.innerHTML = '<p style="text-align:center;padding:24px;color:var(--txt-muted);">'
-            + '<i class="ti ti-loader" style="animation:spin .8s linear infinite;font-size:1.4rem;"></i>'
+        const body     = document.getElementById('detailsModalBody');
+        const backdrop = document.getElementById('detailsBackdrop');
+        body.innerHTML = '<p style="text-align:center;padding:32px;color:var(--txt-muted);">'
+            + '<i class="ti ti-loader" style="animation:spin .8s linear infinite;font-size:1.6rem;"></i>'
             + '</p>';
-        const modal = new bootstrap.Modal(document.getElementById('detailsModal'));
-        modal.show();
+        backdrop.classList.add('open');
+        document.body.style.overflow = 'hidden';
         $.ajax({
             url: 'viewClaimDetails.inc.php',
             type: 'GET',
@@ -344,10 +306,27 @@ $results = [
                 body.innerHTML = response;
             },
             error: function() {
-                body.innerHTML = '<p style="color:var(--txt-muted);text-align:center;padding:20px;">Error loading claim details.</p>';
+                body.innerHTML = '<p style="color:var(--txt-muted);text-align:center;padding:20px;">'
+                    + 'Error loading claim details. Please try again.</p>';
             }
         });
     }
+
+    function closeDetailsModal() {
+        document.getElementById('detailsBackdrop').classList.remove('open');
+        document.getElementById('detailsModalBody').innerHTML = '';
+        document.body.style.overflow = '';
+    }
+
+    // Close on backdrop click or Escape key
+    document.getElementById('detailsBackdrop').addEventListener('click', function(e) {
+        if (e.target === this) closeDetailsModal();
+    });
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && document.getElementById('detailsBackdrop').classList.contains('open')) {
+            closeDetailsModal();
+        }
+    });
 
     function deleteClaim(claimId) {
         Swal.fire({
