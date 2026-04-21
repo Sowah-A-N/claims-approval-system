@@ -167,9 +167,9 @@ $results = [
                         while ($row = $results['savedClaims']->fetch_assoc()) {
                             echo '<tr>';
                             echo '<td>' . h($row['claimTempId']) . '</td>';
-                            echo '<td>' . h($row['department']) . '</td>';
-                            echo '<td>' . h($row['programme']) . '</td>';
-                            echo '<td>' . h($row['course']) . '</td>';
+                            echo '<td>' . ($row['department'] ? h($row['department']) : '<span style="color:var(--txt-muted);">—</span>') . '</td>';
+                            echo '<td>' . ($row['programme']  ? h($row['programme'])  : '<span style="color:var(--txt-muted);">—</span>') . '</td>';
+                            echo '<td>' . ($row['course']     ? h($row['course'])     : '<span style="color:var(--txt-muted);">—</span>') . '</td>';
                             echo '<td>' . date('d M Y', strtotime($row['date_saved'])) . '</td>';
                             echo '<td><span class="rmu-badge rmu-badge--neutral">' . h($row['status']) . '</span></td>';
                             echo '<td style="white-space:nowrap;">
@@ -265,6 +265,10 @@ $results = [
 
 
 
+<style>
+@keyframes spin { to { transform: rotate(360deg); } }
+</style>
+
 <script>
    function editClaim(claimId) {
         // $.ajax({
@@ -325,45 +329,60 @@ $results = [
         });
     }
 
-    //Function to view claim details
-    function viewClaimDetails(claimId){
-        console.log("Viewing claim details...");
+    function viewClaimDetails(claimId) {
+        const body = document.getElementById('detailsModalBody');
+        body.innerHTML = '<p style="text-align:center;padding:24px;color:var(--txt-muted);">'
+            + '<i class="ti ti-loader" style="animation:spin .8s linear infinite;font-size:1.4rem;"></i>'
+            + '</p>';
+        const modal = new bootstrap.Modal(document.getElementById('detailsModal'));
+        modal.show();
         $.ajax({
             url: 'viewClaimDetails.inc.php',
             type: 'GET',
             data: { claimId: claimId },
             success: function(response) {
-                $('#detailsModal .modal-body').html(response);
-                $('#detailsModal').modal('show');
+                body.innerHTML = response;
             },
-            error: function(xhr, status, error) {
-                console.error(error);
-                alert('An error occurred while fetching claim details.');
+            error: function() {
+                body.innerHTML = '<p style="color:var(--txt-muted);text-align:center;padding:20px;">Error loading claim details.</p>';
             }
         });
     }
 
-   //Function to delete a claim
-   function deleteClaim(claimId) {
-        // Ask for confirmation before deleting the claim
-        var confirmation = confirm("Are you sure you want to delete this claim?");
-
-        if (confirmation) {
+    function deleteClaim(claimId) {
+        Swal.fire({
+            title: 'Delete Draft?',
+            text: 'This draft will be permanently removed.',
+            icon: 'warning',
+            background: '#0d1b2a', color: '#e2e8f0',
+            showCancelButton: true,
+            confirmButtonText: 'Yes, Delete',
+            confirmButtonColor: '#ef4444',
+            cancelButtonColor: 'rgba(255,255,255,0.1)',
+        }).then(function(result) {
+            if (!result.isConfirmed) return;
             $.ajax({
                 url: 'deleteClaim.inc.php',
                 type: 'POST',
                 dataType: 'json',
                 data: { claimId: claimId },
                 success: function(response) {
-                    alert(response.success); // or handle success message
+                    Swal.fire({
+                        icon: 'success', title: 'Deleted',
+                        text: response.success || 'Draft removed.',
+                        background: '#0d1b2a', color: '#e2e8f0',
+                        timer: 2000, showConfirmButton: false
+                    }).then(function() { location.reload(); });
                 },
-                error: function(xhr, status, error) {
-                    alert("Error deleting claim: " + xhr.responseText); // or handle error
+                error: function(xhr) {
+                    Swal.fire({
+                        icon: 'error', title: 'Error',
+                        text: 'Could not delete the draft. Please try again.',
+                        background: '#0d1b2a', color: '#e2e8f0',
+                    });
                 }
             });
-        } else {
-            alert("Claim deletion canceled.");
-        }
+        });
     }
    
     //Function to download claim as filled out document

@@ -1,8 +1,7 @@
 
-
-<footer class="footer">
-  <div class="d-sm-flex justify-content-center justify-content-sm-between">
-    <span class="text-muted text-center text-sm-left d-block d-sm-inline-block">Copyright © 2023. Premium <a href="https://www.bootstrapdash.com/" target="_blank">Bootstrap admin template</a> from BootstrapDash. All rights reserved.</span>
-    <span class="float-none float-sm-right d-block mt-1 mt-sm-0 text-center">Hand-crafted & made with <i class="ti-heart text-danger ms-1"></i></span>
-  </div>
+<footer style="padding:18px 32px;border-top:1px solid rgba(255,255,255,0.08);
+               color:var(--txt-muted);font-size:.78rem;
+               display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px;">
+    <span>&copy; <?php echo date('Y'); ?> Regional Maritime University &mdash; Claims Management System. All rights reserved.</span>
+    <span>RMU Finance Department</span>
 </footer>
