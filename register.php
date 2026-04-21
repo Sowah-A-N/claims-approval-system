@@ -1,7 +1,7 @@
 <?php
 require_once __DIR__ . '/includes/db.php';
 
-$rankResult       = mysqli_query($conn, 'SELECT rank, rate FROM lecturer_rank_rate ORDER BY rank');
+$rankResult       = mysqli_query($conn, 'SELECT `rank`, rate FROM lecturer_rank_rate ORDER BY `rank`');
 $facultyResult    = mysqli_query($conn, 'SELECT id, name FROM faculty ORDER BY name');
 $deptResult       = mysqli_query($conn, 'SELECT dept_name FROM department ORDER BY dept_name');
 $bankResult       = mysqli_query($conn, "SELECT DISTINCT bank_name FROM banks_branches ORDER BY bank_name");
