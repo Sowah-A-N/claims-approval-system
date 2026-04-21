@@ -1,498 +1,615 @@
 <?php
 $pageTitle = 'File New Claim';
-
-// Start the session
-session_start();
-
-// Database connection
-// include_once '../../includes/conn.inc.php';
 include_once '../../assets/partials/_head.php';
+require_once '../../queries/claim.queries.php';
 
-$currentRate = $_SESSION['rate'] ?? '';
+$userId      = current_user_id();
+$currentRate = isset($_SESSION['rate']) ? (float)$_SESSION['rate'] : 0;
 
-// Query to select all programmes from the database
-$programmeSelectQuery = 'SELECT * FROM programme;';
-// Execute the query
-$programmeSelectResult = mysqli_query($conn, $programmeSelectQuery);
+$departmentResult = mysqli_query($conn, 'SELECT dept_name FROM department ORDER BY dept_name ASC');
+$programmeResult  = mysqli_query($conn, 'SELECT name FROM programme ORDER BY name ASC');
 
-// Query to select all departments from the database
-$departmentSelectQuery = 'SELECT * FROM department ORDER BY dept_name ASC; ';
-// Execute the query
-$departmentSelectResult = mysqli_query($conn, $departmentSelectQuery);
+// Fetch fuel settings in one query
+$fsq = mysqli_query($conn,
+    "SELECT settingName, settingValue FROM settings WHERE settingName IN ('fuelComponent','fuelAmount')");
+$fs = [];
+while ($r = mysqli_fetch_assoc($fsq)) $fs[$r['settingName']] = $r['settingValue'];
+$fuelEnabled = (int)($fs['fuelComponent'] ?? 0) === 1;
+$fuelValue   = $fuelEnabled ? (float)($fs['fuelAmount'] ?? 0) : 0;
 
-function outputFullName()
-{
-    if (isset($_SESSION['full_name'])) {
-        echo $_SESSION['full_name'];
+// Draft loading — populate if ?claimTempId= is set
+$draft       = null;
+$draftSlots  = [];
+$claimTempId = isset($_GET['claimTempId']) ? (int)$_GET['claimTempId'] : 0;
+if ($claimTempId > 0) {
+    $draft = db_get_saved_claim_by_owner($conn, $claimTempId, $userId);
+    if ($draft) {
+        $rows    = db_get_claim_data_rows($conn, $claimTempId);
+        $slotMap = [];
+        foreach ($rows as $row) {
+            $key = $row['start_time'] . '|' . $row['end_time'] . '|' . $row['periods'] . '|' . $row['fuelComponent'];
+            if (!isset($slotMap[$key])) {
+                $slotMap[$key] = [
+                    'startTime'     => $row['start_time'],
+                    'endTime'       => $row['end_time'],
+                    'periods'       => (int)$row['periods'],
+                    'subTotal'      => (float)$row['subTotal'],
+                    'fuelComponent' => (int)$row['fuelComponent'],
+                    'dates'         => [],
+                ];
+            }
+            $slotMap[$key]['dates'][] = $row['date'];
+        }
+        $draftSlots = array_values($slotMap);
+    } else {
+        $claimTempId = 0; // not owned by this user
     }
 }
 
-$currentRate = isset($_SESSION['rate']) ? (float) $_SESSION['rate'] : 0;
-
-$programmeSelectResult = mysqli_query($conn, 'SELECT * FROM programme ORDER BY name ASC');
-$departmentSelectResult = mysqli_query($conn, 'SELECT * FROM department ORDER BY dept_name ASC');
-
-// Fuel component toggle
-$fuelStmt = mysqli_prepare($conn, "SELECT settingValue FROM settings WHERE settingName = ?");
-mysqli_stmt_bind_param($fuelStmt, 's', $k);
-$k = 'fuelComponent';
-mysqli_stmt_execute($fuelStmt);
-mysqli_stmt_bind_result($fuelStmt, $fuelComponent);
-mysqli_stmt_fetch($fuelStmt);
-mysqli_stmt_close($fuelStmt);
-
-$fuelValue = 0;
-if ($fuelComponent == 1) {
-    $fuelStmt2 = mysqli_prepare($conn, "SELECT settingValue FROM settings WHERE settingName = ?");
-    mysqli_stmt_bind_param($fuelStmt2, 's', $k2);
-    $k2 = 'fuelAmount';
-    mysqli_stmt_execute($fuelStmt2);
-    mysqli_stmt_bind_result($fuelStmt2, $fuelValue);
-    mysqli_stmt_fetch($fuelStmt2);
-    mysqli_stmt_close($fuelStmt2);
-}
-
+$draftJson      = json_encode($draft ? [
+    'claimTempId' => $claimTempId,
+    'department'  => $draft['department'],
+    'programme'   => $draft['programme'],
+    'course'      => $draft['course'],
+] : null);
+$draftSlotsJson = json_encode($draftSlots);
 ?>
-
 <body>
+<div class="container-scroller">
+    <?php include '../../assets/partials/_navbar.php'; ?>
 
-    <script>
-        // Check if the page was reloaded after a form submission and if there's an error message to display
-        window.onload = function() {
-            if(performance.navigation.type == 1 && <?php echo isset($_SESSION['formError']) && !empty($_SESSION['formError']) ? 'true' : 'false'; ?>) {
-                // Show the error message div
-                document.getElementById('errorMessageDiv').style.display = 'block';
-            }
-        }
-    </script>
+    <div class="container-fluid page-body-wrapper">
+        <?php include '../../assets/partials/_sidebar.php'; ?>
 
-    <div class="container-scroller">
-        <?php include '../../assets/partials/_navbar.php'; ?>
+        <div class="main-panel">
+            <div class="content-wrapper">
 
-        <div class="container-fluid page-body-wrapper">
-            <?php include '../../assets/partials/_sidebar.php' ?>
-
-            <div class="main-panel">
-                <div class="content-wrapper">
-                    
-                <form action="" id="newClaimForm" name="newClaimForm"></form>
-                     <?php
-function getClaimFieldValue($field)
-{
-    return isset($_SESSION['claim_data'][$field]) ? $_SESSION['claim_data'][$field] : '';
-}
-?>
-                         <div class="form-group row">
-                            <label class="col-sm-3 col-form-label" for="rate">Rate (GH₵)</label>
-                            <div class="col-sm-9">
-                                <input type="text" name="rate" class="form-control" id="rate" style="width:50%" 
-                                        value="<?php echo h($currentRate); ?>" readonly>
-                            </div>
-                        </div>		
-                    
-                        <div class="form-group row">
-                            <label class="col-sm-3 col-form-label" for="department">Department</label>
-                            <div class="col-sm-9">
-                                <select class="form-select" name="department" id="department" style="width:75%">
-                                    <option value="">--Select Department--</option>
-                                    <?php
-                                    while ($row = mysqli_fetch_assoc($departmentSelectResult)) {
-                                        $selected = $row['dept_name'] == getClaimFieldValue('department') ? 'selected' : '';
-                                        echo '<option value="' . $row['dept_name'] . "\" $selected>" . $row['dept_name'] . '</option>';
-                                    }
-                                    ?>
-                                </select>
-                            </div>
-                        </div>
-
-                        <div class="form-group row">
-                            <label class="col-sm-3 col-form-label" for="programme">Programme</label>
-                            <div class="col-sm-9">
-                                <select class="form-select" name="programme" id="programme" style="width:75%">
-                                    <option value="">--Select Programme--</option>
-                                    <?php
-                                    while ($row = mysqli_fetch_assoc($programmeSelectResult)) {
-                                        $selected = $row['name'] == getClaimFieldValue('programme') ? 'selected' : '';
-                                        echo '<option value="' . $row['name'] . "\" $selected>" . $row['name'] . '</option>';
-                                    }
-                                    ?>
-                                </select>
-                            </div>
-                        </div>
-
-                        <div class="form-group row">
-                            <label class="col-sm-3 col-form-label" for="course">Course</label>
-                            <div class="col-sm-9">
-                                <select class="form-select" name="course" id="course" style="width:75%">
-                                    <option value="">--Select Department First--</option>
-                                    <?php
-                                    // Dynamically populate based on the department selected
-                                    ?>
-                                </select>
-                            </div>
-                        </div>
-
-                        <!-- Container for dynamically added rows -->
-                        <div id="courseTimeRows" class="mt-4">
-                            <!-- Dynamic rows for times and dates will be appended here -->
-                        </div>
-
-                        <!-- Container for other details -->
-                        <div id="detailsRowsDiv" class="mt-4">
-                            <!-- Details for times and dates will be appended here -->
-                        </div>
-
-                        <!-- Buttons for form actions -->               
-                        <div class="form-group row">
-                            <div class="col-md-3 col-sm-6 mb-2">
-                                <button type='button' id="addTimeSlot" class="btn btn-secondary btn-rounded btn-block">Add Timeslot</button>
-                            </div>
-                            <div class="col-md-3 col-sm-6 mb-2">
-                                <button type='submit' id='saveFormDetails' name='submitBtn'  class="btn btn-primary btn-rounded btn-block">Save Claim Info</button>
-                            </div>
-                            <div class="col-md-3 col-sm-6 mb-2">
-                                <button type='submit' id='submitClaim' name='submitBtn'  class="btn btn-success btn-rounded btn-block">Submit Claim</button>
-                            </div>                           
-                        </div>
-
+                <div class="rmu-page-header">
+                    <div class="rmu-page-header__title">
+                        <?php echo $claimTempId ? 'Edit Draft Claim' : 'File New Claim'; ?>
+                    </div>
+                    <div class="rmu-page-header__sub">
+                        Select a course, add your teaching sessions with dates, then save as draft or submit
+                    </div>
                 </div>
-                <!--Footer goes here -->
+
+                <!-- ── Claim Details ──────────────────────────────────────── -->
+                <div class="rmu-card" style="margin-bottom:24px;">
+                    <div class="rmu-card__header">
+                        <span class="rmu-card__title">Claim Details</span>
+                    </div>
+                    <div class="rmu-card__body">
+                        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px;">
+                            <div class="rmu-form-group" style="margin-bottom:0;">
+                                <label class="rmu-label" for="department">Department <span class="required">*</span></label>
+                                <select class="rmu-select" id="department">
+                                    <option value="">— Select Department —</option>
+                                    <?php while ($r = mysqli_fetch_assoc($departmentResult)): ?>
+                                    <option value="<?php echo h($r['dept_name']); ?>"><?php echo h($r['dept_name']); ?></option>
+                                    <?php endwhile; ?>
+                                </select>
+                            </div>
+                            <div class="rmu-form-group" style="margin-bottom:0;">
+                                <label class="rmu-label" for="programme">Programme <span class="required">*</span></label>
+                                <select class="rmu-select" id="programme">
+                                    <option value="">— Select Programme —</option>
+                                    <?php while ($r = mysqli_fetch_assoc($programmeResult)): ?>
+                                    <option value="<?php echo h($r['name']); ?>"><?php echo h($r['name']); ?></option>
+                                    <?php endwhile; ?>
+                                </select>
+                            </div>
+                            <div class="rmu-form-group" style="margin-bottom:0;">
+                                <label class="rmu-label" for="course">Course <span class="required">*</span></label>
+                                <select class="rmu-select" id="course" disabled>
+                                    <option value="">— Select Department First —</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div style="margin-top:16px;display:flex;align-items:center;gap:10px;">
+                            <span class="rmu-label" style="margin-bottom:0;">Your Rate:</span>
+                            <span class="rmu-badge rmu-badge--primary" style="font-size:.9rem;padding:5px 14px;">
+                                GH₵ <?php echo h(number_format($currentRate, 2)); ?> / period
+                            </span>
+                            <input type="hidden" id="rate" value="<?php echo h($currentRate); ?>">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ── Teaching Sessions ──────────────────────────────────── -->
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+                    <div>
+                        <div style="font-size:1rem;font-weight:600;color:var(--txt-primary);">Teaching Sessions</div>
+                        <div style="font-size:.78rem;color:var(--txt-muted);margin-top:3px;">
+                            One entry per unique time slot. Periods and sub-total are calculated automatically.
+                        </div>
+                    </div>
+                    <button type="button" class="rmu-btn rmu-btn--primary" onclick="addSlot()">
+                        <i class="ti ti-plus"></i> Add Session
+                    </button>
+                </div>
+
+                <div id="slotsContainer"></div>
+
+                <div id="emptySlots" style="text-align:center;padding:36px 20px;color:var(--txt-muted);
+                    background:rgba(255,255,255,0.02);border:1px dashed rgba(255,255,255,0.1);
+                    border-radius:12px;margin-bottom:24px;">
+                    <i class="ti ti-calendar-off" style="font-size:2.2rem;display:block;margin-bottom:10px;opacity:.5;"></i>
+                    No sessions yet. Click <strong style="color:var(--txt-primary);">Add Session</strong> to begin.
+                </div>
+
+                <!-- ── Live Summary ───────────────────────────────────────── -->
+                <div class="rmu-card" id="summaryCard" style="margin-bottom:24px;display:none;">
+                    <div class="rmu-card__header">
+                        <span class="rmu-card__title">Claim Summary</span>
+                    </div>
+                    <div class="rmu-card__body" style="padding-bottom:0;">
+                        <div class="rmu-table-wrap">
+                            <table class="rmu-table">
+                                <thead>
+                                    <tr>
+                                        <th>Session</th>
+                                        <th>Time Slot</th>
+                                        <th>Periods</th>
+                                        <th>Dates</th>
+                                        <th>Per Session (GH₵)</th>
+                                        <th>Session Total (GH₵)</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="summaryBody"></tbody>
+                            </table>
+                        </div>
+                        <div style="display:flex;justify-content:flex-end;align-items:center;gap:16px;
+                            padding:16px 0;border-top:1px solid rgba(255,255,255,0.08);margin-top:4px;">
+                            <span style="color:var(--txt-secondary);font-size:.9rem;font-weight:500;">Grand Total</span>
+                            <span style="font-size:1.3rem;font-weight:700;color:var(--txt-primary);">
+                                GH₵ <span id="grandTotal">0.00</span>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ── Action Bar ─────────────────────────────────────────── -->
+                <div style="display:flex;gap:12px;justify-content:flex-end;margin-bottom:40px;">
+                    <button type="button" class="rmu-btn rmu-btn--secondary" id="saveDraftBtn" onclick="saveDraft()">
+                        <i class="ti ti-device-floppy"></i> Save Draft
+                    </button>
+                    <button type="button" class="rmu-btn rmu-btn--primary" id="submitClaimBtn" onclick="submitClaim()">
+                        <i class="ti ti-send"></i> Submit Claim
+                    </button>
+                </div>
+
             </div>
+            <?php include '../../assets/partials/_footer.php'; ?>
         </div>
     </div>
+</div>
 
-    <script>
-        document.getElementById("department").addEventListener("change", function () {
-            const department = this.value;
-            const courseDropdown = document.getElementById("course");
+<style>
+@keyframes spin { to { transform: rotate(360deg); } }
+.slot-periods, .slot-subtotal { color: var(--txt-secondary) !important; }
+</style>
 
-            // Reset course dropdown and disable initially
-            courseDropdown.innerHTML = `<option value="">--Select Department First--</option>`;
-            courseDropdown.disabled = !department;
+<script>
+const RATE         = <?php echo json_encode($currentRate); ?>;
+const FUEL_ENABLED = <?php echo json_encode($fuelEnabled); ?>;
+const FUEL_VALUE   = <?php echo json_encode($fuelValue); ?>;
+const DRAFT        = <?php echo $draftJson; ?>;
+const DRAFT_SLOTS  = <?php echo $draftSlotsJson; ?>;
 
-            if (department) {
-                // Make an AJAX call to fetch courses for the selected department
-                fetch(`getCourses.php?department=${encodeURIComponent(department)}`)
-                    .then(response => response.json())
-                    .then(courses => {
-                        // Populate the courses dropdown
-                        courseDropdown.innerHTML = `<option value="">--Select Course--</option>`;
-                        courses.forEach(course => {
-                            const option = document.createElement("option");
-                            option.value = course.name;
-                            option.textContent = course.name;
-                            courseDropdown.appendChild(option);
-                        });
-                    });
+let slotCounter          = 0;
+let currentClaimTempId   = DRAFT ? DRAFT.claimTempId : 0;
+
+// ── Utilities ─────────────────────────────────────────────────────────────────
+
+function timeToMins(t) {
+    if (!t) return 0;
+    const [h, m] = t.split(':').map(Number);
+    return h * 60 + m;
+}
+
+function fmt(n) { return Number(n).toFixed(2); }
+
+function swal(icon, title, text) {
+    Swal.fire({
+        icon, title, text,
+        background: '#0d1b2a',
+        color: '#e2e8f0',
+        confirmButtonColor: '#3b82f6'
+    });
+}
+
+function swalSuccess(text) {
+    Swal.fire({
+        icon: 'success', title: 'Done', text,
+        background: '#0d1b2a', color: '#e2e8f0',
+        timer: 2500, showConfirmButton: false
+    });
+}
+
+function setBusy(btnId, busy, label) {
+    const btn = document.getElementById(btnId);
+    btn.disabled = busy;
+    btn.innerHTML = busy
+        ? `<i class="ti ti-loader" style="animation:spin .8s linear infinite;"></i> ${label}`
+        : label;
+}
+
+// ── Slot management ───────────────────────────────────────────────────────────
+
+function addSlot(prefill) {
+    slotCounter++;
+    const n    = slotCounter;
+    const card = document.createElement('div');
+    card.className = 'rmu-card rmu-slot-card';
+    card.style.marginBottom = '16px';
+
+    card.innerHTML = `
+        <div class="rmu-card__header"
+             style="display:flex;justify-content:space-between;align-items:center;">
+            <span class="rmu-card__title slot-title">Session ${n}</span>
+            <button type="button"
+                    class="rmu-btn rmu-btn--danger"
+                    style="padding:4px 10px;font-size:.78rem;"
+                    onclick="removeSlot(this)">
+                <i class="ti ti-x"></i> Remove
+            </button>
+        </div>
+        <div class="rmu-card__body">
+
+            <!-- Time / periods / sub-total row -->
+            <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:16px;">
+                <div class="rmu-form-group" style="margin-bottom:0;">
+                    <label class="rmu-label">Start Time <span class="required">*</span></label>
+                    <input type="time" class="rmu-input slot-start" oninput="recalculate()">
+                </div>
+                <div class="rmu-form-group" style="margin-bottom:0;">
+                    <label class="rmu-label">End Time <span class="required">*</span></label>
+                    <input type="time" class="rmu-input slot-end" oninput="recalculate()">
+                </div>
+                <div class="rmu-form-group" style="margin-bottom:0;">
+                    <label class="rmu-label">Periods</label>
+                    <input type="text" class="rmu-input slot-periods"
+                           readonly placeholder="— auto —" tabindex="-1">
+                </div>
+                <div class="rmu-form-group" style="margin-bottom:0;">
+                    <label class="rmu-label">Per Session (GH₵)</label>
+                    <input type="text" class="rmu-input slot-subtotal"
+                           readonly placeholder="— auto —" tabindex="-1">
+                </div>
+            </div>
+
+            ${FUEL_ENABLED ? `
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">
+                <input type="checkbox" class="slot-fuel" id="fuel-${n}"
+                       onchange="recalculate()"
+                       style="width:16px;height:16px;accent-color:#3b82f6;cursor:pointer;flex-shrink:0;">
+                <label for="fuel-${n}" class="rmu-label"
+                       style="margin-bottom:0;cursor:pointer;font-size:.82rem;">
+                    Include Fuel Component
+                    <span style="color:var(--txt-muted);">(+GH₵ ${fmt(FUEL_VALUE)} per session)</span>
+                </label>
+            </div>` : ''}
+
+            <div style="border-top:1px solid rgba(255,255,255,0.08);margin-bottom:14px;"></div>
+
+            <!-- Dates -->
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+                <label class="rmu-label" style="margin-bottom:0;">
+                    Teaching Dates <span class="required">*</span>
+                </label>
+                <button type="button"
+                        class="rmu-btn rmu-btn--secondary"
+                        style="padding:5px 12px;font-size:.78rem;"
+                        onclick="addDate(this)">
+                    <i class="ti ti-calendar-plus"></i> Add Date
+                </button>
+            </div>
+            <div class="slot-dates" style="display:flex;flex-wrap:wrap;gap:8px;min-height:32px;"></div>
+            <div class="slot-dates-empty"
+                 style="color:var(--txt-muted);font-size:.78rem;margin-top:6px;">
+                No dates added yet.
+            </div>
+        </div>`;
+
+    document.getElementById('slotsContainer').appendChild(card);
+    document.getElementById('emptySlots').style.display  = 'none';
+    document.getElementById('summaryCard').style.display = '';
+
+    if (prefill) {
+        card.querySelector('.slot-start').value = prefill.startTime || '';
+        card.querySelector('.slot-end').value   = prefill.endTime   || '';
+        const fc = card.querySelector('.slot-fuel');
+        if (fc) fc.checked = !!prefill.fuelComponent;
+        (prefill.dates || []).forEach(d => addDateToCard(card, d));
+    }
+
+    recalculate();
+    return card;
+}
+
+function removeSlot(btn) {
+    btn.closest('.rmu-slot-card').remove();
+    renumberSlots();
+    recalculate();
+    if (!document.querySelector('.rmu-slot-card')) {
+        document.getElementById('emptySlots').style.display  = '';
+        document.getElementById('summaryCard').style.display = 'none';
+    }
+}
+
+function renumberSlots() {
+    document.querySelectorAll('.rmu-slot-card').forEach((c, i) => {
+        c.querySelector('.slot-title').textContent = 'Session ' + (i + 1);
+    });
+}
+
+// ── Date management ───────────────────────────────────────────────────────────
+
+function addDateToCard(card, val) {
+    const container = card.querySelector('.slot-dates');
+    const empty     = card.querySelector('.slot-dates-empty');
+
+    const pill = document.createElement('div');
+    pill.className  = 'date-pill';
+    pill.style.cssText =
+        'display:flex;align-items:center;gap:4px;' +
+        'background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);' +
+        'border-radius:6px;padding:3px 6px 3px 10px;';
+    pill.innerHTML = `
+        <input type="date" class="slot-date" value="${val || ''}"
+               style="background:transparent;border:none;color:var(--txt-primary);
+                      font-size:.85rem;outline:none;width:130px;cursor:pointer;"
+               onchange="recalculate()">
+        <button type="button" onclick="removeDate(this)"
+                style="background:none;border:none;color:var(--txt-muted);
+                       cursor:pointer;padding:2px 4px;line-height:1;
+                       display:flex;align-items:center;"
+                title="Remove date">
+            <i class="ti ti-x" style="font-size:.75rem;"></i>
+        </button>`;
+
+    container.appendChild(pill);
+    if (empty) empty.style.display = 'none';
+}
+
+function addDate(btn) {
+    const card = btn.closest('.rmu-slot-card');
+    addDateToCard(card, '');
+    card.querySelector('.slot-dates').lastElementChild.querySelector('.slot-date').focus();
+    recalculate();
+}
+
+function removeDate(btn) {
+    const pill  = btn.closest('.date-pill');
+    const card  = pill.closest('.rmu-slot-card');
+    const empty = card.querySelector('.slot-dates-empty');
+    pill.remove();
+    if (!card.querySelectorAll('.slot-date').length && empty) empty.style.display = '';
+    recalculate();
+}
+
+// ── Calculation ───────────────────────────────────────────────────────────────
+
+function recalculate() {
+    let grandTotal = 0;
+    const rows = [];
+
+    document.querySelectorAll('.rmu-slot-card').forEach((card, i) => {
+        const start    = card.querySelector('.slot-start').value;
+        const end      = card.querySelector('.slot-end').value;
+        const fuelChk  = card.querySelector('.slot-fuel');
+        const hasFuel  = fuelChk && fuelChk.checked;
+        const filled   = Array.from(card.querySelectorAll('.slot-date'))
+                              .filter(d => d.value).length;
+
+        let periods = 0, perSession = 0;
+        if (start && end) {
+            const diff = timeToMins(end) - timeToMins(start);
+            if (diff > 0) {
+                periods    = Math.ceil(diff / 50);
+                perSession = periods * RATE + (hasFuel ? FUEL_VALUE : 0);
             }
+        }
+
+        card.querySelector('.slot-periods').value  = periods    > 0 ? periods          : '';
+        card.querySelector('.slot-subtotal').value = perSession > 0 ? fmt(perSession)   : '';
+
+        const sessionTotal = perSession * filled;
+        grandTotal += sessionTotal;
+        rows.push({ n: i + 1, start, end, periods, perSession, filled, sessionTotal });
+    });
+
+    updateSummary(rows, grandTotal);
+}
+
+function updateSummary(rows, grandTotal) {
+    const tbody = document.getElementById('summaryBody');
+
+    if (!rows.length) { tbody.innerHTML = ''; return; }
+
+    tbody.innerHTML = rows.map(r => `
+        <tr>
+            <td>Session ${r.n}</td>
+            <td>${r.start || '—'} → ${r.end || '—'}</td>
+            <td>${r.periods || '—'}</td>
+            <td>${r.filled}</td>
+            <td>${r.perSession > 0 ? fmt(r.perSession) : '—'}</td>
+            <td><strong>${fmt(r.sessionTotal)}</strong></td>
+        </tr>`).join('');
+
+    document.getElementById('grandTotal').textContent = fmt(grandTotal);
+}
+
+// ── Course AJAX ───────────────────────────────────────────────────────────────
+
+function loadCourses(department, callback) {
+    const sel = document.getElementById('course');
+    sel.innerHTML = '<option value="">Loading…</option>';
+    sel.disabled  = true;
+    if (!department) {
+        sel.innerHTML = '<option value="">— Select Department First —</option>';
+        return;
+    }
+    fetch(`getCourses.php?department=${encodeURIComponent(department)}`)
+        .then(r => r.json())
+        .then(courses => {
+            sel.innerHTML = '<option value="">— Select Course —</option>';
+            courses.forEach(c => {
+                const o = document.createElement('option');
+                o.value = o.textContent = c.name;
+                sel.appendChild(o);
+            });
+            sel.disabled = courses.length === 0;
+            if (callback) callback();
+        })
+        .catch(() => {
+            sel.innerHTML = '<option value="">Error loading courses</option>';
+            sel.disabled  = false;
         });
+}
 
-        // Add a new time slot row
-        document.getElementById("addTimeSlot").addEventListener("click", function () {
-            const course = document.getElementById("course").value;
+document.getElementById('department').addEventListener('change', function () {
+    loadCourses(this.value);
+});
 
-            if (!course) {
-                alert("Please select a course first.");
-                return;
-            }
+// ── Form payload builder ──────────────────────────────────────────────────────
 
-            // Create a container for the time slot
-            const timeSlotDiv = document.createElement("div");
-            timeSlotDiv.className = "time-slot mb-4 border p-3 rounded bg-light";
+function buildPayload() {
+    const dept   = document.getElementById('department').value.trim();
+    const prog   = document.getElementById('programme').value.trim();
+    const course = document.getElementById('course').value.trim();
 
-            // Create time input fields
-            const timeRow = document.createElement("div");
-            timeRow.className = "row mb-2";
+    if (!dept || !prog || !course) {
+        swal('error', 'Validation Error', 'Please select Department, Programme, and Course.');
+        return null;
+    }
 
-            const startTimeCol = document.createElement("div");
-            startTimeCol.className = "col-md-5";
-            const startTimeInput = document.createElement("input");
-            startTimeInput.type = "time";
-            startTimeInput.name = `startTime[${course}][]`;
-            startTimeInput.className = "form-control";
-            startTimeInput.placeholder = "Start Time";
-            startTimeCol.appendChild(startTimeInput);
-            startTimeInput.addEventListener('input', function() {
-                checkDuplicateDateTime();
+    const slotCards = Array.from(document.querySelectorAll('.rmu-slot-card'));
+    if (!slotCards.length) {
+        swal('error', 'Validation Error', 'Please add at least one teaching session.');
+        return null;
+    }
+
+    const fd = new FormData();
+    fd.append('department', dept);
+    fd.append('programme',  prog);
+    fd.append('course',     course);
+    fd.append('rate',       RATE);
+
+    for (let i = 0; i < slotCards.length; i++) {
+        const card      = slotCards[i];
+        const start     = card.querySelector('.slot-start').value;
+        const end       = card.querySelector('.slot-end').value;
+        const fuelChk   = card.querySelector('.slot-fuel');
+        const fuel      = fuelChk && fuelChk.checked ? 1 : 0;
+        const periods   = parseInt(card.querySelector('.slot-periods').value)   || 0;
+        const subTotal  = parseFloat(card.querySelector('.slot-subtotal').value) || 0;
+        const dates     = Array.from(card.querySelectorAll('.slot-date'))
+                               .map(d => d.value).filter(d => d);
+
+        if (!start || !end) {
+            swal('error', 'Validation Error', `Session ${i + 1}: start and end time are required.`);
+            return null;
+        }
+        if (timeToMins(end) <= timeToMins(start)) {
+            swal('error', 'Validation Error', `Session ${i + 1}: end time must be after start time.`);
+            return null;
+        }
+        if (!dates.length) {
+            swal('error', 'Validation Error', `Session ${i + 1}: add at least one teaching date.`);
+            return null;
+        }
+
+        fd.append(`timeSlots[${i}][startTime]`,     start);
+        fd.append(`timeSlots[${i}][endTime]`,       end);
+        fd.append(`timeSlots[${i}][periods]`,       periods);
+        fd.append(`timeSlots[${i}][subTotal]`,      subTotal);
+        fd.append(`timeSlots[${i}][fuelComponent]`, fuel);
+        dates.forEach((d, di) => fd.append(`timeSlots[${i}][dates][${di}]`, d));
+    }
+
+    return fd;
+}
+
+// ── Submit ────────────────────────────────────────────────────────────────────
+
+function submitClaim() {
+    const payload = buildPayload();
+    if (!payload) return;
+
+    Swal.fire({
+        title: 'Submit Claim?',
+        text: 'Once submitted, the claim will be sent for approval and cannot be edited.',
+        icon: 'question',
+        background: '#0d1b2a', color: '#e2e8f0',
+        showCancelButton: true,
+        confirmButtonText: 'Yes, Submit',
+        confirmButtonColor: '#3b82f6',
+        cancelButtonColor: 'rgba(255,255,255,0.1)',
+    }).then(result => {
+        if (!result.isConfirmed) return;
+
+        setBusy('submitClaimBtn', true, 'Submitting…');
+
+        fetch('multiClaimsSubmit.inc.php', { method: 'POST', body: payload })
+            .then(r => r.json())
+            .then(data => {
+                if (data.status === 'success' || data.success) {
+                    swalSuccess(data.message || 'Claim submitted successfully.');
+                    setTimeout(() => { window.location.href = '../myClaims/'; }, 2600);
+                } else {
+                    swal('error', 'Submission Failed', data.message || data.error || 'Please try again.');
+                    setBusy('submitClaimBtn', false,
+                        '<i class="ti ti-send"></i> Submit Claim');
+                }
+            })
+            .catch(() => {
+                swal('error', 'Network Error', 'Could not reach the server. Please try again.');
+                setBusy('submitClaimBtn', false,
+                    '<i class="ti ti-send"></i> Submit Claim');
             });
+    });
+}
 
-            const endTimeCol = document.createElement("div");
-            endTimeCol.className = "col-md-5";
-            const endTimeInput = document.createElement("input");
-            endTimeInput.type = "time";
-            endTimeInput.name = `endTime[${course}][]`;
-            endTimeInput.className = "form-control";
-            endTimeCol.appendChild(endTimeInput);
+// ── Save Draft ────────────────────────────────────────────────────────────────
 
-            timeRow.appendChild(startTimeCol);
-            timeRow.appendChild(endTimeCol);
+function saveDraft() {
+    const payload = buildPayload();
+    if (!payload) return;
 
-            timeSlotDiv.appendChild(timeRow);
+    if (currentClaimTempId) payload.append('claimTempId', currentClaimTempId);
 
-            // Add fields for `periods`, `subTotal`, and `fuelComponent`
-            const detailsRow = document.createElement("div");
-            detailsRow.className = "row mb-2";
+    setBusy('saveDraftBtn', true, 'Saving…');
 
-            const periodsCol = document.createElement("div");
-            periodsCol.className = "col-md-4";
-            const periodsInput = document.createElement("input");
-            periodsInput.type = "number";
-            periodsInput.name = `period[${course}][]`;
-            periodsInput.className = "form-control";
-            periodsInput.placeholder = "Periods";
-            periodsCol.appendChild(periodsInput);
-            
-            const periodsTooltip = document.createElement("span");
-            periodsTooltip.className = "tooltip-text";
-            periodsTooltip.textContent = "Number of periods for the course";
-            periodsCol.appendChild(periodsTooltip);
-
-            const subTotalCol = document.createElement("div");
-            subTotalCol.className = "col-md-4";
-            const subTotalInput = document.createElement("input");
-            subTotalInput.type = "number";
-            subTotalInput.name = `subTotal[${course}][]`;
-            subTotalInput.className = "form-control";
-            subTotalInput.placeholder = "Sub Total";
-            subTotalCol.appendChild(subTotalInput);
-            
-            const subTotalTooltip = document.createElement("span");
-            subTotalTooltip.className = "tooltip-text";
-            subTotalTooltip.textContent = "Subtotal cost for this time slot";
-            subTotalCol.appendChild(subTotalTooltip);
-
-            <?php if($fuelComponent): ?>
-            const fuelCol = document.createElement("div");
-            fuelCol.className = "col-md-4";
-            const fuelLabel = document.createElement("label");
-            fuelLabel.className = "form-check-label me-2";
-            fuelLabel.textContent = "Fuel Component";
-            const fuelInput = document.createElement("input");
-            fuelInput.type = "checkbox";
-            fuelInput.name = `fuelComponent[${course}][]`;
-            fuelInput.className = "form-check-input";
-            fuelCol.appendChild(fuelLabel);
-            fuelCol.appendChild(fuelInput);
-            
-            const fuelTooltip = document.createElement("span");
-            fuelTooltip.className = "tooltip-text";
-            fuelTooltip.textContent = "Check if fuel component applies";
-            fuelCol.appendChild(fuelTooltip);
-
-            detailsRow.appendChild(fuelCol);
-            <?php endif; ?>
-
-            detailsRow.insertBefore(periodsCol, detailsRow.firstChild);
-            detailsRow.insertBefore(subTotalCol, detailsRow.children[1] || null);
-            document.getElementById('detailsRowsDiv').appendChild(detailsRow);
-
-            // Add dates under the time slot
-            const dateContainer = document.createElement("div");
-            dateContainer.className = "date-container";
-
-            const addDateButton = document.createElement("button");
-            addDateButton.type = "button";
-            addDateButton.textContent = "Add Date";
-            addDateButton.className = "btn btn-primary mb-2";
-            addDateButton.addEventListener("click", function () {
-                const dateRow = document.createElement("div");
-                dateRow.className = "row mb-2";
-
-                const dateCol = document.createElement("div");
-                dateCol.className = "col-md-10";
-                const dateInput = document.createElement("input");
-                dateInput.type = "date";
-                dateInput.name = `dates[${course}][]`;
-                dateInput.className = "form-control";
-                dateCol.appendChild(dateInput);
-
-                const dateTooltip = document.createElement("span");
-                dateTooltip.className = "tooltip-text";
-                dateTooltip.textContent = "Select the date for this time slot";
-                dateCol.appendChild(dateTooltip);
-
-                dateRow.appendChild(dateCol);
-                dateContainer.appendChild(dateRow);
-            });
-
-            timeSlotDiv.appendChild(addDateButton);
-            timeSlotDiv.appendChild(dateContainer);
-
-            // Append time slot to the container
-            document.getElementById("courseTimeRows").appendChild(timeSlotDiv);
-        });  
-
-        // Function to check for duplicate date and time
-        function checkDuplicateDateTime() {
-        var rows = document.getElementsByName('date[]');
-        const course = document.getElementById("course").value;
-        var startTimes = document.getElementsByName(`startTime[${course}][]`);
-        
-        var values = {};
-        var duplicateFound = false;
-
-        for (var i = 0; i < rows.length; i++) {
-            var key = rows[i].value + '-' + startTimes[i].value;
-            if (values[key] && values[key] !== rows[i]) {
-                duplicateFound = true;
-                break;
+    fetch('saveDraft.inc.php', { method: 'POST', body: payload })
+        .then(r => r.json())
+        .then(data => {
+            if (data.claimTempId) {
+                currentClaimTempId = data.claimTempId;
+                history.replaceState({}, '', `?claimTempId=${data.claimTempId}`);
+                swalSuccess('Draft saved. You can return to it from My Claims.');
             } else {
-                values[key] = rows[i];
+                swal('error', 'Save Failed', data.error || 'Please try again.');
             }
-        }
+        })
+        .catch(() => swal('error', 'Network Error', 'Could not reach the server. Please try again.'))
+        .finally(() => setBusy('saveDraftBtn', false,
+            '<i class="ti ti-device-floppy"></i> Save Draft'));
+}
 
-        if (duplicateFound) {
-            // You can throw a flag, show an alert, disable form submission, etc.
-            alert('Duplicate date and start time found in multiple rows!');
-            // Example: disable submit button
-            document.getElementById('addTimeSlot').disabled = true;
-            document.getElementById('saveFormDetails').disabled = true;
-            document.getElementById('submitClaim').disabled = true;
+// ── Draft pre-population ──────────────────────────────────────────────────────
 
+document.addEventListener('DOMContentLoaded', function () {
+    if (!DRAFT) return;
 
-        } else {
-            // Enable submit button if no duplicates
-            document.getElementById('addTimeSlot').disabled = false;
-            document.getElementById('saveFormDetails').disabled = false;
-            document.getElementById('submitClaim').disabled = false;
-        }    
-	};
+    document.getElementById('department').value = DRAFT.department;
+    document.getElementById('programme').value  = DRAFT.programme;
 
-        // Event listener for time picker changes
-        document.querySelectorAll('input[type="time"]').forEach(function(timePicker) {
-            timePicker.addEventListener('input', calculatePeriod);
-        });
-
-        function calculatePeriod() {
-            // Select all start time, end time, and period input fields
-            const startTimeInputs = document.querySelectorAll('input[name="startTime[]"]');
-            const endTimeInputs = document.querySelectorAll('input[name="endTime[]"]');
-            const periodInputs = document.querySelectorAll('input[name="period[]"]');
-
-            // Loop through each pair of start time and end time inputs
-            startTimeInputs.forEach((startTimeInput, index) => {
-                const endTimeInput = endTimeInputs[index];
-                const periodInput = periodInputs[index];
-
-                const startTime = startTimeInput.value;
-                const endTime = endTimeInput.value;
-
-                if (startTime && endTime) {
-                    const startTimeParts = startTime.split(':');
-                    const endTimeParts = endTime.split(':');
-
-                    const startTimeMinutes = parseInt(startTimeParts[0]) * 60 + parseInt(startTimeParts[1]);
-                    const endTimeMinutes = parseInt(endTimeParts[0]) * 60 + parseInt(endTimeParts[1]);
-
-                    const timeDifferenceMinutes = endTimeMinutes - startTimeMinutes;
-                    const periods = Math.ceil(timeDifferenceMinutes / 50);
-
-                    periodInput.value = periods;
-                }
-            });
-        }
-
-
-
-        $(document).ready(function () {
-            //Event listener for clicking the submit claim button
-            $(document).on("click", "#submitClaim", function (e) {
-                $("#newClaimForm").submit(); 
-            }); 
-
-            //Handler for parsing and submitting form data
-            $(document).on("submit", "#newClaimForm", function (e) {
-                e.preventDefault();
-
-                const department = document.getElementById("department").value;
-                const programme = document.getElementById("programme").value;
-                const course = document.getElementById("course").value;
-                const rate = document.getElementById("rate").value;
-
-                // Validate department, programme, and course are selected
-                if (!department || !programme || !course) {
-                    alert("Please select department, programme, and course before submitting.");
-                    return;
-                }
-
-                // Gather form data
-                const claimData = {
-                    department: department,
-                    programme: programme,
-                    course: course,
-                    rate: rate, // Assuming there's a rate field
-                    //rate: 35,
-                    timeSlots: [],
-                };
-
-                // Iterate through each time slot row
-                const timeSlotDivs = document.querySelectorAll(".time-slot");
-                timeSlotDivs.forEach((slotDiv) => {
-                    const startTime = slotDiv.querySelector('input[name^="startTime"]').value;
-                    const endTime = slotDiv.querySelector('input[name^="endTime"]').value;
-                    const periods = 30;//slotDiv.querySelector('input[name^="period"]').value;
-                    const subTotal = 450; //slotDiv.querySelector('input[name^="subTotal"]').value;
-                    const fuelComponent = slotDiv.querySelector('input[name^="fuelComponent"]')?.checked ? 1 : 0;
-
-                    // Collect dates for this time slot
-                    const dates = Array.from(slotDiv.querySelectorAll('input[name^="dates"]')).map(
-                        (dateInput) => dateInput.value
-                    );
-
-                    // Push the time slot data with its dates
-                    claimData.timeSlots.push({
-                        startTime,
-                        endTime,
-                        periods,
-                        subTotal,
-                        fuelComponent,
-                        dates,
-                    });
-                });
-
-                // Validate at least one time slot is present
-                if (claimData.timeSlots.length === 0) {
-                    alert("Please add at least one time slot with valid details before submitting.");
-                    return;
-                }
-
-                // Convert claimData into FormData
-                const formData = new FormData();
-                formData.append("department", claimData.department);
-                formData.append("programme", claimData.programme);
-                formData.append("course", claimData.course);
-                formData.append("rate", claimData.rate);
-
-                claimData.timeSlots.forEach((slot, index) => {
-                    formData.append(`timeSlots[${index}][startTime]`, slot.startTime);
-                    formData.append(`timeSlots[${index}][endTime]`, slot.endTime);
-                    formData.append(`timeSlots[${index}][periods]`, slot.periods);
-                    formData.append(`timeSlots[${index}][subTotal]`, slot.subTotal);
-                    formData.append(`timeSlots[${index}][fuelComponent]`, slot.fuelComponent);
-
-                    slot.dates.forEach((date, dateIndex) => {
-                        formData.append(`timeSlots[${index}][dates][${dateIndex}]`, date);
-                    });
-                });		
-                
-                $.ajax({
-                    type: "POST",
-                    url: "multiClaimsSubmit.inc.php",
-                    data: formData,
-                    processData: false,
-                    contentType: false, 
-                    cache:false,
-                    success:function(result) {
-                        console.log(result);
-                        alert("Claim submitted successfully");
-                        window.location.reload();
-
-                    },
-                    error: function(xhr, status, error) {
-                        console.log(error);
-                    }
-                })
-            });  
-        });
-    </script>
+    loadCourses(DRAFT.department, function () {
+        document.getElementById('course').value = DRAFT.course;
+        DRAFT_SLOTS.forEach(slot => addSlot(slot));
+        recalculate();
+    });
+});
+</script>
 </body>
