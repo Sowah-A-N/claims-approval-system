@@ -11,32 +11,95 @@ $claim_id = validated_int(isset($_GET['claimId']) ? $_GET['claimId'] : null, 'cl
 $claim = db_get_claim_details_for_approver($conn, $claim_id);
 
 if ($claim === null) {
-    echo '<p>Claim not found.</p>';
+    echo '<p style="color:var(--txt-muted);text-align:center;padding:20px;">Claim not found.</p>';
     exit;
 }
+?>
+<div style="padding:4px 0;">
 
-echo '<p><strong>Programme:</strong> ' . h($claim['programme']) . '</p>';
-echo '<p><strong>Course:</strong> '    . h($claim['course'])    . '</p>';
+    <!-- Claim meta -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px 28px;margin-bottom:20px;">
+        <div>
+            <div style="font-size:.72rem;color:var(--txt-muted);text-transform:uppercase;
+                        letter-spacing:.06em;margin-bottom:4px;">Department</div>
+            <div style="font-weight:500;color:var(--txt-primary);">
+                <?php echo $claim['department'] ? h($claim['department']) : '<span style="color:var(--txt-muted);">—</span>'; ?>
+            </div>
+        </div>
+        <div>
+            <div style="font-size:.72rem;color:var(--txt-muted);text-transform:uppercase;
+                        letter-spacing:.06em;margin-bottom:4px;">Programme</div>
+            <div style="font-weight:500;color:var(--txt-primary);">
+                <?php echo $claim['programme'] ? h($claim['programme']) : '<span style="color:var(--txt-muted);">—</span>'; ?>
+            </div>
+        </div>
+        <div>
+            <div style="font-size:.72rem;color:var(--txt-muted);text-transform:uppercase;
+                        letter-spacing:.06em;margin-bottom:4px;">Course</div>
+            <div style="font-weight:500;color:var(--txt-primary);">
+                <?php echo $claim['course'] ? h($claim['course']) : '<span style="color:var(--txt-muted);">—</span>'; ?>
+            </div>
+        </div>
+        <div>
+            <div style="font-size:.72rem;color:var(--txt-muted);text-transform:uppercase;
+                        letter-spacing:.06em;margin-bottom:4px;">Rate per Period</div>
+            <div style="font-weight:500;color:var(--txt-primary);">
+                GH&#8373; <?php echo h(number_format((float)$claim['rate'], 2)); ?>
+            </div>
+        </div>
+    </div>
 
-if (!empty($claim['rows'])) {
-    echo '<table class="table">';
-    echo '<thead class="thead-light"><tr>';
-    echo '<th>Date</th><th>Start</th><th>End</th><th>Periods</th><th>Rate (GH&#8373;)</th><th>Amount</th>';
-    echo '</tr></thead><tbody>';
+    <?php if (!empty($claim['rows'])):
+        $grandTotal = 0;
+        foreach ($claim['rows'] as $r) {
+            $grandTotal += (float)$r['rate'] * (int)$r['periods'];
+        }
+    ?>
+    <div class="rmu-table-wrap" style="border-radius:8px;overflow:hidden;margin-bottom:0;">
+        <table class="rmu-table" style="margin:0;">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Start</th>
+                    <th>End</th>
+                    <th>Periods</th>
+                    <th>Rate (GH&#8373;)</th>
+                    <th>Amount (GH&#8373;)</th>
+                    <th>Fuel</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php foreach ($claim['rows'] as $r):
+                    $amount = (float)$r['rate'] * (int)$r['periods'];
+                ?>
+                <tr>
+                    <td><?php echo h(date('d M Y', strtotime($r['date']))); ?></td>
+                    <td><?php echo h(date('g:iA', strtotime($r['start_time']))); ?></td>
+                    <td><?php echo h(date('g:iA', strtotime($r['end_time']))); ?></td>
+                    <td><?php echo h($r['periods']); ?></td>
+                    <td><?php echo h(number_format((float)$r['rate'], 2)); ?></td>
+                    <td><strong><?php echo h(number_format($amount, 2)); ?></strong></td>
+                    <td>
+                        <?php if (!empty($r['fuelComponent']) && (int)$r['fuelComponent']): ?>
+                            <span class="rmu-badge rmu-badge--primary">Yes</span>
+                        <?php else: ?>
+                            <span style="color:var(--txt-muted);">No</span>
+                        <?php endif; ?>
+                    </td>
+                </tr>
+                <?php endforeach; ?>
+            </tbody>
+        </table>
+    </div>
+    <div style="display:flex;justify-content:flex-end;align-items:center;gap:14px;
+                padding:14px 0 4px;border-top:1px solid rgba(255,255,255,0.08);margin-top:0;">
+        <span style="color:var(--txt-secondary);font-size:.9rem;font-weight:500;">Grand Total</span>
+        <span style="font-size:1.2rem;font-weight:700;color:var(--txt-primary);">
+            GH&#8373; <?php echo h(number_format($grandTotal, 2)); ?>
+        </span>
+    </div>
+    <?php else: ?>
+    <p style="color:var(--txt-muted);text-align:center;padding:20px 0;">No session data found for this claim.</p>
+    <?php endif; ?>
 
-    foreach ($claim['rows'] as $row) {
-        $amount = (float) $row['rate'] * (int) $row['periods'];
-        echo '<tr>';
-        echo '<td>' . h(date('d/m/Y', strtotime($row['date'])))      . '</td>';
-        echo '<td>' . h($row['start_time'])                           . '</td>';
-        echo '<td>' . h($row['end_time'])                             . '</td>';
-        echo '<td>' . h($row['periods'])                              . '</td>';
-        echo '<td>' . h($row['rate'])                                 . '</td>';
-        echo '<td>' . h(number_format($amount, 2))                    . '</td>';
-        echo '</tr>';
-    }
-
-    echo '</tbody></table>';
-} else {
-    echo '<p>No claim data rows found.</p>';
-}
+</div>
