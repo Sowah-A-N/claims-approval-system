@@ -12,8 +12,10 @@ $phone_number = validated_str(isset($_POST['phone_number']) ? $_POST['phone_numb
 $gender       = validated_str(isset($_POST['gender'])       ? $_POST['gender']       : '');
 $email        = validated_str(isset($_POST['email'])        ? $_POST['email']        : '');
 $raw_password =               isset($_POST['password'])     ? $_POST['password']     : '';
+$faculty      = validated_str(isset($_POST['faculty'])      ? $_POST['faculty']      : '');
 $department   = validated_str(isset($_POST['department'])   ? $_POST['department']   : '');
 $rank         = validated_str(isset($_POST['rank'])         ? $_POST['rank']         : '');
+$stage        = (int) (isset($_POST['stage'])               ? $_POST['stage']        : 0);
 
 if ($first_name === '' || $last_name === '' || $email === '' || $raw_password === '') {
     $_SESSION['message'] = 'Please fill in all required fields.';
@@ -33,13 +35,13 @@ $ok = true;
 $s1 = mysqli_prepare($conn,
     'INSERT INTO user_details
          (first_name, last_name, other_names, phone_number, gender, email,
-          `password`, department, `role`, `rank`, `rate`, account_status, date_created)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+          `password`, faculty, department, `role`, `rank`, `rate`, account_status, date_created)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
 );
 if ($s1) {
-    mysqli_stmt_bind_param($s1, 'ssssssssssdss',
+    mysqli_stmt_bind_param($s1, 'sssssssssssdss',
         $first_name, $last_name, $other_names, $phone_number, $gender,
-        $email, $password_hash, $department, $role, $rank,
+        $email, $password_hash, $faculty, $department, $role, $rank,
         $rate, $account_status, $date_created
     );
     $ok      = mysqli_stmt_execute($s1);
@@ -51,11 +53,11 @@ if ($s1) {
 
 if ($ok) {
     $s2 = mysqli_prepare($conn,
-        'INSERT INTO login_details (userId, email, `password`, `role`, `rank`)
-         VALUES (?, ?, ?, ?, ?)'
+        'INSERT INTO login_details (userId, email, `password`, `role`, `rank`, stage)
+         VALUES (?, ?, ?, ?, ?, ?)'
     );
     if ($s2) {
-        mysqli_stmt_bind_param($s2, 'issss', $user_id, $email, $password_hash, $role, $rank);
+        mysqli_stmt_bind_param($s2, 'issssi', $user_id, $email, $password_hash, $role, $rank, $stage);
         $ok = mysqli_stmt_execute($s2);
         mysqli_stmt_close($s2);
     } else {

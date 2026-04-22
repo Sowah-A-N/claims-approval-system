@@ -1,17 +1,16 @@
 <?php
+require_once __DIR__ . '/includes/auth.php';
 require_once __DIR__ . '/includes/db.php';
 
-$rankResult       = mysqli_query($conn, 'SELECT `rank`, rate FROM lecturer_rank_rate ORDER BY `rank`');
-$facultyResult    = mysqli_query($conn, 'SELECT id, name FROM faculty ORDER BY name');
-$deptResult       = mysqli_query($conn, 'SELECT dept_name FROM department ORDER BY dept_name');
-$bankResult       = mysqli_query($conn, "SELECT DISTINCT bank_name FROM banks_branches ORDER BY bank_name");
+$rankResult    = mysqli_query($conn, 'SELECT `rank`, rate FROM lecturer_rank_rate ORDER BY `rank`');
+$facultyResult = mysqli_query($conn, 'SELECT id, name FROM faculty ORDER BY name');
+$deptResult    = mysqli_query($conn, 'SELECT dept_name FROM department ORDER BY dept_name');
+$bankResult    = mysqli_query($conn, "SELECT DISTINCT bank_name FROM banks_branches ORDER BY bank_name");
 
-$ranks    = $rankResult    ? mysqli_fetch_all($rankResult,    MYSQLI_ASSOC) : array();
-$faculties= $facultyResult ? mysqli_fetch_all($facultyResult, MYSQLI_ASSOC) : array();
-$depts    = $deptResult    ? mysqli_fetch_all($deptResult,    MYSQLI_ASSOC) : array();
-$banks    = $bankResult    ? mysqli_fetch_all($bankResult,    MYSQLI_ASSOC) : array();
-
-session_start();
+$ranks     = $rankResult    ? mysqli_fetch_all($rankResult,    MYSQLI_ASSOC) : array();
+$faculties = $facultyResult ? mysqli_fetch_all($facultyResult, MYSQLI_ASSOC) : array();
+$depts     = $deptResult    ? mysqli_fetch_all($deptResult,    MYSQLI_ASSOC) : array();
+$banks     = $bankResult    ? mysqli_fetch_all($bankResult,    MYSQLI_ASSOC) : array();
 ?>
 <!DOCTYPE html>
 <html lang="en">
