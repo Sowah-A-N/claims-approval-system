@@ -40,7 +40,7 @@ $banks     = $bankResult    ? mysqli_fetch_all($bankResult,    MYSQLI_ASSOC) : a
           Create your claimant account — an admin will activate it shortly.
         </div>
       </div>
-      <a href="register.php?type=approver" class="rmu-btn rmu-btn--secondary">
+      <a href="registerApp.php" class="rmu-btn rmu-btn--secondary">
         <i class="ti ti-shield-check"></i> Register as Approver
       </a>
     </div>
