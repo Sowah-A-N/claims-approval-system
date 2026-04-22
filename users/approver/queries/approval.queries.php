@@ -27,14 +27,15 @@ function db_get_pending_claims_for_stage($conn, $stage, $department) {
          INNER JOIN user_details ud ON cd.userId = ud.userId
          WHERE cas.stage = ?
            AND cas.status = 'Pending'
-           AND cd.flagged = 0";
+           AND cd.flagged = 0
+           AND cd.completed = 0";
 
     if ($department !== null && $department !== '') {
-        $stmt = mysqli_prepare($conn, $base . ' AND cd.department = ?');
+        $stmt = mysqli_prepare($conn, $base . ' AND cd.department = ? ORDER BY cd.time_submitted ASC');
         if (!$stmt) return array();
         mysqli_stmt_bind_param($stmt, 'is', $stage, $department);
     } else {
-        $stmt = mysqli_prepare($conn, $base);
+        $stmt = mysqli_prepare($conn, $base . ' ORDER BY cd.time_submitted ASC');
         if (!$stmt) return array();
         mysqli_stmt_bind_param($stmt, 'i', $stage);
     }
@@ -77,8 +78,8 @@ function db_get_claim_details_for_approver($conn, $claimId) {
     }
     mysqli_stmt_bind_param($stmt2, 'i', $claimId);
     mysqli_stmt_execute($stmt2);
-    $result2        = mysqli_stmt_get_result($stmt2);
-    $claim['rows']  = mysqli_fetch_all($result2, MYSQLI_ASSOC);
+    $result2       = mysqli_stmt_get_result($stmt2);
+    $claim['rows'] = mysqli_fetch_all($result2, MYSQLI_ASSOC);
     mysqli_stmt_close($stmt2);
 
     return $claim;
@@ -100,17 +101,37 @@ function db_get_current_stage($conn, $claimId) {
     return $row ? (int) $row[0] : null;
 }
 
+/*
+ * Return the configured maximum approval stage.
+ * Reads from the settings table (settingName = 'max_approval_stages').
+ * Falls back to 3 if not configured — that covers the default HOD → Dean → Final flow.
+ */
+function db_get_max_approval_stage($conn) {
+    $stmt = mysqli_prepare($conn,
+        "SELECT settingValue FROM settings WHERE settingName = 'max_approval_stages' LIMIT 1");
+    if ($stmt) {
+        mysqli_stmt_execute($stmt);
+        $row = mysqli_fetch_row(mysqli_stmt_get_result($stmt));
+        mysqli_stmt_close($stmt);
+        if ($row && (int) $row[0] > 0) return (int) $row[0];
+    }
+    return 3;
+}
+
 
 // ── Approve ───────────────────────────────────────────────────────────────────
 
 /*
- * Mark the current stage Approved and insert the next Pending stage.
- * Verifies the claim is at $expected_stage with status Pending first.
+ * Approve the current stage and either advance to the next stage or complete
+ * the claim, depending on whether $expected_stage is the final stage.
  *
- * Returns true on success.
- * Returns false with $error set on failure.
+ * Sets $completed = true when the claim reaches completion.
+ * Returns true on success, false with $error set on failure.
  */
-function db_advance_claim_stage($conn, $claimId, $expected_stage, &$error) {
+function db_advance_claim_stage($conn, $claimId, $expected_stage, &$error, &$completed = false) {
+    $max_stage = db_get_max_approval_stage($conn);
+    $completed = false;
+
     mysqli_begin_transaction($conn);
 
     // Verify the claim is genuinely at the expected pending stage.
@@ -121,8 +142,7 @@ function db_advance_claim_stage($conn, $claimId, $expected_stage, &$error) {
     );
     mysqli_stmt_bind_param($check, 'ii', $claimId, $expected_stage);
     mysqli_stmt_execute($check);
-    $check_result = mysqli_stmt_get_result($check);
-    $found        = mysqli_num_rows($check_result) > 0;
+    $found = mysqli_num_rows(mysqli_stmt_get_result($check)) > 0;
     mysqli_stmt_close($check);
 
     if (!$found) {
@@ -148,21 +168,50 @@ function db_advance_claim_stage($conn, $claimId, $expected_stage, &$error) {
         return false;
     }
 
-    // Insert the next Pending stage.
-    $next_stage = $expected_stage + 1;
-    $insert     = mysqli_prepare($conn,
-        "INSERT INTO claim_approval_stages (claimId, stage, status, time_updated)
-         VALUES (?, ?, 'Pending', NOW())"
-    );
-    mysqli_stmt_bind_param($insert, 'ii', $claimId, $next_stage);
-    mysqli_stmt_execute($insert);
-    $inserted = mysqli_stmt_affected_rows($insert);
-    mysqli_stmt_close($insert);
+    if ($expected_stage >= $max_stage) {
+        // ── Final stage: mark claim complete ─────────────────────────────────
+        $upd = mysqli_prepare($conn,
+            'UPDATE claim_details SET completed = 1, time_completed = NOW() WHERE claimId = ?');
+        mysqli_stmt_bind_param($upd, 'i', $claimId);
+        mysqli_stmt_execute($upd);
+        $done = mysqli_stmt_affected_rows($upd);
+        mysqli_stmt_close($upd);
 
-    if ($inserted <= 0) {
-        mysqli_rollback($conn);
-        $error = 'Failed to insert next stage.';
-        return false;
+        if ($done <= 0) {
+            mysqli_rollback($conn);
+            $error = 'Failed to mark claim as complete.';
+            return false;
+        }
+
+        // Record in completed_claims (SELECT-INSERT avoids re-fetching the row).
+        $ins = mysqli_prepare($conn,
+            'INSERT INTO completed_claims (claimId, userId, department, programme, course)
+             SELECT claimId, userId, department, programme, course
+             FROM claim_details WHERE claimId = ?'
+        );
+        mysqli_stmt_bind_param($ins, 'i', $claimId);
+        mysqli_stmt_execute($ins);
+        mysqli_stmt_close($ins);
+
+        $completed = true;
+
+    } else {
+        // ── Intermediate stage: advance to next pending stage ─────────────────
+        $next_stage = $expected_stage + 1;
+        $insert     = mysqli_prepare($conn,
+            "INSERT INTO claim_approval_stages (claimId, stage, status, time_updated)
+             VALUES (?, ?, 'Pending', NOW())"
+        );
+        mysqli_stmt_bind_param($insert, 'ii', $claimId, $next_stage);
+        mysqli_stmt_execute($insert);
+        $inserted = mysqli_stmt_affected_rows($insert);
+        mysqli_stmt_close($insert);
+
+        if ($inserted <= 0) {
+            mysqli_rollback($conn);
+            $error = 'Failed to insert next stage.';
+            return false;
+        }
     }
 
     mysqli_commit($conn);
@@ -176,8 +225,7 @@ function db_advance_claim_stage($conn, $claimId, $expected_stage, &$error) {
  * Flag a claim: set flagged=1, insert a Flagged approval row, record in flagged_claims.
  * All three writes are atomic.
  *
- * Returns true on success.
- * Returns false with $error set on failure.
+ * Returns true on success, false with $error set on failure.
  */
 function db_flag_claim($conn, $claimId, $stage, $reason, &$error) {
     mysqli_begin_transaction($conn);

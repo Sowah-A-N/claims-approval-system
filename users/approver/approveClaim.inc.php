@@ -30,11 +30,15 @@ if ($current_stage !== $session_stage) {
     ), 403);
 }
 
-$error = '';
-$ok    = db_advance_claim_stage($conn, $claim_id, $current_stage, $error);
+$error     = '';
+$completed = false;
+$ok        = db_advance_claim_stage($conn, $claim_id, $current_stage, $error, $completed);
 
 if ($ok) {
-    json_response(array('success' => true, 'message' => 'Claim approved and advanced to next stage.'));
+    $message = $completed
+        ? 'Claim fully approved and forwarded to Finance.'
+        : 'Claim approved and advanced to the next stage.';
+    json_response(array('success' => true, 'message' => $message, 'completed' => $completed));
 } else {
     json_response(array('success' => false, 'message' => $error), 409);
 }

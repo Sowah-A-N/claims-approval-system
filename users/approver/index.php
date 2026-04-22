@@ -66,7 +66,8 @@ $claims = db_get_pending_claims_for_stage($conn, $approverStage, $approverDepart
                                 <?php if (!empty($claims)):
                                     $index = 1;
                                     foreach ($claims as $claim): ?>
-                                <tr data-department="<?php echo h($claim['department']); ?>">
+                                <tr data-department="<?php echo h($claim['department']); ?>"
+                                    data-claim-id="<?php echo (int)$claim['claimId']; ?>">
                                     <td><?php echo $index; ?></td>
                                     <td style="font-weight:500;"><?php echo h($claim['full_name']); ?></td>
                                     <td><?php echo h($claim['department']); ?></td>
@@ -165,35 +166,55 @@ $claims = db_get_pending_claims_for_stage($conn, $approverStage, $approverDepart
 </style>
 
 <script>
-var csrfToken = '<?php echo h(csrf_token()); ?>';
+const CSRF = '<?php echo h(csrf_token()); ?>';
+
+const swalOpts = { background: '#0d1b2a', color: '#e2e8f0' };
+
+function swalErr(title, text) {
+    Swal.fire(Object.assign({ icon: 'error', title, text }, swalOpts));
+}
+
+function swalSuccess(text, cb) {
+    Swal.fire(Object.assign({
+        icon: 'success', title: 'Done', text,
+        timer: 2000, showConfirmButton: false
+    }, swalOpts)).then(cb || function() {});
+}
 
 // ── Table filter ──────────────────────────────────────────────────────────────
 function filterTable() {
-    var filter = document.getElementById('departmentFilter').value;
-    document.querySelectorAll('tbody tr[data-department]').forEach(function(row) {
-        row.style.display = (!filter || row.getAttribute('data-department') === filter) ? '' : 'none';
+    const filter = document.getElementById('departmentFilter').value;
+    document.querySelectorAll('tbody tr[data-claim-id]').forEach(function(row) {
+        const dept = row.getAttribute('data-department');
+        row.style.display = (!filter || dept === filter) ? '' : 'none';
     });
+}
+
+// ── Row helpers ───────────────────────────────────────────────────────────────
+function setRowBusy(claimId, busy) {
+    const row = document.querySelector('tr[data-claim-id="' + claimId + '"]');
+    if (!row) return;
+    row.querySelectorAll('button').forEach(function(b) { b.disabled = busy; });
+    row.style.opacity = busy ? '0.5' : '';
 }
 
 // ── Details Modal ─────────────────────────────────────────────────────────────
 function viewDetails(claimId) {
-    var body     = document.getElementById('detailsModalBody');
-    var backdrop = document.getElementById('detailsBackdrop');
+    const body     = document.getElementById('detailsModalBody');
+    const backdrop = document.getElementById('detailsBackdrop');
     body.innerHTML = '<p style="text-align:center;padding:32px;color:var(--txt-muted);">'
         + '<i class="ti ti-loader" style="animation:spin .8s linear infinite;font-size:1.6rem;"></i>'
         + '</p>';
     backdrop.classList.add('open');
     document.body.style.overflow = 'hidden';
-    $.ajax({
-        url: 'getClaimDetails.inc.php',
-        type: 'GET',
-        data: { claimId: claimId },
-        success: function(response) { body.innerHTML = response; },
-        error: function() {
+
+    fetch('getClaimDetails.inc.php?claimId=' + encodeURIComponent(claimId))
+        .then(function(r) { return r.text(); })
+        .then(function(html) { body.innerHTML = html; })
+        .catch(function() {
             body.innerHTML = '<p style="color:var(--txt-muted);text-align:center;padding:20px;">'
                 + 'Error loading claim details. Please try again.</p>';
-        }
-    });
+        });
 }
 
 function closeDetailsModal() {
@@ -225,93 +246,86 @@ document.getElementById('flagBackdrop').addEventListener('click', function(e) {
 });
 
 function submitFlag() {
-    var claimId = document.getElementById('flagClaimId').value;
-    var reason  = document.getElementById('flagReason').value.trim();
+    const claimId = document.getElementById('flagClaimId').value;
+    const reason  = document.getElementById('flagReason').value.trim();
+
     if (!reason) {
-        Swal.fire({ icon:'warning', title:'Required',
-            text:'Please enter a reason for flagging.',
-            background:'#0d1b2a', color:'#e2e8f0' });
+        Swal.fire(Object.assign({ icon: 'warning', title: 'Required',
+            text: 'Please enter a reason for flagging.' }, swalOpts));
         return;
     }
-    var btn = document.getElementById('submitFlagBtn');
-    btn.disabled = true;
+
+    const btn = document.getElementById('submitFlagBtn');
+    btn.disabled  = true;
     btn.innerHTML = '<i class="ti ti-loader" style="animation:spin .8s linear infinite;"></i> Flagging…';
 
-    var fd = new FormData();
+    const fd = new FormData();
     fd.append('claimId',    claimId);
     fd.append('flagReason', reason);
-    fd.append('csrf_token', csrfToken);
+    fd.append('csrf_token', CSRF);
 
-    fetch('flagClaim.inc.php', { method:'POST', body:fd })
+    function resetBtn() {
+        btn.disabled  = false;
+        btn.innerHTML = '<i class="ti ti-flag"></i> Submit Flag';
+    }
+
+    fetch('flagClaim.inc.php', { method: 'POST', body: fd })
         .then(function(r) { return r.json(); })
         .then(function(res) {
             closeFlagModal();
             if (res.success) {
-                Swal.fire({ icon:'success', title:'Flagged',
-                    text: res.message || 'Claim flagged successfully.',
-                    background:'#0d1b2a', color:'#e2e8f0',
-                    timer:2000, showConfirmButton:false })
-                    .then(function() { location.reload(); });
+                swalSuccess(res.message || 'Claim flagged successfully.',
+                    function() { location.reload(); });
             } else {
-                Swal.fire({ icon:'error', title:'Error',
-                    text: res.message || 'Could not flag the claim.',
-                    background:'#0d1b2a', color:'#e2e8f0' });
-                btn.disabled = false;
-                btn.innerHTML = '<i class="ti ti-flag"></i> Submit Flag';
+                swalErr('Flag Failed', res.message || 'Could not flag the claim.');
+                resetBtn();
             }
         })
         .catch(function() {
             closeFlagModal();
-            Swal.fire({ icon:'error', title:'Network Error',
-                text:'Could not reach the server. Please try again.',
-                background:'#0d1b2a', color:'#e2e8f0' });
-            btn.disabled = false;
-            btn.innerHTML = '<i class="ti ti-flag"></i> Submit Flag';
+            swalErr('Network Error', 'Could not reach the server. Please try again.');
+            resetBtn();
         });
 }
 
 // ── Approve ───────────────────────────────────────────────────────────────────
 function approve(claimId) {
-    Swal.fire({
+    Swal.fire(Object.assign({
         title: 'Approve Claim?',
-        text: 'This will advance the claim to the next approval stage.',
-        icon: 'question',
-        background: '#0d1b2a', color: '#e2e8f0',
-        showCancelButton: true,
-        confirmButtonText: 'Yes, Approve',
-        confirmButtonColor: '#22c55e',
-        cancelButtonColor: 'rgba(255,255,255,0.1)',
-    }).then(function(result) {
+        text:  'This will advance the claim to the next approval stage.',
+        icon:  'question',
+        showCancelButton:    true,
+        confirmButtonText:   'Yes, Approve',
+        confirmButtonColor:  '#22c55e',
+        cancelButtonColor:   'rgba(255,255,255,0.1)',
+    }, swalOpts)).then(function(result) {
         if (!result.isConfirmed) return;
 
-        var fd = new FormData();
-        fd.append('claimId',    claimId);
-        fd.append('csrf_token', csrfToken);
+        setRowBusy(claimId, true);
 
-        fetch('approveClaim.inc.php', { method:'POST', body:fd })
+        const fd = new FormData();
+        fd.append('claimId',    claimId);
+        fd.append('csrf_token', CSRF);
+
+        fetch('approveClaim.inc.php', { method: 'POST', body: fd })
             .then(function(r) { return r.json(); })
             .then(function(res) {
                 if (res.success) {
-                    Swal.fire({ icon:'success', title:'Approved',
-                        text: res.message || 'Claim approved and advanced.',
-                        background:'#0d1b2a', color:'#e2e8f0',
-                        timer:2000, showConfirmButton:false })
-                        .then(function() { location.reload(); });
+                    swalSuccess(res.message || 'Claim approved.',
+                        function() { location.reload(); });
                 } else {
-                    Swal.fire({ icon:'error', title:'Not Approved',
-                        text: res.message || 'Could not approve the claim.',
-                        background:'#0d1b2a', color:'#e2e8f0' });
+                    setRowBusy(claimId, false);
+                    swalErr('Not Approved', res.message || 'Could not approve the claim.');
                 }
             })
             .catch(function() {
-                Swal.fire({ icon:'error', title:'Network Error',
-                    text:'Could not reach the server. Please try again.',
-                    background:'#0d1b2a', color:'#e2e8f0' });
+                setRowBusy(claimId, false);
+                swalErr('Network Error', 'Could not reach the server. Please try again.');
             });
     });
 }
 
-// ── Keyboard ──────────────────────────────────────────────────────────────────
+// ── Keyboard close ────────────────────────────────────────────────────────────
 document.addEventListener('keydown', function(e) {
     if (e.key !== 'Escape') return;
     if (document.getElementById('detailsBackdrop').classList.contains('open')) closeDetailsModal();
