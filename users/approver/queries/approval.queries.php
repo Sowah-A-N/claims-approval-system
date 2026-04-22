@@ -104,7 +104,7 @@ function db_get_current_stage($conn, $claimId) {
 /*
  * Return the configured maximum approval stage.
  * Reads from the settings table (settingName = 'max_approval_stages').
- * Falls back to 3 if not configured — that covers the default HOD → Dean → Final flow.
+ * Falls back to 5 if not configured.
  */
 function db_get_max_approval_stage($conn) {
     $stmt = mysqli_prepare($conn,
@@ -115,7 +115,7 @@ function db_get_max_approval_stage($conn) {
         mysqli_stmt_close($stmt);
         if ($row && (int) $row[0] > 0) return (int) $row[0];
     }
-    return 3;
+    return 5;
 }
 
 

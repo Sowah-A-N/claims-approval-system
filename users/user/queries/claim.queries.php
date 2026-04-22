@@ -176,9 +176,9 @@ function db_get_claim_download_data($conn, $claimId, $userId) {
                 bd.account_number,
                 bd.account_name
          FROM claim_details cd
-         JOIN user_details      ud    ON cd.userId  = ud.userId
-         JOIN claim_data        cdata ON cd.claimId = cdata.claimId
-         JOIN user_bank_details bd    ON ud.userId  = bd.userId
+         JOIN      user_details      ud    ON cd.userId  = ud.userId
+         JOIN      claim_data        cdata ON cd.claimId = cdata.claimId
+         LEFT JOIN user_bank_details bd    ON ud.userId  = bd.userId
          WHERE cd.claimId = ? AND cd.userId = ?'
     );
     if (!$stmt) return array();

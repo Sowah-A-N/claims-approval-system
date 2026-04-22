@@ -81,5 +81,23 @@ foreach ($data_rows as $dr) {
 }
 mysqli_stmt_close($ins_data);
 
+// Remove the original flagged claim now that a draft has been created.
+foreach ([
+    'DELETE FROM flagged_claims        WHERE claimId = ?',
+    'DELETE FROM claim_approval_stages WHERE claimId = ?',
+    'DELETE FROM claim_data            WHERE claimId = ?',
+    'DELETE FROM claim_details         WHERE claimId = ? AND userId = ?',
+] as $sql) {
+    $del = mysqli_prepare($conn, $sql);
+    if (!$del) { mysqli_rollback($conn); json_response(array('success' => false, 'message' => 'Database error.'), 500); }
+    if (strpos($sql, 'claim_details') !== false) {
+        mysqli_stmt_bind_param($del, 'ii', $claimId, $userId);
+    } else {
+        mysqli_stmt_bind_param($del, 'i', $claimId);
+    }
+    mysqli_stmt_execute($del);
+    mysqli_stmt_close($del);
+}
+
 mysqli_commit($conn);
 json_response(array('success' => true, 'claimTempId' => $newTempId));
