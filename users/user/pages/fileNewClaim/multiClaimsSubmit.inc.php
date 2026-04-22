@@ -7,8 +7,9 @@ require_once __DIR__ . '/../../queries/claim.queries.php';
 require_post();
 require_role(array('user', 'claimant'));
 
-$user_id    = current_user_id();
-$faculty    = isset($_SESSION['faculty']) ? (string) $_SESSION['faculty'] : '';
+$user_id      = current_user_id();
+$faculty      = isset($_SESSION['faculty']) ? (string) $_SESSION['faculty'] : '';
+$claim_temp_id = isset($_POST['claimTempId']) ? (int)$_POST['claimTempId'] : 0;
 
 $department = validated_str(isset($_POST['department']) ? $_POST['department'] : '');
 $programme  = validated_str(isset($_POST['programme'])  ? $_POST['programme']  : '');
@@ -56,6 +57,22 @@ if ($ok) {
             $total_dates++;
         }
         $total_slots++;
+    }
+}
+
+// If this was submitted from a saved draft, delete the draft inside the same transaction.
+if ($ok && $claim_temp_id > 0) {
+    $del_data = mysqli_prepare($conn, 'DELETE FROM claim_data WHERE claimId = ?');
+    if ($del_data) {
+        mysqli_stmt_bind_param($del_data, 'i', $claim_temp_id);
+        mysqli_stmt_execute($del_data);
+        mysqli_stmt_close($del_data);
+    }
+    $del_saved = mysqli_prepare($conn, 'DELETE FROM saved_claims WHERE claimTempId = ? AND userId = ?');
+    if ($del_saved) {
+        mysqli_stmt_bind_param($del_saved, 'ii', $claim_temp_id, $user_id);
+        mysqli_stmt_execute($del_saved);
+        mysqli_stmt_close($del_saved);
     }
 }
 
