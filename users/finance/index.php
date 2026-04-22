@@ -60,7 +60,12 @@ $completedClaimsResult = mysqli_query($conn,
                 <td><?php echo htmlspecialchars($row['programme'],   ENT_QUOTES, 'UTF-8'); ?></td>
                 <td><?php echo htmlspecialchars($row['course'],      ENT_QUOTES, 'UTF-8'); ?></td>
                 <td><span class="rmu-badge rmu-badge--success">Completed</span></td>
-                <td>
+                <td style="white-space:nowrap;">
+                  <button class="rmu-btn rmu-btn--secondary rmu-btn--sm"
+                          onclick="downloadClaimPDF(<?php echo (int) $row['claimId']; ?>)"
+                          style="margin-right:6px;">
+                    <i class="ti ti-file-download"></i> PDF
+                  </button>
                   <button class="rmu-btn rmu-btn--primary rmu-btn--sm"
                           onclick="approvePayment(<?php echo (int) $row['claimId']; ?>)">
                     <i class="ti ti-credit-card"></i> Process Payment
@@ -86,6 +91,10 @@ $completedClaimsResult = mysqli_query($conn,
 </div><!-- .rmu-main -->
 
 <script>
+function downloadClaimPDF(claimId) {
+  window.open('downloadClaimPDF.inc.php?claimId=' + encodeURIComponent(claimId), '_blank');
+}
+
 function approvePayment(claimId) {
   alert('Payment approved for Claim ID: ' + claimId);
 }

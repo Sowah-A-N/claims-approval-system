@@ -275,9 +275,9 @@ $results = [
                     </div>
 
                 </div>
+                <?php include "../../assets/partials/_footer.php"; ?>
             </div>
         </div>
-        <?php include "../../assets/partials/_footer.php"; ?>
     </div>
 
 
@@ -419,28 +419,9 @@ const swalOpts = { background: '#0d1b2a', color: '#e2e8f0' };
         });
     }
 
-    //Function to download claim as filled out document
     function downloadClaimDetails(claimId) {
-    $.ajax({
-        url: 'downloadClaim.inc.php', // Your PHP script URL
-        type: 'POST',
-        data: { claimId: claimId },
-        xhrFields: {
-            responseType: 'blob' // Ensure the response is treated as a binary file
-        },
-        success: function(response, status, xhr) {
-            var filename = xhr.getResponseHeader('Content-Disposition').split('filename=')[1].split(';')[0];
-            var blob = new Blob([response], { type: xhr.getResponseHeader('Content-Type') });
-            var link = document.createElement('a');
-            link.href = window.URL.createObjectURL(blob);
-            link.download = filename;
-            link.click();
-        },
-        error: function(xhr, status, error) {
-            alert("There was an error. Please try again later!");
-        }
-    });
-}
+        window.open('downloadClaimPDF.inc.php?claimId=' + encodeURIComponent(claimId), '_blank');
+    }
 
 
 

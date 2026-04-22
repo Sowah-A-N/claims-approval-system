@@ -23,13 +23,6 @@ $base_url = (isset($_SERVER['HTTP_HOST']) && strpos($_SERVER['HTTP_HOST'], 'loca
       <span>Dashboard</span>
     </a>
 
-    <?php if (isset($_SESSION['stage']) && $_SESSION['stage'] == 1): ?>
-    <a class="rmu-sidebar__link" href="<?php echo $base_url; ?>users/approver/new_lect.php">
-      <i class="ti ti-user-plus"></i>
-      <span>Add Lecturer</span>
-    </a>
-    <?php endif; ?>
-
     <a class="rmu-sidebar__link" href="<?php echo $base_url; ?>users/approver/reports.php">
       <i class="ti ti-report"></i>
       <span>Reports</span>
