@@ -1,203 +1,207 @@
 <?php
-    // Include session handling (assuming it's needed)
-    // include "session.php";
+require_once __DIR__ . '/../../../../includes/auth.php';
+require_once __DIR__ . '/../../../../includes/db.php';
+require_once __DIR__ . '/../../../../includes/functions.php';
 
-    // Set the page title
-    $pageTitle = "Claims Overview";
+checkUserRole(['admin', 'Admin']);
 
-    // Include head section
-    include "../../assets/partials/head.php";
+// All submitted claims with derived status
+$claims_stmt = mysqli_prepare($conn,
+    "SELECT cd.claimId,
+            CONCAT(ud.first_name, ' ', ud.last_name) AS full_name,
+            cd.department,
+            cd.programme,
+            cd.course,
+            cd.time_submitted,
+            CASE
+                WHEN cd.completed = 1 THEN 'Completed'
+                WHEN cd.flagged   = 1 THEN 'Flagged'
+                ELSE 'Pending'
+            END AS status
+     FROM claim_details cd
+     JOIN user_details ud ON cd.userId = ud.userId
+     ORDER BY cd.time_submitted DESC"
+);
+mysqli_stmt_execute($claims_stmt);
+$claims = mysqli_fetch_all(mysqli_stmt_get_result($claims_stmt), MYSQLI_ASSOC);
+mysqli_stmt_close($claims_stmt);
 
-    // Database connection assuming $conn is already established
+// Distinct filter options sourced from actual claim data
+function fetch_distinct_claims($conn, $col) {
+    $allowed = ['department' => true, 'programme' => true, 'course' => true];
+    if (!isset($allowed[$col])) return [];
+    $res = mysqli_query($conn,
+        "SELECT DISTINCT `$col` FROM claim_details
+         WHERE `$col` IS NOT NULL AND `$col` <> ''
+         ORDER BY `$col`");
+    return $res ? mysqli_fetch_all($res, MYSQLI_ASSOC) : [];
+}
 
-    // Query to fetch claims from different tables
-    $claimSelectQuery = "
-        SELECT claimId, department, programme, course, 'COMPLETED' AS status FROM completed_claims
-        UNION ALL 
-        SELECT claimId, department, programme, course, 'FLAGGED' AS status FROM flagged_claims
-        UNION ALL 
-        SELECT claimTempId AS claimId,  department, programme, course, 'SAVED' AS status FROM saved_claims
-        UNION ALL
-        SELECT claimId AS claimId,  department, programme, course, 'IN PROGRESS' AS status 
-        FROM claim_details 
-        WHERE flagged <> 1;";
+$departments = fetch_distinct_claims($conn, 'department');
+$programmes  = fetch_distinct_claims($conn, 'programme');
+$courses     = fetch_distinct_claims($conn, 'course');
 
-        $claimSelectResult = mysqli_query($conn, $claimSelectQuery);
-
-        // Fetch all claims as associative array
-        $claims = mysqli_fetch_all($claimSelectResult, MYSQLI_ASSOC);
-
-    // Query to fetch all department names from the 'department' table
-    $departmentSelectQuery = "SELECT dept_name FROM department";
-    $result = $conn->query($departmentSelectQuery);
-
-    // Array to store department names
-    $departments = [];
-
-    if ($result->num_rows > 0) {
-        // Fetching department names and storing them in the array
-        while ($row = $result->fetch_assoc()) {
-            $departments[] = $row['dept_name'];
-        }
-    }
-    
-    $courseSelectQuery = "SELECT name FROM course";
-    $result = $conn->query($courseSelectQuery);
-
-    // Array to store course names
-    $courses = [];
-
-    if ($result->num_rows > 0) {
-        // Fetching course names and storing them in the array
-        while ($row = $result->fetch_assoc()) {
-            $courses[] = $row['name'];
-        }
-    }    
-
-    $programmeSelectQuery = "SELECT name FROM programme";
-    $result = $conn->query($programmeSelectQuery);
-
-    // Array to store department names
-    $programmes = [];
-
-    if ($result->num_rows > 0) {
-        // Fetching department names and storing them in the array
-        while ($row = $result->fetch_assoc()) {
-            $programmes[] = $row['name'];
-        }
-    }    
-
-    // Include sidebar
-    include '../../assets/partials/sidebar.php';
-
-    // Include header
-    include '../../assets/partials/header.php';
+$pageTitle = 'Claims Overview';
 ?>
+<!DOCTYPE html>
+<html lang="en">
+<?php include '../../assets/partials/head.php'; ?>
+<body>
 
-<!-- Body Wrapper -->
-<div class="page-wrapper" id="main-wrapper" data-layout="vertical" data-navbarbg="skin6" data-sidebartype="full"
-    data-sidebar-position="fixed" data-header-position="fixed">
-    <div class="body-wrapper">
-        <div class="container-fluid">
-            <h3>Claims Overview</h3>
+<?php include '../../assets/partials/sidebar.php'; ?>
 
-            <div class="row form-group">
-                <div class="col-md-3">
-                    <label for="department-filter">Department</label>
-                    <select name="department-filter" id="department-filter" class="form-control">
-                        <option value="">Select an option</option>
-                        <?php foreach ($departments as $dept): ?>
-                            <option value="<?php echo htmlspecialchars($dept); ?>"><?php echo htmlspecialchars($dept); ?></option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
+<div class="page-wrapper" id="main-wrapper">
+  <div class="body-wrapper">
 
-                <div class="col-md-3">
-                    <label for="programme-filter">Programme</label>
-                    <select name="programme-filter" id="programme-filter" class="form-control">
-                        <option value="">Select an option</option>
-                        <?php foreach ($programmes as $prog): ?>
-                            <option value="<?php echo htmlspecialchars($prog); ?>"><?php echo htmlspecialchars($prog); ?></option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
+    <?php include '../../assets/partials/header.php'; ?>
 
-                <div class="col-md-3">
-                    <label for="courses-filter">Course</label>
-                    <select name="courses-filter" id="courses-filter" class="form-control">
-                        <option value="">Select an option</option>
-                        <?php foreach ($courses as $course): ?>
-                            <option value="<?php echo htmlspecialchars($course); ?>"><?php echo htmlspecialchars($course); ?></option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
+    <div class="container-fluid">
 
-                <div class="col-md-3">
-                    <label for="status-filter">Status</label>
-                    <select name="status-filter" id="status-filter" class="form-control">
-                        <option value="">Select an option</option>
-                        <option value="IN PROGRESS">In-Progress</option>
-                        <option value="SAVED">Saved</option>
-                        <option value="FLAGGED">Flagged</option>
-                        <option value="COMPLETED">Completed</option>
-                    </select>
-                </div>
+      <div class="rmu-page-header">
+        <div class="rmu-page-header__title">Claims Overview</div>
+        <div class="rmu-page-header__sub">All submitted claims across all departments and stages</div>
+      </div>
+
+      <!-- Filters -->
+      <div class="rmu-card" style="margin-bottom:24px;">
+        <div class="rmu-card__body" style="padding:20px 24px;">
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:16px;align-items:flex-end;">
+            <div class="rmu-form-group" style="margin:0;">
+              <label class="rmu-label">Department</label>
+              <select id="filter-dept" class="rmu-select">
+                <option value="">All Departments</option>
+                <?php foreach ($departments as $d): ?>
+                <option value="<?php echo h(strtolower($d['department'])); ?>"><?php echo h($d['department']); ?></option>
+                <?php endforeach; ?>
+              </select>
             </div>
-            <div class="table-responsive">
-                <table class="table table-striped" id="claimsTable">
-                    <thead>
-                        <tr>
-                            <th>Claim ID</th>
-                            <th>Department</th>
-                            <th>Programme</th>
-                            <th>Course</th>
-                            <th>Status</th>
-                            <!-- Removed unnecessary empty headers -->
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php foreach($claims as $claim): ?>
-                        <tr id="<?php echo $claim['claimId']; ?>">
-                            <td><?php echo $claim['claimId']; ?></td>
-                            <td><?php echo $claim['department']; ?></td>
-                            <td><?php echo $claim['programme']; ?></td>
-                            <td><?php echo $claim['course']; ?></td>
-                            <td><?php echo $claim['status']; ?></td>
-                        </tr>
-                        <?php endforeach; ?>
-                    </tbody>
-                </table>
+            <div class="rmu-form-group" style="margin:0;">
+              <label class="rmu-label">Programme</label>
+              <select id="filter-prog" class="rmu-select">
+                <option value="">All Programmes</option>
+                <?php foreach ($programmes as $p): ?>
+                <option value="<?php echo h(strtolower($p['programme'])); ?>"><?php echo h($p['programme']); ?></option>
+                <?php endforeach; ?>
+              </select>
             </div>
+            <div class="rmu-form-group" style="margin:0;">
+              <label class="rmu-label">Course</label>
+              <select id="filter-course" class="rmu-select">
+                <option value="">All Courses</option>
+                <?php foreach ($courses as $c): ?>
+                <option value="<?php echo h(strtolower($c['course'])); ?>"><?php echo h($c['course']); ?></option>
+                <?php endforeach; ?>
+              </select>
+            </div>
+            <div class="rmu-form-group" style="margin:0;">
+              <label class="rmu-label">Status</label>
+              <select id="filter-status" class="rmu-select">
+                <option value="">All Statuses</option>
+                <option value="pending">Pending</option>
+                <option value="flagged">Flagged</option>
+                <option value="completed">Completed</option>
+              </select>
+            </div>
+            <div>
+              <button id="btn-clear" class="rmu-btn rmu-btn--secondary" style="width:100%;">
+                <i class="ti ti-x"></i> Clear Filters
+              </button>
+            </div>
+          </div>
         </div>
-    </div>
-</div>
+      </div>
+
+      <!-- Table -->
+      <div class="rmu-card">
+        <div class="rmu-card__header">
+          <span class="rmu-card__title"><i class="ti ti-files"></i> Claims</span>
+          <span class="rmu-badge rmu-badge--neutral" id="row-count"><?php echo count($claims); ?> claim<?php echo count($claims) !== 1 ? 's' : ''; ?></span>
+        </div>
+        <div class="rmu-card__body" style="padding:0;">
+          <div class="rmu-table-wrap">
+            <table class="rmu-table" id="claimsTable">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Claim ID</th>
+                  <th>Claimant</th>
+                  <th>Department</th>
+                  <th>Programme</th>
+                  <th>Course</th>
+                  <th>Date Submitted</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                <?php if (empty($claims)): ?>
+                <tr><td colspan="8" style="text-align:center;color:var(--txt-muted);padding:20px;">No claims found.</td></tr>
+                <?php else: $i = 1; foreach ($claims as $cl): ?>
+                <tr data-dept="<?php echo h(strtolower($cl['department'])); ?>"
+                    data-prog="<?php echo h(strtolower($cl['programme'])); ?>"
+                    data-course="<?php echo h(strtolower($cl['course'])); ?>"
+                    data-status="<?php echo h(strtolower($cl['status'])); ?>">
+                  <td><?php echo $i++; ?></td>
+                  <td><?php echo (int)$cl['claimId']; ?></td>
+                  <td><?php echo h($cl['full_name']); ?></td>
+                  <td><?php echo h($cl['department']); ?></td>
+                  <td><?php echo h($cl['programme']); ?></td>
+                  <td><?php echo h($cl['course']); ?></td>
+                  <td><?php echo h(date('d M Y', strtotime($cl['time_submitted']))); ?></td>
+                  <td>
+                    <?php
+                    $s = $cl['status'];
+                    $badge = $s === 'Completed' ? 'rmu-badge--success'
+                           : ($s === 'Flagged'  ? 'rmu-badge--danger'
+                           :                      'rmu-badge--neutral');
+                    echo '<span class="rmu-badge ' . $badge . '">' . h($s) . '</span>';
+                    ?>
+                  </td>
+                </tr>
+                <?php endforeach; endif; ?>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- .container-fluid -->
+  </div><!-- .body-wrapper -->
+</div><!-- .page-wrapper -->
 
 <script>
-// JavaScript for filtering table
-document.addEventListener("DOMContentLoaded", function() {
-        const departmentFilter = document.getElementById('department-filter');
-        const programmeFilter = document.getElementById('programme-filter');
-        const coursesFilter = document.getElementById('courses-filter');
-        const statusFilter = document.getElementById('status-filter');
-        const tableRows = document.querySelectorAll('#claimsTable tbody tr');
+document.addEventListener('DOMContentLoaded', function() {
+  var rows     = Array.from(document.querySelectorAll('#claimsTable tbody tr[data-status]'));
+  var rowCount = document.getElementById('row-count');
 
-        function applyFilters() {
-            const departmentValue = departmentFilter.value.trim().toLowerCase();
-            const programmeValue = programmeFilter.value.trim().toLowerCase();
-            const coursesValue = coursesFilter.value.trim().toLowerCase();
-            const statusValue = statusFilter.value.trim().toLowerCase();
-
-            tableRows.forEach(row => {
-                const departmentText = row.children[1].textContent.trim().toLowerCase();
-                const programmeText = row.children[2].textContent.trim().toLowerCase();
-                const coursesText = row.children[3].textContent.trim().toLowerCase();
-                const statusText = row.children[4].textContent.trim().toLowerCase();
-
-                const departmentMatch = departmentValue === '' || departmentText === departmentValue;
-                const programmeMatch = programmeValue === '' || programmeText === programmeValue;
-                const coursesMatch = coursesValue === '' || coursesText === coursesValue;
-                const statusMatch = statusValue === '' || statusText === statusValue;
-
-                if (departmentMatch && programmeMatch && coursesMatch && statusMatch) {
-                    row.style.display = '';
-                } else {
-                    row.style.display = 'none';
-                }
-            });
-        }
-
-        departmentFilter.addEventListener('change', applyFilters);
-        programmeFilter.addEventListener('change', applyFilters);
-        coursesFilter.addEventListener('change', applyFilters);
-        statusFilter.addEventListener('change', applyFilters);
+  function applyFilters() {
+    var dept   = document.getElementById('filter-dept').value;
+    var prog   = document.getElementById('filter-prog').value;
+    var course = document.getElementById('filter-course').value;
+    var status = document.getElementById('filter-status').value;
+    var vis = 0;
+    rows.forEach(function(r) {
+      var show = (!dept   || r.dataset.dept   === dept)
+              && (!prog   || r.dataset.prog   === prog)
+              && (!course || r.dataset.course === course)
+              && (!status || r.dataset.status === status);
+      r.style.display = show ? '' : 'none';
+      if (show) vis++;
     });
+    rowCount.textContent = vis + ' claim' + (vis !== 1 ? 's' : '');
+  }
+
+  ['filter-dept','filter-prog','filter-course','filter-status'].forEach(function(id) {
+    document.getElementById(id).addEventListener('change', applyFilters);
+  });
+
+  document.getElementById('btn-clear').addEventListener('click', function() {
+    ['filter-dept','filter-prog','filter-course','filter-status'].forEach(function(id) {
+      document.getElementById(id).value = '';
+    });
+    applyFilters();
+  });
+});
 </script>
 
-<!-- JavaScript imports -->
-<script src="../../assets/libs/jquery/dist/jquery.min.js"></script>
-<script src="../../assets/libs/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
-<script src="../../assets/js/sidebarmenu.js"></script>
-<script src="../../assets/js/app.min.js"></script>
-<script src="../../assets/libs/simplebar/dist/simplebar.js"></script>
 </body>
 </html>

@@ -6,6 +6,7 @@ require_once __DIR__ . '/../../queries/user.queries.php';
 
 require_post();
 require_role(array('admin', 'Admin'));
+csrf_verify();
 
 $user_id = validated_int(isset($_POST['userId']) ? $_POST['userId'] : null, 'userId');
 
