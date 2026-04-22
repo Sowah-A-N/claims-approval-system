@@ -71,7 +71,7 @@ $pageTitle = 'Claims Overview';
               <select id="filter-dept" class="rmu-select">
                 <option value="">All Departments</option>
                 <?php foreach ($departments as $d): ?>
-                <option value="<?php echo h(strtolower($d['department'])); ?>"><?php echo h($d['department']); ?></option>
+                <option value="<?php echo h(strtolower($d['department'] ?? '')); ?>"><?php echo h($d['department']); ?></option>
                 <?php endforeach; ?>
               </select>
             </div>
@@ -80,7 +80,7 @@ $pageTitle = 'Claims Overview';
               <select id="filter-prog" class="rmu-select">
                 <option value="">All Programmes</option>
                 <?php foreach ($programmes as $p): ?>
-                <option value="<?php echo h(strtolower($p['programme'])); ?>"><?php echo h($p['programme']); ?></option>
+                <option value="<?php echo h(strtolower($p['programme'] ?? '')); ?>"><?php echo h($p['programme']); ?></option>
                 <?php endforeach; ?>
               </select>
             </div>
@@ -89,7 +89,7 @@ $pageTitle = 'Claims Overview';
               <select id="filter-course" class="rmu-select">
                 <option value="">All Courses</option>
                 <?php foreach ($courses as $c): ?>
-                <option value="<?php echo h(strtolower($c['course'])); ?>"><?php echo h($c['course']); ?></option>
+                <option value="<?php echo h(strtolower($c['course'] ?? '')); ?>"><?php echo h($c['course']); ?></option>
                 <?php endforeach; ?>
               </select>
             </div>
@@ -136,10 +136,10 @@ $pageTitle = 'Claims Overview';
                 <?php if (empty($claims)): ?>
                 <tr><td colspan="8" style="text-align:center;color:var(--txt-muted);padding:20px;">No claims found.</td></tr>
                 <?php else: $i = 1; foreach ($claims as $cl): ?>
-                <tr data-dept="<?php echo h(strtolower($cl['department'])); ?>"
-                    data-prog="<?php echo h(strtolower($cl['programme'])); ?>"
-                    data-course="<?php echo h(strtolower($cl['course'])); ?>"
-                    data-status="<?php echo h(strtolower($cl['status'])); ?>">
+                <tr data-dept="<?php echo h(strtolower($cl['department'] ?? '')); ?>"
+                    data-prog="<?php echo h(strtolower($cl['programme'] ?? '')); ?>"
+                    data-course="<?php echo h(strtolower($cl['course'] ?? '')); ?>"
+                    data-status="<?php echo h(strtolower($cl['status'] ?? '')); ?>">
                   <td><?php echo $i++; ?></td>
                   <td><?php echo (int)$cl['claimId']; ?></td>
                   <td><?php echo h($cl['full_name']); ?></td>

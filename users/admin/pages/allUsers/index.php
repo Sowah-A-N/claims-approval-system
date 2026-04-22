@@ -51,7 +51,7 @@ $pageTitle = 'All Users';
               <select id="filter-dept" class="rmu-select">
                 <option value="">All Departments</option>
                 <?php foreach ($departments as $d): ?>
-                <option value="<?php echo h(strtolower($d['department'])); ?>"><?php echo h($d['department']); ?></option>
+                <option value="<?php echo h(strtolower($d['department'] ?? '')); ?>"><?php echo h($d['department'] ?? ''); ?></option>
                 <?php endforeach; ?>
               </select>
             </div>
@@ -60,7 +60,7 @@ $pageTitle = 'All Users';
               <select id="filter-role" class="rmu-select">
                 <option value="">All Roles</option>
                 <?php foreach ($roles as $r): ?>
-                <option value="<?php echo h(strtolower($r['role'])); ?>"><?php echo h(ucfirst($r['role'])); ?></option>
+                <option value="<?php echo h(strtolower($r['role'] ?? '')); ?>"><?php echo h(ucfirst($r['role'] ?? '')); ?></option>
                 <?php endforeach; ?>
               </select>
             </div>
@@ -105,9 +105,9 @@ $pageTitle = 'All Users';
                 <?php if (empty($users)): ?>
                 <tr><td colspan="7" style="text-align:center;color:var(--txt-muted);padding:20px;">No users found.</td></tr>
                 <?php else: $i = 1; foreach ($users as $u): ?>
-                <tr data-dept="<?php echo h(strtolower($u['department'])); ?>"
-                    data-role="<?php echo h(strtolower($u['role'])); ?>"
-                    data-status="<?php echo h(strtolower($u['account_status'])); ?>">
+                <tr data-dept="<?php echo h(strtolower($u['department'] ?? '')); ?>"
+                    data-role="<?php echo h(strtolower($u['role'] ?? '')); ?>"
+                    data-status="<?php echo h(strtolower($u['account_status'] ?? '')); ?>">
                   <td><?php echo $i++; ?></td>
                   <td><?php echo h($u['full_name']); ?></td>
                   <td><?php echo h($u['email']); ?></td>
