@@ -1,178 +1,209 @@
 <?php
-    //Session Include goes here
-    $pageTitle = "Reports";
+require_once __DIR__ . '/../../includes/auth.php';
+require_once __DIR__ . '/../../includes/db.php';
+require_once __DIR__ . '/../../includes/functions.php';
+require_role(array('approver', 'Approver'));
 
-    $approverStage;
-    require_once __DIR__ . '/../../includes/db.php';
+$approverStage = isset($_SESSION['stage']) ? (int)$_SESSION['stage'] : 0;
 
-	$dateSelectQuery = "SELECT DISTINCT DATE(time_submitted) AS time_submitted FROM `claim_details`; ";
+// Fetch distinct submission dates for the approver's department
+$dept = isset($_SESSION['dept']) ? (string)$_SESSION['dept'] : '';
+$dates = [];
 
-	// Execute the query
-	$dateSelectResult = $conn->query($dateSelectQuery);
+$d_stmt = mysqli_prepare($conn,
+    "SELECT DISTINCT DATE(cd.time_submitted) AS sub_date
+     FROM claim_details cd
+     WHERE cd.department = ?
+     ORDER BY sub_date DESC");
+if ($d_stmt) {
+    mysqli_stmt_bind_param($d_stmt, 's', $dept);
+    mysqli_stmt_execute($d_stmt);
+    $d_result = mysqli_stmt_get_result($d_stmt);
+    while ($row = mysqli_fetch_assoc($d_result)) {
+        $dates[] = date('d/m/Y', strtotime($row['sub_date']));
+    }
+    mysqli_stmt_close($d_stmt);
+}
 
-	// Check if the query was successful
-	if ($dateSelectResult) {
-		// Fetch the distinct dates
-		$dates = [];
-		while ($row = $dateSelectResult->fetch_assoc()) {
-			// Assuming time_submitted is a valid datetime format
-			$formattedDate = date('d/m/Y', strtotime($row['time_submitted']));
-			$dates[] = $formattedDate;
-		}
-	} else {
-		// Handle query error
-		echo "Error: " . $conn->error;
-	};
-
-
-	
+$pageTitle = "Reports";
 ?>
-
 <!DOCTYPE html>
 <html lang="en">
-
-<?php
-    include "./assets/partials/head.php";
-?>
-
+<?php include './assets/partials/head.php'; ?>
 <body>
-    <!--Body Wrapper -->
-    <div class="page-wrapper" id="main-wrapper" data-layout="vertical" data-navbarbg="skin6" data-sidebartype="full"
-        data-sidebar-position="fixed" data-header-position="fixed">
+<div class="page-wrapper" id="main-wrapper">
+    <?php include './assets/partials/sidebar.php'; ?>
 
-        <?php include './assets/partials/sidebar.php' ?>
+    <div class="body-wrapper">
+        <?php include './assets/partials/header.html'; ?>
 
-        <div class="body-wrapper">
-			
-		<?php include './assets/partials/header.html'; ?>	
+        <div style="padding:28px 32px;">
 
-			
-			<div class="container-fluid">
+            <div class="rmu-page-header">
+                <div class="rmu-page-header__title">Reports</div>
+                <div class="rmu-page-header__sub">Review claim activity for your department</div>
+            </div>
 
-			
-				
-				<div class="row">
-					<div class="col-4 me-2">
-						<label for="dateSubmitted" class="form-label">Date Submitted</label>
-						<select name="dateSubmitted" id="dateSubmitted" class="form-select">
-							<option value=""selected disabled>--Select an option--</option>
-							<?php foreach ($dates as $date): ?>
-								<option value="<?php echo $date; ?>"><?php echo $date; ?></option>
-							<?php endforeach; ?>
-						</select>
-					</div>
-					<div class="col-4 me-2">
-						<label for="action" class="form-label">Action</label>
-						<select name="action" id="action" class="form-select">
-							<option value="" selected disabled>--Select an option--</option>
-							<option value="flagged">Flagged</option>
-							<option value="pending">Pending</option>
-							<option value="approved">Approved</option>
-						</select>
-					</div>					
-				</div>
+            <!-- Filters -->
+            <div class="rmu-card" style="margin-bottom:24px;">
+                <div class="rmu-card__header">
+                    <span class="rmu-card__title"><i class="ti ti-filter" style="margin-right:8px;"></i>Filter Claims</span>
+                </div>
+                <div class="rmu-card__body">
+                    <div style="display:flex;align-items:flex-end;gap:16px;flex-wrap:wrap;">
+                        <div class="rmu-form-group" style="margin-bottom:0;min-width:200px;">
+                            <label class="rmu-label" for="dateSubmitted">Date Submitted</label>
+                            <select id="dateSubmitted" class="rmu-select">
+                                <option value="" selected disabled>— Select a date —</option>
+                                <?php foreach ($dates as $d): ?>
+                                <option value="<?php echo h($d); ?>"><?php echo h($d); ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
 
-				<div class="col-4">
-					<!-- Clear Filters Button -->
-					<button type="button" id="clearFiltersBtn" class="btn btn-secondary mt-4">Clear Filters</button>
-				</div>
+                        <div class="rmu-form-group" style="margin-bottom:0;min-width:180px;">
+                            <label class="rmu-label" for="actionFilter">Status</label>
+                            <select id="actionFilter" class="rmu-select">
+                                <option value="" selected disabled>— Select status —</option>
+                                <option value="Flagged">Flagged</option>
+                                <option value="Pending">Pending</option>
+                                <option value="Approved">Approved</option>
+                            </select>
+                        </div>
 
-				<div class="container">
-					<div id="results"></div>
-				</div>
-				
-			</div>
+                        <button type="button" id="clearFiltersBtn" class="rmu-btn rmu-btn--secondary">
+                            <i class="ti ti-x"></i> Clear Filters
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Results -->
+            <div class="rmu-card">
+                <div class="rmu-card__header">
+                    <span class="rmu-card__title">Results</span>
+                    <span class="rmu-badge rmu-badge--primary" id="resultCount" style="display:none;">0</span>
+                </div>
+                <div class="rmu-card__body" id="resultsContainer" style="padding:0;">
+                    <div style="text-align:center;color:var(--txt-muted);padding:40px 20px;">
+                        <i class="ti ti-filter" style="font-size:2rem;display:block;margin-bottom:10px;opacity:.4;"></i>
+                        Select at least one filter above to load results.
+                    </div>
+                </div>
+            </div>
+
         </div>
-    </div>    
+    </div>
+</div>
 
-	<script>
-		document.addEventListener('DOMContentLoaded', function() {
-		// Get the select elements
-		const dateSubmitted = document.getElementById('dateSubmitted');
-		const action = document.getElementById('action');
+<style>
+@keyframes spin { to { transform: rotate(360deg); } }
+</style>
 
-		// Function to handle AJAX request
-		function fetchResults() {
-			const dateValue = dateSubmitted.value;
-			const actionValue = action.value;
+<script>
+function escHtml(str) {
+    var d = document.createElement('div');
+    d.appendChild(document.createTextNode(str != null ? String(str) : ''));
+    return d.innerHTML;
+}
 
-			// Create a new FormData object to send the data
-			const formData = new FormData();
-			if (dateValue) formData.append('dateSubmitted', dateValue);
-			if (actionValue) formData.append('action', actionValue);
+document.addEventListener('DOMContentLoaded', function() {
+    var dateSelect   = document.getElementById('dateSubmitted');
+    var actionSelect = document.getElementById('actionFilter');
+    var container    = document.getElementById('resultsContainer');
+    var countBadge   = document.getElementById('resultCount');
+    var clearBtn     = document.getElementById('clearFiltersBtn');
 
-			// If no filters are selected, do nothing
-			if (!dateValue && !actionValue) {
-				document.getElementById('results').innerHTML = '<p>Please select at least one filter.</p>';
-				return;
-			}
+    function fetchResults() {
+        var dateVal   = dateSelect.value;
+        var actionVal = actionSelect.value;
 
-			// Send the data via AJAX
-			fetch('fetchRecords.inc.php', {
-				method: 'POST',
-				body: formData
-			})
-			.then(response => response.json())
-			.then(data => {
-				// Display the results in the #results div
-				if (data.success) {
-  
-				// Create the table dynamically
-				let html = '<table class="table mt-4">';
-				html += '<thead><tr><th>S/N</th><th>Claim ID</th><th>Course</th><th>Claimant</th><th>Current Stage</th><th>Current Status</th><th>Date Submitted</th></tr></thead>';
-				html += '<tbody>';
+        if (!dateVal && !actionVal) {
+            container.innerHTML =
+                '<div style="text-align:center;color:var(--txt-muted);padding:40px 20px;">' +
+                '<i class="ti ti-filter" style="font-size:2rem;display:block;margin-bottom:10px;opacity:.4;"></i>' +
+                'Select at least one filter above to load results.</div>';
+            countBadge.style.display = 'none';
+            return;
+        }
 
-				// Loop through the results and create a table row for each record
-				data.results.forEach((result, index) => {
-					// Format the 'time_submitted' date (assuming it's in YYYY-MM-DD HH:mm:ss format)
-					const dateSubmitted = new Date(result.time_submitted); // Convert to Date object
-					const formattedDate = dateSubmitted.toLocaleDateString('en-US'); // Format as MM/DD/YYYY (adjust as needed)
-					
-					html += `<tr>
-								<td>${index + 1}</td>
-								<td>${result.claimId}</td>
-								<td>${result.course}</td>
-								<td>${result.full_name}</td>
-								<td>${result.stage}</td>
-								<td>${result.status}</td>
-								<td>${formattedDate}</td>
-							</tr>`;
-				});
+        container.innerHTML =
+            '<div style="text-align:center;padding:32px;color:var(--txt-muted);">' +
+            '<i class="ti ti-loader" style="animation:spin .8s linear infinite;font-size:1.6rem;"></i>' +
+            '</div>';
 
-				html += '</tbody></table>';
+        var fd = new FormData();
+        if (dateVal)   fd.append('dateSubmitted', dateVal);
+        if (actionVal) fd.append('action', actionVal);
 
-				// Append the table to a container in the DOM
-				document.getElementById('results').innerHTML = html;
-			} else {
-				// Handle error or no results scenario
-				document.getElementById('results').innerHTML = "<p>No data found.</p>";
-			}
-		})
-			.catch(error => {
-				console.error('Error fetching data:', error);
-				document.getElementById('results').innerHTML = '<p>There was an error fetching the data.</p>';
-			});
+        fetch('fetchRecords.inc.php', { method: 'POST', body: fd })
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                if (!data.success || !data.results || data.results.length === 0) {
+                    container.innerHTML =
+                        '<div style="text-align:center;color:var(--txt-muted);padding:40px 20px;">' +
+                        '<i class="ti ti-inbox" style="font-size:2rem;display:block;margin-bottom:10px;opacity:.4;"></i>' +
+                        'No records found for the selected filters.</div>';
+                    countBadge.style.display = 'none';
+                    return;
+                }
 
-		}
+                var rows = data.results;
+                var html = '<div class="rmu-table-wrap"><table class="rmu-table">' +
+                    '<thead><tr>' +
+                    '<th>#</th><th>Claim ID</th><th>Course</th><th>Claimant</th>' +
+                    '<th>Stage</th><th>Status</th><th>Date Submitted</th>' +
+                    '</tr></thead><tbody>';
 
-		// Add event listeners for both selects
-		dateSubmitted.addEventListener('change', fetchResults);
-		action.addEventListener('change', fetchResults);
-	});
+                rows.forEach(function(r, idx) {
+                    var d   = new Date(r.time_submitted);
+                    var fmt = d.toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric' });
 
-	// Add event listener to the Clear Filters button
-    clearFiltersBtn.addEventListener('click', function() {
-        // Reset the dropdown values to the default state (the first disabled option)
-        dateSubmitted.value = '';
-        action.value = '';
+                    var statusCls = 'rmu-badge--neutral';
+                    if (r.status === 'Approved') statusCls = 'rmu-badge--success';
+                    if (r.status === 'Flagged')  statusCls = 'rmu-badge--danger';
+                    if (r.status === 'Pending')  statusCls = 'rmu-badge--neutral';
 
-        // Clear the results table
-        resultsDiv.innerHTML = '';
+                    html +=
+                        '<tr>' +
+                        '<td>' + (idx + 1) + '</td>' +
+                        '<td style="font-family:monospace;">#' + escHtml(r.claimId) + '</td>' +
+                        '<td>' + escHtml(r.course) + '</td>' +
+                        '<td style="font-weight:500;">' + escHtml(r.full_name) + '</td>' +
+                        '<td>' + escHtml(r.stage) + '</td>' +
+                        '<td><span class="rmu-badge ' + statusCls + '">' + escHtml(r.status) + '</span></td>' +
+                        '<td>' + escHtml(fmt) + '</td>' +
+                        '</tr>';
+                });
 
-        // Optionally, show a message that filters have been cleared
-        resultsDiv.innerHTML = '<p>Filters have been cleared. Please select your search criteria.</p>';
+                html += '</tbody></table></div>';
+                container.innerHTML = html;
+                countBadge.textContent = rows.length + ' record' + (rows.length !== 1 ? 's' : '');
+                countBadge.style.display = '';
+            })
+            .catch(function() {
+                container.innerHTML =
+                    '<div style="text-align:center;color:var(--txt-muted);padding:40px 20px;">' +
+                    '<i class="ti ti-wifi-off" style="font-size:2rem;display:block;margin-bottom:10px;opacity:.4;"></i>' +
+                    'Error loading results. Please try again.</div>';
+                countBadge.style.display = 'none';
+            });
+    }
+
+    dateSelect.addEventListener('change',   fetchResults);
+    actionSelect.addEventListener('change', fetchResults);
+
+    clearBtn.addEventListener('click', function() {
+        dateSelect.value   = '';
+        actionSelect.value = '';
+        container.innerHTML =
+            '<div style="text-align:center;color:var(--txt-muted);padding:40px 20px;">' +
+            '<i class="ti ti-filter" style="font-size:2rem;display:block;margin-bottom:10px;opacity:.4;"></i>' +
+            'Select at least one filter above to load results.</div>';
+        countBadge.style.display = 'none';
     });
+});
+</script>
 
-	</script>
 </body>
 </html>

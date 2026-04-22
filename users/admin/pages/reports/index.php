@@ -1,240 +1,310 @@
 <?php
-    //Session include goes here
-    $pageTitle = "Reports";
-?>
+require_once __DIR__ . '/../../../../includes/auth.php';
+require_once __DIR__ . '/../../../../includes/db.php';
+require_once __DIR__ . '/../../../../includes/functions.php';
+checkUserRole(['admin', 'Admin']);
 
+// ── Filter values from GET ────────────────────────────────────────────────────
+$f_dept       = validated_str(isset($_GET['department'])  ? $_GET['department']  : '');
+$f_programme  = validated_str(isset($_GET['programme'])   ? $_GET['programme']   : '');
+$f_course     = validated_str(isset($_GET['course'])      ? $_GET['course']      : '');
+$f_status     = validated_str(isset($_GET['status'])      ? $_GET['status']      : '');
+$f_start_date = validated_str(isset($_GET['start_date'])  ? $_GET['start_date']  : '');
+$f_end_date   = validated_str(isset($_GET['end_date'])    ? $_GET['end_date']    : '');
+$f_sort       = validated_str(isset($_GET['sort'])        ? $_GET['sort']        : 'claimId');
+$f_order      = (isset($_GET['order']) && strtolower($_GET['order']) === 'asc') ? 'ASC' : 'DESC';
+
+$valid_sorts = ['claimId', 'full_name', 'department', 'time_submitted'];
+if (!in_array($f_sort, $valid_sorts)) $f_sort = 'claimId';
+
+// ── Filter options (for dropdowns) ───────────────────────────────────────────
+function fetch_distinct($conn, $col, $table) {
+    $stmt = mysqli_prepare($conn, "SELECT DISTINCT `$col` FROM `$table` WHERE `$col` IS NOT NULL AND `$col` <> '' ORDER BY `$col`");
+    mysqli_stmt_execute($stmt);
+    $rows = mysqli_fetch_all(mysqli_stmt_get_result($stmt), MYSQLI_ASSOC);
+    mysqli_stmt_close($stmt);
+    return array_column($rows, $col);
+}
+$dept_opts  = fetch_distinct($conn, 'department', 'claim_details');
+$prog_opts  = fetch_distinct($conn, 'programme',  'claim_details');
+$cours_opts = fetch_distinct($conn, 'course',     'claim_details');
+
+// ── Build query ───────────────────────────────────────────────────────────────
+$base = "SELECT cd.claimId,
+                CONCAT(ud.first_name, ' ', ud.last_name) AS full_name,
+                cd.department, cd.programme, cd.course,
+                cd.flagged, cd.completed,
+                cd.time_submitted,
+                cas.stage  AS current_stage,
+                cas.status AS current_status
+         FROM claim_details cd
+         INNER JOIN user_details ud ON cd.userId = ud.userId
+         LEFT JOIN (
+             SELECT claimId, MAX(stage) AS max_stage
+             FROM claim_approval_stages
+             GROUP BY claimId
+         ) ms ON cd.claimId = ms.claimId
+         LEFT JOIN claim_approval_stages cas
+             ON cd.claimId = cas.claimId AND ms.max_stage = cas.stage
+         WHERE 1=1";
+
+$types  = '';
+$params = [];
+
+if ($f_dept !== '') {
+    $base    .= ' AND cd.department = ?';
+    $params[] = $f_dept;
+    $types   .= 's';
+}
+if ($f_programme !== '') {
+    $base    .= ' AND cd.programme = ?';
+    $params[] = $f_programme;
+    $types   .= 's';
+}
+if ($f_course !== '') {
+    $base    .= ' AND cd.course = ?';
+    $params[] = $f_course;
+    $types   .= 's';
+}
+switch ($f_status) {
+    case 'Pending':
+        $base .= ' AND cd.completed = 0 AND cd.flagged = 0';
+        break;
+    case 'Flagged':
+        $base .= ' AND cd.flagged = 1';
+        break;
+    case 'Completed':
+        $base .= ' AND cd.completed = 1';
+        break;
+}
+if ($f_start_date !== '') {
+    $base    .= ' AND DATE(cd.time_submitted) >= ?';
+    $params[] = $f_start_date;
+    $types   .= 's';
+}
+if ($f_end_date !== '') {
+    $base    .= ' AND DATE(cd.time_submitted) <= ?';
+    $params[] = $f_end_date;
+    $types   .= 's';
+}
+
+$base .= " ORDER BY `{$f_sort}` {$f_order}";
+
+$stmt = mysqli_prepare($conn, $base);
+$claims = [];
+if ($stmt) {
+    if ($types !== '') {
+        mysqli_stmt_bind_param($stmt, $types, ...$params);
+    }
+    mysqli_stmt_execute($stmt);
+    $claims = mysqli_fetch_all(mysqli_stmt_get_result($stmt), MYSQLI_ASSOC);
+    mysqli_stmt_close($stmt);
+}
+
+$has_filters = ($f_dept || $f_programme || $f_course || $f_status || $f_start_date || $f_end_date);
+
+// Helper: sort link URL
+function sort_link($col, $cur_sort, $cur_order) {
+    $params = $_GET;
+    $params['sort']  = $col;
+    $params['order'] = ($cur_sort === $col && $cur_order === 'DESC') ? 'asc' : 'desc';
+    return '?' . http_build_query($params);
+}
+function sort_icon($col, $cur_sort, $cur_order) {
+    if ($cur_sort !== $col) return '<i class="ti ti-arrows-sort" style="opacity:.35;font-size:.8rem;"></i>';
+    return $cur_order === 'ASC'
+        ? '<i class="ti ti-sort-ascending" style="font-size:.8rem;color:var(--accent);"></i>'
+        : '<i class="ti ti-sort-descending" style="font-size:.8rem;color:var(--accent);"></i>';
+}
+
+$pageTitle = "Reports";
+?>
 <!DOCTYPE html>
 <html lang="en">
-
-<?php
-    include "../../assets/partials/head.php";
-?>
-
+<?php include '../../assets/partials/head.php'; ?>
 <body>
-    <?php   
-        include '../../assets/partials/sidebar.php';
-        include '../../assets/partials/header.php';
+<div class="page-wrapper" id="main-wrapper">
+    <?php include '../../assets/partials/sidebar.php'; ?>
 
-    ?>
+    <div class="body-wrapper">
+        <?php include '../../assets/partials/header.php'; ?>
 
-    <!--Body Wrapper -->
-    <div class="page-wrapper" id="main-wrapper" data-layout="vertical" data-navbarbg="skin6" data-sidebartype="full"
-        data-sidebar-position="fixed" data-header-position="fixed">
+        <div style="padding:28px 32px;">
 
-        <div class="body-wrapper">
+            <div class="rmu-page-header">
+                <div class="rmu-page-header__title">Claims Reports</div>
+                <div class="rmu-page-header__sub">Filter, sort and export claim records</div>
+            </div>
 
-            <div class="container-fluid">
-             
-                   <form method="GET" action="">
-					 <div class="row form-group">
-                        <!-- Department Filter -->
-                        <div class="col-md-3">
-                        <label for="department">Department:</label>
-                        <select name="department" id="department" class="form-control">
-                            <option value="">Select Department</option>
-                            <?php
-                            // Fetch unique departments from claim_details
-                            $query = "SELECT DISTINCT department FROM claim_details";
-                            $result = $conn->query($query);
-                            while ($row = $result->fetch_assoc()) {
-                                echo '<option value="' . htmlspecialchars($row['department']) . '">' . 			htmlspecialchars($row['department']) . '</option>';
-                            }
-                            ?>
-                        </select>
+            <!-- Filters -->
+            <div class="rmu-card" style="margin-bottom:24px;">
+                <div class="rmu-card__header">
+                    <span class="rmu-card__title"><i class="ti ti-filter" style="margin-right:8px;"></i>Filters</span>
+                    <?php if ($has_filters): ?>
+                    <a href="?" class="rmu-btn rmu-btn--secondary" style="padding:4px 12px;font-size:.82rem;">
+                        <i class="ti ti-x"></i> Clear
+                    </a>
+                    <?php endif; ?>
+                </div>
+                <div class="rmu-card__body">
+                    <form method="GET" action="">
+                        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:14px;margin-bottom:16px;">
+
+                            <div class="rmu-form-group" style="margin-bottom:0;">
+                                <label class="rmu-label">Department</label>
+                                <select name="department" class="rmu-select">
+                                    <option value="">All</option>
+                                    <?php foreach ($dept_opts as $d): ?>
+                                    <option value="<?php echo h($d); ?>"
+                                        <?php echo ($f_dept === $d) ? 'selected' : ''; ?>>
+                                        <?php echo h($d); ?>
+                                    </option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+
+                            <div class="rmu-form-group" style="margin-bottom:0;">
+                                <label class="rmu-label">Programme</label>
+                                <select name="programme" class="rmu-select">
+                                    <option value="">All</option>
+                                    <?php foreach ($prog_opts as $p): ?>
+                                    <option value="<?php echo h($p); ?>"
+                                        <?php echo ($f_programme === $p) ? 'selected' : ''; ?>>
+                                        <?php echo h($p); ?>
+                                    </option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+
+                            <div class="rmu-form-group" style="margin-bottom:0;">
+                                <label class="rmu-label">Course</label>
+                                <select name="course" class="rmu-select">
+                                    <option value="">All</option>
+                                    <?php foreach ($cours_opts as $c): ?>
+                                    <option value="<?php echo h($c); ?>"
+                                        <?php echo ($f_course === $c) ? 'selected' : ''; ?>>
+                                        <?php echo h($c); ?>
+                                    </option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+
+                            <div class="rmu-form-group" style="margin-bottom:0;">
+                                <label class="rmu-label">Status</label>
+                                <select name="status" class="rmu-select">
+                                    <option value="">All</option>
+                                    <option value="Pending"   <?php echo ($f_status === 'Pending')   ? 'selected' : ''; ?>>Pending</option>
+                                    <option value="Flagged"   <?php echo ($f_status === 'Flagged')   ? 'selected' : ''; ?>>Flagged</option>
+                                    <option value="Completed" <?php echo ($f_status === 'Completed') ? 'selected' : ''; ?>>Completed</option>
+                                </select>
+                            </div>
+
+                            <div class="rmu-form-group" style="margin-bottom:0;">
+                                <label class="rmu-label">From Date</label>
+                                <input type="date" name="start_date" class="rmu-input"
+                                       value="<?php echo h($f_start_date); ?>">
+                            </div>
+
+                            <div class="rmu-form-group" style="margin-bottom:0;">
+                                <label class="rmu-label">To Date</label>
+                                <input type="date" name="end_date" class="rmu-input"
+                                       value="<?php echo h($f_end_date); ?>">
+                            </div>
+
                         </div>
-
-                        <!-- Programme Filter -->
-                        <div class="col-md-3">
-                        <label for="programme">Programme:</label>
-                        <select name="programme" id="programme" class="form-control">
-                            <option value="">Select Programme</option>
-                            <?php
-                            // Fetch unique programmes from claim_details
-                            $query = "SELECT DISTINCT programme FROM claim_details";
-                            $result = $conn->query($query);
-                            while ($row = $result->fetch_assoc()) {
-                                echo '<option value="' . htmlspecialchars($row['programme']) . '">' . htmlspecialchars($row['programme']) . '</option>';
-                            }
-                            ?>
-                        </select>
-                        </div>
-
-                        <!-- Course Filter -->
-                        <div class="col-md-3">
-                        <label for="course">Course:</label>
-                        <select name="course" id="course" class="form-control">
-                            <option value="">Select Course</option>
-                            <?php
-                            // Fetch unique courses from claim_details
-                            $query = "SELECT DISTINCT course FROM claim_details";
-                            $result = $conn->query($query);
-                            while ($row = $result->fetch_assoc()) {
-                                echo '<option value="' . htmlspecialchars($row['course']) . '">' . htmlspecialchars($row['course']) . '</option>';
-                            }
-                            ?>
-                        </select>
-                        </div>
-
-                        <!-- Stage Filter -->
-                        <div class="col-md-3">
-                        <label for="stage">Stage:</label>
-                        <select name="stage" id="stage" class="form-control">
-                            <option value="">Select Stage</option>
-                            <?php
-                            // Fetch unique stages from claim_approval_stages
-                            $query = "SELECT DISTINCT stage FROM claim_approval_stages";
-                            $result = $conn->query($query);
-                            while ($row = $result->fetch_assoc()) {
-                                echo '<option value="' . htmlspecialchars($row['stage']) . '">' . htmlspecialchars($row['stage']) . '</option>';
-                            }
-                            ?>
-                        </select>
-                        </div>
-
-                        <!-- Status Filter -->
-                         <div class="col-md-3">
-                         <label for="status">Status:</label>
-                            <select name="status" id="status" class="form-control">
-                                <option value="">Select Status</option>
-                                <option value="Pending" <?php if (isset($_GET['status']) && $_GET['status'] == 'Pending') echo 'selected'; ?>>Pending</option>
-								<option value="Completed" <?php if (isset($_GET['status']) && $_GET['status'] == 'Completed') echo 'selected'; ?>>Completed</option>
-                                <option value="Approved" <?php if (isset($_GET['status']) && $_GET['status'] == 'Approved') echo 'selected'; ?>>Approved</option>
-                                <option value="Flagged" <?php if (isset($_GET['status']) && $_GET['status'] == 'Flagged') echo 'selected'; ?>>Flagged</option>
-                            </select>
-                        </div>
-
-                        <!-- Date Range Filters -->
-                        <div class="col-md-3">
-                            <label for="start_date">Start Date:</label>
-                            <input type="date" name="start_date" id="start_date" class="form-control"
-								   value="<?php echo isset($_GET['start_date']) ? htmlspecialchars($_GET['start_date']) : ''; ?>">
-						 </div>
-                            
-						<div class="col-md-3">
-                            <label for="end_date">End Date:</label>
-                            <input type="date" name="end_date" id="end_date" class="form-control" 
-								   value="<?php echo isset($_GET['end_date']) ? htmlspecialchars($_GET['end_date']) : ''; ?>">
-                        </div>
-
-                        <!-- Filter Button -->
-						<div class="col-md-3">						 
-                       		 <br /><input class="btn btn-info" type="submit" value="Filter">
-						 </div>
-					   </div>	 
+                        <input type="hidden" name="sort"  value="<?php echo h($f_sort); ?>">
+                        <input type="hidden" name="order" value="<?php echo h(strtolower($f_order)); ?>">
+                        <button type="submit" class="rmu-btn rmu-btn--primary">
+                            <i class="ti ti-search"></i> Apply Filters
+                        </button>
                     </form>
                 </div>
-
-                <?php
-                    // Building the SQL query with filters
-                    $query = "SELECT cd.*, cas.stage, cas.status, cas.time_approved, cas.time_rejected 
-                              FROM claim_details cd 
-                              JOIN claim_approval_stages cas ON cd.claimId = cas.claimId 
-                              WHERE 1=1";
-                
-                    if (!empty($_GET['department'])) {
-                        $department = $conn->real_escape_string($_GET['department']);
-                        $query .= " AND cd.department = '$department'";
-                    }
-                
-                    if (!empty($_GET['programme'])) {
-                        $programme = $conn->real_escape_string($_GET['programme']);
-                        $query .= " AND cd.programme = '$programme'";
-                    }
-                
-                    if (!empty($_GET['course'])) {
-                        $course = $conn->real_escape_string($_GET['course']);
-                        $query .= " AND cd.course = '$course'";
-                    }
-                
-                    if (!empty($_GET['stage'])) {
-                        $stage = $conn->real_escape_string($_GET['stage']);
-                        $query .= " AND cas.stage = '$stage'";
-                    }
-                
-                    if (!empty($_GET['status'])) {
-                        $status = $conn->real_escape_string($_GET['status']);
-                        $query .= " AND cas.status = '$status'";
-                    }
-                
-                    // Date range filters
-                    if (!empty($_GET['start_date'])) {   $start_date = $conn->real_escape_string($_GET['start_date']);
-                        $query .= " AND cd.time_submitted >= '$start_date'";
-                    }
-                
-                    if (!empty($_GET['end_date'])) {
-                        $end_date = $conn->real_escape_string($_GET['end_date']);
-                        $query .= " AND cd.time_submitted <= '$end_date'";
-                    }
-                
-                    $result = $conn->query($query);
-                
-                    
-                    if ($result->num_rows > 0) {
-						echo '<div class="container">';
-                        echo '<table class="table table-bordered table-striped">';
-                        echo '<thead class="thead-dark">';
-                        echo '<tr>';
-                        echo '<th scope="col">Claim ID</th>';
-                        //echo '<th scope="col">User ID</th>';
-                        echo '<th scope="col">Department</th>';
-                        echo '<th scope="col">Programme</th>';
-                        echo '<th scope="col">Course</th>';
-                        echo '<th scope="col">Flagged</th>';
-                        echo '<th scope="col">Completed</th>';
-                        //echo '<th scope="col">Time Submitted</th>';
-                        echo '<th scope="col">Stage</th>';
-                        echo '<th scope="col">Status</th>';
-                        echo '<th scope="col">Time Approved</th>';
-                        echo '<th scope="col">Time Rejected</th>';
-                        echo '</tr>';
-                        echo '</thead>';
-                        echo '<tbody>';
-                        
-                        while ($row = $result->fetch_assoc()) {
-                            echo '<tr>';
-                            echo '<td>' . htmlspecialchars($row['claimId']) . '</td>';
-                            //echo '<td>' . htmlspecialchars($row['userId']) . '</td>';
-                            echo '<td>' . htmlspecialchars($row['department']) . '</td>';
-                            echo '<td>' . htmlspecialchars($row['programme']) . '</td>';
-                            echo '<td>' . htmlspecialchars($row['course']) . '</td>';
-                            echo '<td>' . ($row['flagged'] ? 'Yes' : 'No') . '</td>';
-                            echo '<td>' . ($row['completed'] ? 'Yes' : 'No') . '</td>';
-                            //echo '<td>' . htmlspecialchars($row['time_submitted']) . '</td>';
-                            echo '<td>' . htmlspecialchars($row['stage']) . '</td>';
-                            echo '<td>' . htmlspecialchars($row['status']) . '</td>';
-                            echo '<td>' . htmlspecialchars($row['time_approved']) . '</td>';
-                            echo '<td>' . htmlspecialchars($row['time_rejected']) . '</td>';
-                            echo '</tr>';
-                        }
-
-                    } else {
-                        echo '<div class="alert alert-warning" role="alert">No records found.</div>';
-                    }			
-			
-                        echo '</tbody>';
-                        echo '</table>';
-						echo '</div>';
-                
-                    $conn->close();
-                ?>
-                <?php ?>
-                <?php ?>
             </div>
+
+            <!-- Results -->
+            <div class="rmu-card">
+                <div class="rmu-card__header">
+                    <span class="rmu-card__title">Results</span>
+                    <span class="rmu-badge rmu-badge--primary"><?php echo count($claims); ?> record<?php echo count($claims) !== 1 ? 's' : ''; ?></span>
+                </div>
+                <div class="rmu-card__body" style="padding:0;">
+                    <div class="rmu-table-wrap">
+                        <table class="rmu-table">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>
+                                        <a href="<?php echo h(sort_link('claimId', $f_sort, $f_order)); ?>"
+                                           style="color:inherit;text-decoration:none;display:flex;align-items:center;gap:4px;">
+                                            ID <?php echo sort_icon('claimId', $f_sort, $f_order); ?>
+                                        </a>
+                                    </th>
+                                    <th>
+                                        <a href="<?php echo h(sort_link('full_name', $f_sort, $f_order)); ?>"
+                                           style="color:inherit;text-decoration:none;display:flex;align-items:center;gap:4px;">
+                                            Claimant <?php echo sort_icon('full_name', $f_sort, $f_order); ?>
+                                        </a>
+                                    </th>
+                                    <th>
+                                        <a href="<?php echo h(sort_link('department', $f_sort, $f_order)); ?>"
+                                           style="color:inherit;text-decoration:none;display:flex;align-items:center;gap:4px;">
+                                            Department <?php echo sort_icon('department', $f_sort, $f_order); ?>
+                                        </a>
+                                    </th>
+                                    <th>Course</th>
+                                    <th>
+                                        <a href="<?php echo h(sort_link('time_submitted', $f_sort, $f_order)); ?>"
+                                           style="color:inherit;text-decoration:none;display:flex;align-items:center;gap:4px;">
+                                            Submitted <?php echo sort_icon('time_submitted', $f_sort, $f_order); ?>
+                                        </a>
+                                    </th>
+                                    <th>Stage</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php if (!empty($claims)):
+                                    $i = 1;
+                                    foreach ($claims as $row):
+                                        if ($row['completed']) {
+                                            $badge = '<span class="rmu-badge rmu-badge--success">Completed</span>';
+                                        } elseif ($row['flagged']) {
+                                            $badge = '<span class="rmu-badge rmu-badge--danger">Flagged</span>';
+                                        } else {
+                                            $status_cls = $row['current_status'] === 'Approved'
+                                                ? 'rmu-badge--success'
+                                                : 'rmu-badge--neutral';
+                                            $badge = '<span class="rmu-badge ' . $status_cls . '">'
+                                                . h($row['current_status'] ?? 'Pending') . '</span>';
+                                        }
+                                ?>
+                                <tr>
+                                    <td><?php echo $i++; ?></td>
+                                    <td style="font-family:monospace;">#<?php echo (int)$row['claimId']; ?></td>
+                                    <td style="font-weight:500;"><?php echo h($row['full_name']); ?></td>
+                                    <td><?php echo h($row['department']); ?></td>
+                                    <td><?php echo h($row['course']); ?></td>
+                                    <td><?php echo h(date('d M Y', strtotime($row['time_submitted']))); ?></td>
+                                    <td><?php echo $row['current_stage'] !== null ? (int)$row['current_stage'] : '—'; ?></td>
+                                    <td><?php echo $badge; ?></td>
+                                </tr>
+                                <?php endforeach; ?>
+                                <?php else: ?>
+                                <tr>
+                                    <td colspan="8" style="text-align:center;color:var(--txt-muted);padding:40px 20px;">
+                                        <i class="ti ti-search-off" style="font-size:2rem;display:block;margin-bottom:10px;opacity:.4;"></i>
+                                        No claims match the selected filters.
+                                    </td>
+                                </tr>
+                                <?php endif; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
         </div>
     </div>
-    
-    
-    <script src="../../assets/libs/jquery/dist/jquery.min.js"></script>
-    <script src="../../assets/libs/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="../../assets/js/sidebarmenu.js"></script>
-    <script src="../../assets/js/app.min.js"></script>
-    <script src="../../assets/libs/simplebar/dist/simplebar.js"></script>
+</div>
 </body>
-
-<?php
-
-?>
-
-
-
 </html>

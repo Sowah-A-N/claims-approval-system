@@ -168,41 +168,80 @@ $disabledUserResult = mysqli_query($conn, "SELECT * FROM user_details WHERE acco
 </div>
 
 <script>
+const CSRF = '<?php echo h(csrf_token()); ?>';
+const swalOpts = { background: '#0d1b2a', color: '#e2e8f0' };
+
 function activateAccount(userId) {
-  var xhr = new XMLHttpRequest();
-  xhr.open('POST', 'index.inc.php', true);
-  xhr.setRequestHeader('Content-type', 'application/x-www-form-urlencoded');
-  xhr.onload = function() {
-    if (xhr.status === 200) {
-      window.location.reload();
-    } else {
-      alert('Error activating account.');
-    }
-  };
-  xhr.send('action=activateAccount&userId=' + userId);
+  Swal.fire(Object.assign({
+    title: 'Activate Account?',
+    text: 'This will grant the user access to the system.',
+    icon: 'question',
+    showCancelButton: true,
+    confirmButtonText: 'Yes, Activate',
+    confirmButtonColor: '#22c55e',
+    cancelButtonColor: 'rgba(255,255,255,0.1)',
+  }, swalOpts)).then(function(result) {
+    if (!result.isConfirmed) return;
+
+    var btn = document.getElementById('activate-btn-' + userId);
+    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="ti ti-loader"></i>'; }
+
+    var fd = new FormData();
+    fd.append('action', 'activateAccount');
+    fd.append('userId', userId);
+    fd.append('csrf_token', CSRF);
+
+    fetch('index.inc.php', { method: 'POST', body: fd })
+      .then(function(r) {
+        if (r.ok) {
+          Swal.fire(Object.assign({
+            icon: 'success', title: 'Activated',
+            text: 'Account has been activated.',
+            timer: 1800, showConfirmButton: false,
+          }, swalOpts)).then(function() { location.reload(); });
+        } else {
+          if (btn) { btn.disabled = false; btn.innerHTML = '<i class="ti ti-user-check"></i> Activate'; }
+          Swal.fire(Object.assign({ icon: 'error', title: 'Failed', text: 'Could not activate account.' }, swalOpts));
+        }
+      })
+      .catch(function() {
+        if (btn) { btn.disabled = false; btn.innerHTML = '<i class="ti ti-user-check"></i> Activate'; }
+        Swal.fire(Object.assign({ icon: 'error', title: 'Network Error', text: 'Please try again.' }, swalOpts));
+      });
+  });
 }
 
 function viewAcctDetails(userId) {
-  $.ajax({
-    url: 'index.inc.php',
-    type: 'POST',
-    data: { action: 'viewAccountDetails', userId: userId },
-    success: function(response) {
-      var u = JSON.parse(response);
-      document.getElementById('ud_first_name').value    = u.first_name    || '';
-      document.getElementById('ud_last_name').value     = u.last_name     || '';
-      document.getElementById('ud_phone_number').value  = u.phone_number  || '';
-      document.getElementById('ud_gender').value        = u.gender        || '';
-      document.getElementById('ud_email').value         = u.email         || '';
-      document.getElementById('ud_department').value    = u.department    || '';
-      document.getElementById('ud_role').value          = u.role          || '';
-      document.getElementById('ud_rank').value          = u.rank          || '';
-      document.getElementById('ud_account_status').value= u.account_status|| '';
+  var fd = new FormData();
+  fd.append('action', 'viewAccountDetails');
+  fd.append('userId', userId);
+  fd.append('csrf_token', CSRF);
+
+  fetch('index.inc.php', { method: 'POST', body: fd })
+    .then(function(r) { return r.json(); })
+    .then(function(u) {
+      document.getElementById('ud_first_name').value     = u.first_name     || '';
+      document.getElementById('ud_last_name').value      = u.last_name      || '';
+      document.getElementById('ud_phone_number').value   = u.phone_number   || '';
+      document.getElementById('ud_gender').value         = u.gender         || '';
+      document.getElementById('ud_email').value          = u.email          || '';
+      document.getElementById('ud_department').value     = u.department     || '';
+      document.getElementById('ud_role').value           = u.role           || '';
+      document.getElementById('ud_rank').value           = u.rank           || '';
+      document.getElementById('ud_account_status').value = u.account_status || '';
       document.getElementById('userDetailsModal').classList.add('open');
-    },
-    error: function() { alert('An error occurred while fetching user details.'); }
-  });
+    })
+    .catch(function() {
+      Swal.fire(Object.assign({ icon: 'error', title: 'Error', text: 'Could not load user details.' }, swalOpts));
+    });
 }
+
+document.getElementById('userDetailsModal').addEventListener('click', function(e) {
+  if (e.target === this) this.classList.remove('open');
+});
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') document.getElementById('userDetailsModal').classList.remove('open');
+});
 </script>
 
 </body>

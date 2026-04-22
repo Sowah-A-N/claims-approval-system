@@ -35,8 +35,8 @@ $base_url = (isset($_SERVER['HTTP_HOST']) && strpos($_SERVER['HTTP_HOST'], 'loca
       <span>Claims</span>
     </a>
 
-    <a class="rmu-sidebar__link" href="#">
-      <i class="ti ti-alert-circle"></i>
+    <a class="rmu-sidebar__link" href="<?php echo $base_url; ?>users/admin/pages/logs">
+      <i class="ti ti-history"></i>
       <span>Logs</span>
     </a>
 

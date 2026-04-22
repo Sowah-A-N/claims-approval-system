@@ -2,6 +2,7 @@
 require_once __DIR__ . '/../../../../includes/headers.php';
 require_once __DIR__ . '/../../../../includes/auth.php';
 require_once __DIR__ . '/../../../../includes/db.php';
+require_once __DIR__ . '/../../../../includes/functions.php';
 checkUserRole(['admin', 'Admin']);
 
 if (isset($pageTitle) && $pageTitle === 'Reports') {
@@ -19,6 +20,7 @@ if (isset($pageTitle) && $pageTitle === 'Reports') {
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.4.0/dist/tabler-icons.min.css">
   <?php $rmu_css = ($pageTitle === 'Admin Dashboard') ? '../../assets/css/rmu-glass.css' : '../../../../assets/css/rmu-glass.css'; ?>
   <link rel="stylesheet" href="<?php echo $rmu_css; ?>">
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.all.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js" crossorigin="anonymous"></script>
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous"></script>
   <?php if (!empty($include_charts)): ?>

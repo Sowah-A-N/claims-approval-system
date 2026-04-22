@@ -19,7 +19,10 @@ function run_claim_query($conn, $sql, $userId) {
 
 $results = [
     'flaggedClaims'   => run_claim_query($conn,
-        "SELECT *, 'Flagged' AS status FROM claim_details WHERE userId = ? AND flagged = 1",
+        "SELECT cd.*, fc.flagged_at_stage, fc.flagged_msg, 'Flagged' AS status
+         FROM claim_details cd
+         LEFT JOIN flagged_claims fc ON cd.claimId = fc.claimId
+         WHERE cd.userId = ? AND cd.flagged = 1",
         $userId),
     'pendingClaims'   => run_claim_query($conn,
         "SELECT * FROM claim_details WHERE userId = ? AND flagged <> 1 AND completed <> 1 ORDER BY claimId DESC",
@@ -62,25 +65,37 @@ $results = [
                                             <tr>
                                                 <th>#</th>
                                                 <th>Department</th>
-                                                <th>Programme</th>
                                                 <th>Course</th>
-                                                <th>Status</th>
+                                                <th>Flagged At Stage</th>
+                                                <th>Reason</th>
                                                 <th>Actions</th>
                                             </tr>
                                         </thead>
                                         <tbody>';
 
                     if ($results['flaggedClaims']->num_rows > 0) {
+                        $fi = 1;
                         while ($row = $results['flaggedClaims']->fetch_assoc()) {
+                            $reason = $row['flagged_msg'] ? h($row['flagged_msg']) : '<span style="color:var(--txt-muted);">—</span>';
+                            $short_reason = $row['flagged_msg']
+                                ? '<span title="' . h($row['flagged_msg']) . '" style="cursor:help;">'
+                                    . h(mb_substr($row['flagged_msg'], 0, 60) . (mb_strlen($row['flagged_msg']) > 60 ? '…' : ''))
+                                    . '</span>'
+                                : '<span style="color:var(--txt-muted);">—</span>';
                             echo '<tr>';
-                            echo '<td>' . h($row['claimId']) . '</td>';
+                            echo '<td>' . $fi++ . '</td>';
                             echo '<td>' . h($row['department']) . '</td>';
-                            echo '<td>' . h($row['programme']) . '</td>';
                             echo '<td>' . h($row['course']) . '</td>';
-                            echo '<td><span class="rmu-badge rmu-badge--danger">Flagged</span></td>';
-                            echo '<td>
-                                    <button class="rmu-btn rmu-btn--secondary" style="padding:5px 9px;" onclick="viewClaimDetails(' . (int)$row['claimId'] . ')" title="View">
+                            echo '<td>' . ($row['flagged_at_stage'] !== null
+                                ? '<span class="rmu-badge rmu-badge--neutral">Stage ' . (int)$row['flagged_at_stage'] . '</span>'
+                                : '<span style="color:var(--txt-muted);">—</span>') . '</td>';
+                            echo '<td style="max-width:260px;">' . $short_reason . '</td>';
+                            echo '<td style="white-space:nowrap;">
+                                    <button class="rmu-btn rmu-btn--secondary" style="padding:5px 9px;margin-right:4px;" onclick="viewClaimDetails(' . (int)$row['claimId'] . ')" title="View">
                                         <i class="ti ti-eye"></i>
+                                    </button>
+                                    <button class="rmu-btn rmu-btn--primary" style="padding:5px 10px;" onclick="resubmitClaim(' . (int)$row['claimId'] . ')" title="Resubmit">
+                                        <i class="ti ti-send"></i> Resubmit
                                     </button>
                                   </td>';
                             echo '</tr>';
@@ -272,6 +287,9 @@ $results = [
 </style>
 
 <script>
+const CSRF     = '<?php echo h(csrf_token()); ?>';
+const swalOpts = { background: '#0d1b2a', color: '#e2e8f0' };
+
    function editClaim(claimId) {
         // $.ajax({
         //     url: 'editClaimDetails.inc.php',
@@ -364,6 +382,43 @@ $results = [
         });
     }
    
+    function resubmitClaim(claimId) {
+        Swal.fire(Object.assign({
+            title: 'Resubmit Claim?',
+            text: 'A copy of this claim will open for editing so you can address the flagged issues before resubmitting.',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: 'Yes, Edit & Resubmit',
+            confirmButtonColor: 'var(--accent)',
+            cancelButtonColor: 'rgba(255,255,255,0.1)',
+        }, swalOpts)).then(function(result) {
+            if (!result.isConfirmed) return;
+
+            var fd = new FormData();
+            fd.append('claimId',    claimId);
+            fd.append('csrf_token', CSRF);
+
+            fetch('resubmitFlaggedClaim.inc.php', { method: 'POST', body: fd })
+                .then(function(r) { return r.json(); })
+                .then(function(res) {
+                    if (res.success) {
+                        window.location.assign('../fileNewClaim/index.php?claimTempId=' + res.claimTempId);
+                    } else {
+                        Swal.fire(Object.assign({
+                            icon: 'error', title: 'Error',
+                            text: res.message || 'Could not prepare claim for resubmission.',
+                        }, swalOpts));
+                    }
+                })
+                .catch(function() {
+                    Swal.fire(Object.assign({
+                        icon: 'error', title: 'Network Error',
+                        text: 'Could not reach the server. Please try again.',
+                    }, swalOpts));
+                });
+        });
+    }
+
     //Function to download claim as filled out document
     function downloadClaimDetails(claimId) {
     $.ajax({

@@ -20,6 +20,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['action'])) {
 
 function activateAccount() {
     global $conn;
+    csrf_verify();
 
     if (!isset($_POST['userId'])) {
         http_response_code(400);
