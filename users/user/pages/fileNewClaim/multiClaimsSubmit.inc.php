@@ -6,6 +6,7 @@ require_once __DIR__ . '/../../queries/claim.queries.php';
 
 require_post();
 require_role(array('user', 'claimant'));
+csrf_verify();
 
 $user_id      = current_user_id();
 $faculty      = isset($_SESSION['faculty']) ? (string) $_SESSION['faculty'] : '';
@@ -19,6 +20,17 @@ $time_slots = isset($_POST['timeSlots']) && is_array($_POST['timeSlots']) ? $_PO
 
 if ($department === '' || $programme === '' || $course === '' || empty($time_slots)) {
     json_response(array('status' => 'error', 'message' => 'Missing required fields.'), 400);
+}
+
+// Reject submissions with an unreasonable number of dates.
+$total_dates_submitted = 0;
+foreach ($time_slots as $slot) {
+    if (isset($slot['dates']) && is_array($slot['dates'])) {
+        $total_dates_submitted += count($slot['dates']);
+    }
+}
+if ($total_dates_submitted > 365) {
+    json_response(array('status' => 'error', 'message' => 'Too many dates in a single claim (maximum 365).'), 400);
 }
 
 mysqli_begin_transaction($conn);
@@ -45,7 +57,10 @@ if ($ok) {
         $fuel_component = (int)   (isset($slot['fuelComponent']) ? $slot['fuelComponent'] : 0);
         $dates          = isset($slot['dates']) && is_array($slot['dates']) ? $slot['dates'] : array();
 
-        if ($start_time === '' || $end_time === '' || $periods === 0 || empty($dates)) {
+        $valid_start = DateTime::createFromFormat('H:i', $start_time);
+        $valid_end   = DateTime::createFromFormat('H:i', $end_time);
+
+        if ($start_time === '' || $end_time === '' || !$valid_start || !$valid_end || $periods === 0 || empty($dates)) {
             $ok = false;
             break;
         }

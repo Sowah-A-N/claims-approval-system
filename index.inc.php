@@ -49,7 +49,7 @@ $password_ok = password_verify($login_pw, $row['password']);
 
 // Legacy plaintext fallback for accounts registered before v1.0.1.
 // On match: silently re-hash and continue so future logins use bcrypt.
-if (!$password_ok && $login_pw === $row['password']) {
+if (!$password_ok && hash_equals($row['password'], $login_pw)) {
     $new_hash = password_hash($login_pw, PASSWORD_BCRYPT, array('cost' => 12));
     $upd = mysqli_prepare($conn, 'UPDATE login_details SET password = ? WHERE userId = ?');
     if ($upd) {

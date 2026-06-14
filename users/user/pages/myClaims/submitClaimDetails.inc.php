@@ -5,6 +5,7 @@ require_once __DIR__ . '/../../../../includes/functions.php';
 
 require_post();
 require_role(['user', 'claimant']);
+csrf_verify();
 
 $claimId = (int) ($_POST['claimId'] ?? 0);
 $userId  = current_user_id();
