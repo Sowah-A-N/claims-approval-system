@@ -5,22 +5,6 @@ require_once __DIR__ . '/includes/functions.php';
 
 require_post();
 
-// Ensure login_details.stage column exists (added after initial schema creation).
-$col = mysqli_query($conn,
-    "SELECT COUNT(*) AS n FROM information_schema.COLUMNS
-     WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'login_details' AND COLUMN_NAME = 'stage'");
-if ($col && mysqli_fetch_assoc($col)['n'] == 0) {
-    mysqli_query($conn, 'ALTER TABLE login_details ADD COLUMN stage INT NOT NULL DEFAULT 0');
-}
-
-// Ensure user_details.faculty column exists.
-$col2 = mysqli_query($conn,
-    "SELECT COUNT(*) AS n FROM information_schema.COLUMNS
-     WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'user_details' AND COLUMN_NAME = 'faculty'");
-if ($col2 && mysqli_fetch_assoc($col2)['n'] == 0) {
-    mysqli_query($conn, "ALTER TABLE user_details ADD COLUMN faculty VARCHAR(255) NOT NULL DEFAULT ''");
-}
-
 $first_name   = validated_str(isset($_POST['first_name'])   ? $_POST['first_name']   : '');
 $last_name    = validated_str(isset($_POST['last_name'])    ? $_POST['last_name']    : '');
 $other_names  = validated_str(isset($_POST['other_names'])  ? $_POST['other_names']  : '');
@@ -35,6 +19,12 @@ $stage        = (int) (isset($_POST['stage'])               ? $_POST['stage']   
 
 if ($first_name === '' || $last_name === '' || $email === '' || $raw_password === '') {
     $_SESSION['message'] = 'Please fill in all required fields.';
+    header('Location: ./registerApp.php');
+    exit;
+}
+
+if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+    $_SESSION['message'] = 'Please enter a valid email address.';
     header('Location: ./registerApp.php');
     exit;
 }

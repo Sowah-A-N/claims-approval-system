@@ -30,7 +30,7 @@ function session_init() {
     session_set_cookie_params(array(
         'lifetime' => 1800,
         'path'     => '/',
-        'secure'   => false, // Set to true when HTTPS is in place.
+        'secure'   => true,
         'httponly' => true,
         'samesite' => 'Lax',
     ));

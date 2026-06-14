@@ -6,6 +6,7 @@ require_once __DIR__ . '/../../queries/claim.queries.php';
 
 require_post();
 require_role(array('user', 'claimant'));
+csrf_verify();
 
 $user_id    = current_user_id();
 $rate       = isset($_SESSION['rate'])    ? (float) $_SESSION['rate']    : 0.0;
