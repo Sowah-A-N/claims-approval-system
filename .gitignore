@@ -9,3 +9,4 @@ users/user/pages/fileNewClaim/x2index.inc2.php
 /users/user/assets/blank_page.php
 /users/user/pages/snippets.txt
 loadenv.php
+*.sql
