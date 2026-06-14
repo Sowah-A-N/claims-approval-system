@@ -19,6 +19,17 @@ if (!$department || !$programme || !$course) {
     json_response(['error' => 'Department, programme, and course are required.'], 400);
 }
 
+// Reject drafts with an unreasonable number of dates.
+$total_draft_dates = 0;
+foreach ($timeSlots as $slot) {
+    if (isset($slot['dates']) && is_array($slot['dates'])) {
+        $total_draft_dates += count($slot['dates']);
+    }
+}
+if ($total_draft_dates > 365) {
+    json_response(['error' => 'Too many dates in a single claim (maximum 365).'], 400);
+}
+
 mysqli_begin_transaction($conn);
 $ok = true;
 
@@ -64,6 +75,10 @@ if ($ok) {
         $sub    = (float)($slot['subTotal']    ?? 0);
         $fuel   = (int)($slot['fuelComponent'] ?? 0);
         $dates  = isset($slot['dates']) && is_array($slot['dates']) ? $slot['dates'] : [];
+
+        if (!DateTime::createFromFormat('H:i', $start) || !DateTime::createFromFormat('H:i', $end)) {
+            continue; // skip slots with invalid time format
+        }
 
         foreach ($dates as $raw) {
             $date = validated_str($raw);

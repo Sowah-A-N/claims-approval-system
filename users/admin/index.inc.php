@@ -36,10 +36,11 @@ function activateAccount() {
 
     if (mysqli_stmt_execute($stmt)) {
         http_response_code(200);
-        echo "Account activated successfully.";
+        echo json_encode(array('success' => true, 'message' => 'Account activated successfully.'));
     } else {
+        error_log('[admin] activateAccount failed: ' . mysqli_error($conn));
         http_response_code(500);
-        echo "Error activating account: " . mysqli_error($conn);
+        echo json_encode(array('success' => false, 'message' => 'Account activation failed. Please try again.'));
     }
 
     mysqli_stmt_close($stmt);
@@ -64,10 +65,11 @@ function changeStage() {
 
     if (mysqli_stmt_execute($stmt)) {
         http_response_code(200);
-        echo "Stage changed successfully!";
+        echo json_encode(array('success' => true, 'message' => 'Stage updated successfully.'));
     } else {
+        error_log('[admin] changeStage failed: ' . mysqli_error($conn));
         http_response_code(500);
-        echo "Error changing stage: " . mysqli_error($conn);
+        echo json_encode(array('success' => false, 'message' => 'Stage update failed. Please try again.'));
     }
 
     mysqli_stmt_close($stmt);
@@ -85,20 +87,25 @@ function viewAccountDetails() {
 
     $userId = (int) $_POST['userId'];
 
-    $stmt = mysqli_prepare($conn, "SELECT * FROM user_details WHERE userId = ?");
+    $stmt = mysqli_prepare($conn,
+        'SELECT userId, first_name, last_name, other_names, phone_number, gender,
+                email, department, faculty, `role`, `rank`, account_status
+         FROM user_details WHERE userId = ?'
+    );
     mysqli_stmt_bind_param($stmt, 'i', $userId);
     mysqli_stmt_execute($stmt);
     $result = mysqli_stmt_get_result($stmt);
+    $row    = $result ? mysqli_fetch_assoc($result) : null;
+    mysqli_stmt_close($stmt);
 
-    if ($result) {
-        $row = mysqli_fetch_assoc($result);
+    if ($row) {
         http_response_code(200);
         echo json_encode($row);
     } else {
+        error_log('[admin] viewAccountDetails failed: ' . mysqli_error($conn));
         http_response_code(500);
-        echo "Error retrieving user details: " . mysqli_error($conn);
+        echo json_encode(array('success' => false, 'message' => 'Could not retrieve user details.'));
     }
 
-    mysqli_stmt_close($stmt);
     exit;
 }

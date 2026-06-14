@@ -46,13 +46,16 @@ if ($claimTempId > 0) {
     }
 }
 
-$draftJson      = json_encode($draft ? [
+$draftJson = json_encode($draft ? [
     'claimTempId' => $claimTempId,
     'department'  => $draft['department'],
     'programme'   => $draft['programme'],
     'course'      => $draft['course'],
 ] : null);
+if ($draftJson === false) $draftJson = 'null';
+
 $draftSlotsJson = json_encode($draftSlots);
+if ($draftSlotsJson === false) $draftSlotsJson = '[]';
 ?>
 <body>
 <div class="container-scroller">

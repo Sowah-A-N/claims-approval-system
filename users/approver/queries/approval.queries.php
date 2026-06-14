@@ -90,7 +90,7 @@ function db_get_claim_details_for_approver($conn, $claimId) {
  */
 function db_get_current_stage($conn, $claimId) {
     $stmt = mysqli_prepare($conn,
-        'SELECT stage FROM claim_approval_stages WHERE claimId = ? ORDER BY stageId DESC LIMIT 1'
+        "SELECT stage FROM claim_approval_stages WHERE claimId = ? AND status = 'Pending' ORDER BY stageId DESC LIMIT 1"
     );
     if (!$stmt) return null;
     mysqli_stmt_bind_param($stmt, 'i', $claimId);
