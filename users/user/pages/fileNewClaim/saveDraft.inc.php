@@ -6,6 +6,7 @@ require_once __DIR__ . '/../../queries/claim.queries.php';
 
 require_post();
 require_role(['user', 'claimant']);
+csrf_verify();
 
 $userId      = current_user_id();
 $claimTempId = (int)($_POST['claimTempId'] ?? 0);

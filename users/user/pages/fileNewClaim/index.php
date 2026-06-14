@@ -195,6 +195,7 @@ const FUEL_ENABLED = <?php echo json_encode($fuelEnabled); ?>;
 const FUEL_VALUE   = <?php echo json_encode($fuelValue); ?>;
 const DRAFT        = <?php echo $draftJson; ?>;
 const DRAFT_SLOTS  = <?php echo $draftSlotsJson; ?>;
+const CSRF         = '<?php echo h(csrf_token()); ?>';
 
 let slotCounter          = 0;
 let currentClaimTempId   = DRAFT ? DRAFT.claimTempId : 0;
@@ -491,6 +492,7 @@ function buildPayload() {
     }
 
     const fd = new FormData();
+    fd.append('csrf_token', CSRF);
     fd.append('department', dept);
     fd.append('programme',  prog);
     fd.append('course',     course);
@@ -565,9 +567,9 @@ function submitClaim() {
             })
             .catch(() => {
                 swal('error', 'Network Error', 'Could not reach the server. Please try again.');
-                setBusy('submitClaimBtn', false,
-                    '<i class="ti ti-send"></i> Submit Claim');
-            });
+            })
+            .finally(() => setBusy('submitClaimBtn', false,
+                '<i class="ti ti-send"></i> Submit Claim'));
     });
 }
 

@@ -3,6 +3,7 @@
 require_once __DIR__ . '/../../includes/auth.php';
 require_once __DIR__ . '/../../includes/db.php';
 require_once __DIR__ . '/../../includes/functions.php';
+require_role(array('admin', 'Admin'));
 
 // Handle AJAX request if received
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['action'])) {
@@ -47,6 +48,7 @@ function activateAccount() {
 
 function changeStage() {
     global $conn;
+    csrf_verify();
 
     if (!isset($_POST['userId']) || !isset($_POST['stage'])) {
         http_response_code(400);

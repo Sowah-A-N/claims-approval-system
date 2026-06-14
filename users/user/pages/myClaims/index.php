@@ -362,7 +362,7 @@ const swalOpts = { background: '#0d1b2a', color: '#e2e8f0' };
                 url: 'deleteClaim.inc.php',
                 type: 'POST',
                 dataType: 'json',
-                data: { claimId: claimId },
+                data: { claimId: claimId, csrf_token: CSRF },
                 success: function(response) {
                     Swal.fire({
                         icon: 'success', title: 'Deleted',
