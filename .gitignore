@@ -8,4 +8,15 @@ users/user/pages/fileNewClaim/xindex.inc2.php
 users/user/pages/fileNewClaim/x2index.inc2.php
 /users/user/assets/blank_page.php
 /users/user/pages/snippets.txt
-loadenv.php
+
+# Composer dependencies — restore with `composer install` (composer.json/lock are tracked)
+/vendor/
+
+# OS / editor cruft
+.DS_Store
+**/.DS_Store
+Thumbs.db
+
+# Runtime artefacts
+/uploads/*.tmp
+*.log
