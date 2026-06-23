@@ -35,6 +35,8 @@ $completed = false;
 $ok        = db_advance_claim_stage($conn, $claim_id, $current_stage, $error, $completed);
 
 if ($ok) {
+    log_audit($conn, 'claim.approve', 'claim', $claim_id,
+        'stage ' . $current_stage . ($completed ? ' (completed)' : ''));
     $message = $completed
         ? 'Claim fully approved and forwarded to Finance.'
         : 'Claim approved and advanced to the next stage.';

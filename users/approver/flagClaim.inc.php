@@ -38,6 +38,7 @@ $error = '';
 $ok    = db_flag_claim($conn, $claim_id, $session_stage, $flag_reason, $error);
 
 if ($ok) {
+    log_audit($conn, 'claim.flag', 'claim', $claim_id, $flag_reason);
     json_response(array('success' => true, 'message' => 'Claim flagged successfully.'));
 } else {
     json_response(array('success' => false, 'message' => $error), 409);

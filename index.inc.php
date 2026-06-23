@@ -115,6 +115,8 @@ if (strtolower($row['role']) === 'approver') {
     $_SESSION['approverId'] = (int) $row['userId'];
 }
 
+log_audit($conn, 'auth.login', 'user', (int) $row['userId']);
+
 // Role-to-dashboard routing.
 $role     = strtolower((string) $row['role']);
 $redirect = null;

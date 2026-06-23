@@ -109,6 +109,8 @@ if ($ok && $claim_temp_id > 0) {
 
 if ($ok) {
     mysqli_commit($conn);
+    log_audit($conn, 'claim.submit', 'claim', $claim_id,
+        $total_slots . ' slot(s), ' . $total_dates . ' date(s)');
     json_response(array('status' => 'success', 'message' => $total_slots . ' slot(s) and ' . $total_dates . ' date(s) submitted.'));
 } else {
     mysqli_rollback($conn);

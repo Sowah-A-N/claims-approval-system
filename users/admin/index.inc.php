@@ -35,6 +35,7 @@ function activateAccount() {
     mysqli_stmt_bind_param($stmt, 'i', $userId);
 
     if (mysqli_stmt_execute($stmt)) {
+        log_audit($conn, 'user.activate', 'user', $userId);
         http_response_code(200);
         echo json_encode(array('success' => true, 'message' => 'Account activated successfully.'));
     } else {
@@ -64,6 +65,7 @@ function changeStage() {
     mysqli_stmt_bind_param($stmt, 'ii', $stage, $userId);
 
     if (mysqli_stmt_execute($stmt)) {
+        log_audit($conn, 'user.change_stage', 'user', $userId, 'stage = ' . $stage);
         http_response_code(200);
         echo json_encode(array('success' => true, 'message' => 'Stage updated successfully.'));
     } else {

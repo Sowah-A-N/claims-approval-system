@@ -185,4 +185,6 @@ if ($del_draft) {
 
 mysqli_commit($conn);
 
+log_audit($conn, 'claim.submit', 'claim', $newClaimId, 'from draft #' . $claimTempId);
+
 json_response(['ok' => true, 'message' => 'Claim submitted successfully and sent for approval.']);
