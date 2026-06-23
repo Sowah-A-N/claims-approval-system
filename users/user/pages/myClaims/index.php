@@ -288,8 +288,11 @@ $results = [
                                     <button class="rmu-btn rmu-btn--secondary" style="padding:5px 9px;margin-right:4px;" onclick="viewClaimDetails(' . (int)$row['claimId'] . ')" title="View">
                                         <i class="ti ti-eye"></i>
                                     </button>
-                                    <button class="rmu-btn rmu-btn--secondary" style="padding:5px 9px;" onclick="downloadClaimDetails(' . (int)$row['claimId'] . ')" title="Download">
+                                    <button class="rmu-btn rmu-btn--secondary" style="padding:5px 9px;margin-right:4px;" onclick="downloadClaimDetails(' . (int)$row['claimId'] . ')" title="Download">
                                         <i class="ti ti-download"></i>
+                                    </button>
+                                    <button class="rmu-btn rmu-btn--primary" style="padding:5px 10px;" onclick="cloneClaim(' . (int)$row['claimId'] . ')" title="Reuse as a new draft">
+                                        <i class="ti ti-copy"></i> Clone
                                     </button>
                                   </td>';
                             echo '</tr>';
@@ -509,6 +512,43 @@ const swalOpts = { background: '#0d1b2a', color: '#e2e8f0' };
 
     function downloadClaimDetails(claimId) {
         window.open('downloadClaimPDF.inc.php?claimId=' + encodeURIComponent(claimId), '_blank');
+    }
+
+    function cloneClaim(claimId) {
+        Swal.fire(Object.assign({
+            title: 'Clone this claim?',
+            text: 'A new editable draft will be created with the same course and sessions. The original claim is not affected.',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: 'Yes, Clone',
+            confirmButtonColor: '#3b82f6',
+            cancelButtonColor: 'rgba(255,255,255,0.1)',
+        }, swalOpts)).then(function(result) {
+            if (!result.isConfirmed) return;
+
+            var fd = new FormData();
+            fd.append('claimId',    claimId);
+            fd.append('csrf_token', CSRF);
+
+            fetch('cloneClaim.inc.php', { method: 'POST', body: fd })
+                .then(function(r) { return r.json(); })
+                .then(function(res) {
+                    if (res.success) {
+                        window.location.assign('../fileNewClaim/index.php?claimTempId=' + res.claimTempId);
+                    } else {
+                        Swal.fire(Object.assign({
+                            icon: 'error', title: 'Error',
+                            text: res.message || 'Could not clone the claim.',
+                        }, swalOpts));
+                    }
+                })
+                .catch(function() {
+                    Swal.fire(Object.assign({
+                        icon: 'error', title: 'Network Error',
+                        text: 'Could not reach the server. Please try again.',
+                    }, swalOpts));
+                });
+        });
     }
 
 

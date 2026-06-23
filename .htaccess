@@ -1,0 +1,37 @@
+# RMU Claims Approval System — Apache hardening (project root)
+#
+# IMPORTANT: many *.inc.php files in users/**/pages/** ARE live AJAX endpoints
+# fetched directly by the browser (saveDraft.inc.php, saveBankDetails.inc.php,
+# the admin index.inc.php, etc.). They guard themselves with require_post() +
+# require_role() + csrf_verify(), so they must stay reachable. Do NOT blanket
+# block *.inc.php here. Instead we lock down the shared include/config files that
+# should never be requested over HTTP, and add a dedicated includes/.htaccess.
+
+# ── Force HTTPS (skip on localhost so WAMP dev still works over http) ──────────
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteCond %{HTTPS} off
+    RewriteCond %{HTTP_HOST} !^localhost [NC]
+    RewriteCond %{HTTP_HOST} !^127\.0\.0\.1 [NC]
+    RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+</IfModule>
+
+# ── Never serve environment / VCS / config / data artefacts ───────────────────
+<FilesMatch "(^\.env$|^\.env\.|^\.gitignore$|^\.htaccess$|\.sql$|\.md$|composer\.(json|lock))">
+    Require all denied
+</FilesMatch>
+
+# ── Block direct access to bootstrap includes and DB connection ───────────────
+<FilesMatch "^(db|auth|functions|conn)\.(inc\.)?php$">
+    Require all denied
+</FilesMatch>
+
+# ── Disable directory listing ─────────────────────────────────────────────────
+Options -Indexes
+
+# ── Basic security headers ────────────────────────────────────────────────────
+<IfModule mod_headers.c>
+    Header always set X-Content-Type-Options "nosniff"
+    Header always set X-Frame-Options "SAMEORIGIN"
+    Header always set Referrer-Policy "strict-origin-when-cross-origin"
+</IfModule>

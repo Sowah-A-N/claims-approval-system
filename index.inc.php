@@ -51,11 +51,19 @@ $password_ok = password_verify($login_pw, $row['password']);
 // On match: silently re-hash and continue so future logins use bcrypt.
 if (!$password_ok && hash_equals($row['password'], $login_pw)) {
     $new_hash = password_hash($login_pw, PASSWORD_BCRYPT, array('cost' => 12));
+    // Keep both auth tables in sync — login_details is the source of truth,
+    // but user_details.password is mirrored to avoid drift (#28).
     $upd = mysqli_prepare($conn, 'UPDATE login_details SET password = ? WHERE userId = ?');
     if ($upd) {
         mysqli_stmt_bind_param($upd, 'si', $new_hash, $row['userId']);
         mysqli_stmt_execute($upd);
         mysqli_stmt_close($upd);
+    }
+    $upd2 = mysqli_prepare($conn, 'UPDATE user_details SET password = ? WHERE userId = ?');
+    if ($upd2) {
+        mysqli_stmt_bind_param($upd2, 'si', $new_hash, $row['userId']);
+        mysqli_stmt_execute($upd2);
+        mysqli_stmt_close($upd2);
     }
     $password_ok = true;
 }

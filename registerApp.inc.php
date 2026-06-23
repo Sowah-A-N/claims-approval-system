@@ -29,6 +29,19 @@ if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
     exit;
 }
 
+// Clamp the approval stage to the configured range (1..max_approval_stages).
+$max_stage = 5;
+$cfg = mysqli_query($conn,
+    "SELECT settingValue FROM settings WHERE settingName = 'max_approval_stages' LIMIT 1");
+if ($cfg && ($cfg_row = mysqli_fetch_row($cfg)) && (int) $cfg_row[0] > 0) {
+    $max_stage = (int) $cfg_row[0];
+}
+if ($stage < 1 || $stage > $max_stage) {
+    $_SESSION['message'] = 'Please select a valid approval stage (1 to ' . $max_stage . ').';
+    header('Location: ./registerApp.php');
+    exit;
+}
+
 $password_hash  = password_hash($raw_password, PASSWORD_BCRYPT, array('cost' => 12));
 $role           = 'approver';
 $rate           = 0.0;

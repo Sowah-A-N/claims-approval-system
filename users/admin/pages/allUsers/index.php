@@ -125,6 +125,10 @@ $pageTitle = 'All Users';
                             onclick="viewUser(<?php echo (int)$u['userId']; ?>)" title="View Details">
                       <i class="ti ti-eye"></i>
                     </button>
+                    <button class="rmu-btn rmu-btn--secondary rmu-btn--sm" style="margin-right:4px;"
+                            onclick="editUser(<?php echo (int)$u['userId']; ?>)" title="Edit Details">
+                      <i class="ti ti-edit"></i>
+                    </button>
                     <?php if ($u['account_status'] === 'disabled'): ?>
                     <button class="rmu-btn rmu-btn--success rmu-btn--sm"
                             onclick="setStatus(<?php echo (int)$u['userId']; ?>, 'active')" title="Activate">
@@ -203,6 +207,43 @@ $pageTitle = 'All Users';
           <input type="text" class="rmu-input" id="md-status" readonly>
         </div>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- Edit User Modal -->
+<div class="rmu-modal-backdrop" id="editModal">
+  <div class="rmu-modal" style="max-width:520px;width:calc(100% - 48px);">
+    <div class="rmu-modal__header">
+      <span class="rmu-modal__title"><i class="ti ti-edit" style="margin-right:8px;"></i>Edit User</span>
+      <button class="rmu-modal__close" onclick="closeEditModal()"><i class="ti ti-x"></i></button>
+    </div>
+    <div class="rmu-modal__body">
+      <input type="hidden" id="edit-userId">
+      <div class="rmu-form-group">
+        <label class="rmu-label">Name</label>
+        <input type="text" class="rmu-input" id="edit-name" readonly>
+      </div>
+      <div class="rmu-grid-2">
+        <div class="rmu-form-group">
+          <label class="rmu-label">Department</label>
+          <input type="text" class="rmu-input" id="edit-dept" maxlength="120">
+        </div>
+        <div class="rmu-form-group">
+          <label class="rmu-label">Rank</label>
+          <input type="text" class="rmu-input" id="edit-rank" maxlength="120">
+        </div>
+        <div class="rmu-form-group" style="grid-column:1/-1;">
+          <label class="rmu-label">Rate (GHS per period)</label>
+          <input type="number" class="rmu-input" id="edit-rate" min="0" step="0.01">
+        </div>
+      </div>
+    </div>
+    <div class="rmu-modal__footer" style="display:flex;justify-content:flex-end;gap:10px;padding:16px 24px;">
+      <button class="rmu-btn rmu-btn--secondary" onclick="closeEditModal()">Cancel</button>
+      <button class="rmu-btn rmu-btn--primary" id="edit-save-btn" onclick="saveUser()">
+        <i class="ti ti-device-floppy"></i> Save Changes
+      </button>
     </div>
   </div>
 </div>
@@ -288,6 +329,72 @@ document.getElementById('userModal').addEventListener('click', function(e) {
 });
 document.addEventListener('keydown', function(e) {
   if (e.key === 'Escape') closeModal();
+});
+
+// ── Edit user ─────────────────────────────────────────────────────────────────
+function editUser(userId) {
+  fetch('getUserDetails.inc.php?userId=' + encodeURIComponent(userId))
+    .then(function(r) { return r.json(); })
+    .then(function(u) {
+      if (u.error) {
+        Swal.fire(Object.assign({ icon:'error', title:'Not Found', text: u.error }, swalOpts));
+        return;
+      }
+      document.getElementById('edit-userId').value = u.userId || userId;
+      document.getElementById('edit-name').value   = u.full_name
+        || ((u.last_name || '') + ', ' + (u.first_name || ''));
+      document.getElementById('edit-dept').value   = u.department || '';
+      document.getElementById('edit-rank').value   = u.rank       || '';
+      document.getElementById('edit-rate').value   = (u.rate !== null && u.rate !== undefined)
+        ? parseFloat(u.rate).toFixed(2) : '';
+      document.getElementById('editModal').classList.add('open');
+      document.body.style.overflow = 'hidden';
+    })
+    .catch(function() {
+      Swal.fire(Object.assign({ icon:'error', title:'Error', text:'Could not load user details.' }, swalOpts));
+    });
+}
+
+function closeEditModal() {
+  document.getElementById('editModal').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+function saveUser() {
+  var btn = document.getElementById('edit-save-btn');
+  var fd  = new FormData();
+  fd.append('csrf_token', CSRF);
+  fd.append('userId',     document.getElementById('edit-userId').value);
+  fd.append('department', document.getElementById('edit-dept').value.trim());
+  fd.append('rank',       document.getElementById('edit-rank').value.trim());
+  fd.append('rate',       document.getElementById('edit-rate').value.trim());
+
+  btn.disabled = true;
+  btn.innerHTML = '<i class="ti ti-loader"></i> Saving…';
+
+  fetch('updateUser.inc.php', { method: 'POST', body: fd })
+    .then(function(r) { return r.json(); })
+    .then(function(res) {
+      if (res.success) {
+        Swal.fire(Object.assign({
+          icon:'success', title:'Saved', text: res.message,
+          timer: 1600, showConfirmButton: false,
+        }, swalOpts)).then(function() { location.reload(); });
+      } else {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="ti ti-device-floppy"></i> Save Changes';
+        Swal.fire(Object.assign({ icon:'error', title:'Failed', text: res.message || 'Update failed.' }, swalOpts));
+      }
+    })
+    .catch(function() {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="ti ti-device-floppy"></i> Save Changes';
+      Swal.fire(Object.assign({ icon:'error', title:'Network Error', text:'Please try again.' }, swalOpts));
+    });
+}
+
+document.getElementById('editModal').addEventListener('click', function(e) {
+  if (e.target === this) closeEditModal();
 });
 
 // ── Activate / Disable ────────────────────────────────────────────────────────
