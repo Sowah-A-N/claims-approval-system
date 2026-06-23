@@ -36,7 +36,7 @@ checkUserRole(['user', 'claimant']);
 // Get dashboard link and text based on user role
 //$userRole = $_SESSION['role'];
 
-include_once '../../includes/conn.inc.php';
+require_once __DIR__ . '/../../../../includes/db.php';
 
 function logout() {
     // Unset all of the session variables

@@ -15,7 +15,16 @@ $claim_temp_id = isset($_POST['claimTempId']) ? (int)$_POST['claimTempId'] : 0;
 $department = validated_str(isset($_POST['department']) ? $_POST['department'] : '');
 $programme  = validated_str(isset($_POST['programme'])  ? $_POST['programme']  : '');
 $course     = validated_str(isset($_POST['course'])     ? $_POST['course']     : '');
-$rate       = (float) (isset($_POST['rate'])            ? $_POST['rate']       : 0);
+// Fetch rate from DB — never trust client-submitted value
+$rate_stmt = mysqli_prepare($conn, 'SELECT rate FROM user_details WHERE userId = ?');
+if (!$rate_stmt) {
+    json_response(array('status' => 'error', 'message' => 'Database error.'), 500);
+}
+mysqli_stmt_bind_param($rate_stmt, 'i', $user_id);
+mysqli_stmt_execute($rate_stmt);
+$rate_row = mysqli_fetch_assoc(mysqli_stmt_get_result($rate_stmt));
+mysqli_stmt_close($rate_stmt);
+$rate = isset($rate_row['rate']) ? (float) $rate_row['rate'] : 0.0;
 $time_slots = isset($_POST['timeSlots']) && is_array($_POST['timeSlots']) ? $_POST['timeSlots'] : array();
 
 if ($department === '' || $programme === '' || $course === '' || empty($time_slots)) {
@@ -52,18 +61,25 @@ if ($ok) {
     foreach ($time_slots as $slot) {
         $start_time     = validated_str(isset($slot['startTime'])     ? $slot['startTime']     : '');
         $end_time       = validated_str(isset($slot['endTime'])       ? $slot['endTime']       : '');
-        $periods        = (int)   (isset($slot['periods'])      ? $slot['periods']      : 0);
-        $sub_total      = (float) (isset($slot['subTotal'])     ? $slot['subTotal']     : 0.0);
         $fuel_component = (int)   (isset($slot['fuelComponent']) ? $slot['fuelComponent'] : 0);
         $dates          = isset($slot['dates']) && is_array($slot['dates']) ? $slot['dates'] : array();
 
         $valid_start = DateTime::createFromFormat('H:i', $start_time);
         $valid_end   = DateTime::createFromFormat('H:i', $end_time);
 
-        if ($start_time === '' || $end_time === '' || !$valid_start || !$valid_end || $periods === 0 || empty($dates)) {
+        if ($start_time === '' || $end_time === '' || !$valid_start || !$valid_end || empty($dates)) {
             $ok = false;
             break;
         }
+
+        // Recompute periods server-side (1 period = 50 min); ignore client-submitted value.
+        $start_mins = (int) $valid_start->format('G') * 60 + (int) $valid_start->format('i');
+        $end_mins   = (int) $valid_end->format('G')   * 60 + (int) $valid_end->format('i');
+        $periods    = $end_mins > $start_mins ? (int) ceil(($end_mins - $start_mins) / 50) : 0;
+        if ($periods === 0) { $ok = false; break; }
+
+        // subTotal derived entirely server-side from DB rate and recomputed periods.
+        $sub_total = (float) $periods * $rate;
 
         foreach ($dates as $raw_date) {
             $date = validated_str($raw_date);

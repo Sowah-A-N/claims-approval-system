@@ -35,6 +35,11 @@ $base_url = (isset($_SERVER['HTTP_HOST']) && strpos($_SERVER['HTTP_HOST'], 'loca
 
     <div class="rmu-sidebar__section">Account</div>
 
+    <a class="rmu-sidebar__link" href="<?php echo $base_url; ?>users/user/pages/bankDetails">
+      <i class="ti ti-building-bank"></i>
+      <span>Bank Details</span>
+    </a>
+
     <a class="rmu-sidebar__link" href="<?php echo $base_url; ?>users/user/pages/settings">
       <i class="ti ti-settings"></i>
       <span>Settings</span>

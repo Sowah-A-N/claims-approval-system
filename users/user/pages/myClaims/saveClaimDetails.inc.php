@@ -32,7 +32,7 @@
 //     echo "Invalid request. Claim ID parameter is missing.";
 // }
 
-require_once '../../includes/conn.inc.php';
+require_once __DIR__ . '/../../../../includes/db.php';
 
 if (isset($_POST['claimTempId'])) {
     $claimId = $_POST['claimId'];
