@@ -15,7 +15,9 @@ $raw_password   =               isset($_POST['password'])       ? $_POST['passwo
 $faculty        = validated_str(isset($_POST['faculty'])        ? $_POST['faculty']        : '');
 $department     = validated_str(isset($_POST['department'])     ? $_POST['department']     : '');
 $rank           = validated_str(isset($_POST['rank'])           ? $_POST['rank']           : '');
-$rate           = (float) (isset($_POST['rate'])                ? $_POST['rate']           : 0);
+// Rate is assigned by an administrator after the account is approved — it must
+// never be self-declared at registration. Any client-supplied 'rate' is ignored.
+$rate           = 0.0;
 $bank_name      = validated_str(isset($_POST['bank_name'])      ? $_POST['bank_name']      : '');
 $bank_branch    = validated_str(isset($_POST['bank_branch'])    ? $_POST['bank_branch']    : '');
 $account_name   = validated_str(isset($_POST['account_name'])   ? $_POST['account_name']   : '');
