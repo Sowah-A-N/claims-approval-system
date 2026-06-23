@@ -34,4 +34,15 @@ Options -Indexes
     Header always set X-Content-Type-Options "nosniff"
     Header always set X-Frame-Options "SAMEORIGIN"
     Header always set Referrer-Policy "strict-origin-when-cross-origin"
+
+    # HSTS — only honoured by browsers over HTTPS (ignored on localhost/http).
+    # No 'preload'/'includeSubDomains' to avoid locking unrelated subdomains.
+    Header always set Strict-Transport-Security "max-age=31536000"
+
+    # Content-Security-Policy.
+    # NOTE: the app relies heavily on inline <script>, inline style="" and
+    # on* handlers, so 'unsafe-inline' is required for script/style until those
+    # are refactored. Sources are otherwise restricted to self + the CDNs and
+    # Google Fonts the pages actually load.
+    Header always set Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com https://cdn.jsdelivr.net; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'self'; form-action 'self'"
 </IfModule>
