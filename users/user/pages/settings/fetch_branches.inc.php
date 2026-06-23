@@ -1,5 +1,9 @@
 <?php
+require_once __DIR__ . '/../../../../includes/auth.php';
 require_once __DIR__ . '/../../../../includes/db.php';
+
+// Authenticated settings endpoint — claimants only.
+require_role(array('user', 'claimant'));
 
 header('Content-Type: application/json');
 

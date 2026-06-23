@@ -53,6 +53,7 @@ $banks     = $bankResult    ? mysqli_fetch_all($bankResult,    MYSQLI_ASSOC) : a
     <?php endif; ?>
 
     <form action="register.inc.php" method="post" novalidate>
+      <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars(csrf_token(), ENT_QUOTES, 'UTF-8'); ?>">
 
       <!-- Personal Information -->
       <div class="rmu-card rmu-mb-3">

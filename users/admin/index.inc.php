@@ -78,6 +78,7 @@ function changeStage() {
 
 function viewAccountDetails() {
     global $conn;
+    csrf_verify();
 
     if (!isset($_POST['userId'])) {
         http_response_code(400);
