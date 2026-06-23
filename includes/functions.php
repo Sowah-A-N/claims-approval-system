@@ -70,6 +70,21 @@ function validated_str($val, $max_len = 500) {
 }
 
 /*
+ * Neutralise CSV/spreadsheet formula injection.
+ * A leading =, +, -, @, tab or CR can be interpreted as a formula by Excel /
+ * Sheets; prefix such values with a single quote so they render as text.
+ *
+ *   fputcsv($out, array_map('csv_safe', $row));
+ */
+function csv_safe($val) {
+    $val = (string) $val;
+    if ($val !== '' && strpbrk($val[0], "=+-@\t\r") !== false) {
+        return "'" . $val;
+    }
+    return $val;
+}
+
+/*
  * Append an entry to the audit_log table.
  *
  * Actor identity and IP are taken from the current session/request — callers

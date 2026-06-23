@@ -30,7 +30,7 @@ $sql =
      JOIN user_details ud         ON cd.userId  = ud.userId
      LEFT JOIN claim_data cdata   ON cd.claimId = cdata.claimId
      LEFT JOIN user_bank_details bd ON ud.userId = bd.userId
-     WHERE cd.completed = 1
+     WHERE cd.completed = 1 AND cd.paid = 0
      GROUP BY cd.claimId
      ORDER BY ud.last_name, cd.claimId";
 
@@ -60,7 +60,7 @@ fputcsv($out, array(
 ));
 
 while ($row = mysqli_fetch_assoc($result)) {
-    fputcsv($out, array(
+    fputcsv($out, array_map('csv_safe', array(
         $row['claimId'],
         $row['full_name'],
         $row['department'],
@@ -74,7 +74,7 @@ while ($row = mysqli_fetch_assoc($result)) {
         $row['bank_branch'],
         $row['account_number'],
         $row['account_name'],
-    ));
+    )));
 }
 
 fclose($out);
