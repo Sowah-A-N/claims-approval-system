@@ -27,9 +27,16 @@ $completedClaimsResult = mysqli_query($conn,
 
   <div class="rmu-content">
 
-    <div class="rmu-page-header">
-      <div class="rmu-page-header__title">Finance Dashboard</div>
-      <div class="rmu-page-header__sub">Completed claims awaiting payment processing</div>
+    <div class="rmu-page-header" style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap;">
+      <div>
+        <div class="rmu-page-header__title">Finance Dashboard</div>
+        <div class="rmu-page-header__sub">Completed claims awaiting payment processing</div>
+      </div>
+      <?php if ($completedClaimsResult && mysqli_num_rows($completedClaimsResult) > 0): ?>
+      <a class="rmu-btn rmu-btn--success" href="exportClaimsCSV.inc.php">
+        <i class="ti ti-file-spreadsheet"></i> Export CSV
+      </a>
+      <?php endif; ?>
     </div>
 
     <?php if ($completedClaimsResult && mysqli_num_rows($completedClaimsResult) > 0): ?>

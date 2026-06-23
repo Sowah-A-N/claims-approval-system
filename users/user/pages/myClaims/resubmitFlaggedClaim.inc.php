@@ -95,7 +95,12 @@ foreach ([
     } else {
         mysqli_stmt_bind_param($del, 'i', $claimId);
     }
-    mysqli_stmt_execute($del);
+    if (!mysqli_stmt_execute($del)) {
+        error_log('[resubmitFlaggedClaim] delete failed: ' . mysqli_error($conn));
+        mysqli_stmt_close($del);
+        mysqli_rollback($conn);
+        json_response(array('success' => false, 'message' => 'Could not remove the original claim.'), 500);
+    }
     mysqli_stmt_close($del);
 }
 

@@ -6,14 +6,25 @@ $pageTitle = 'Admin Dashboard';
 <?php
 include './assets/partials/head.php';
 
-// Dashboard counts
-$totalUsers    = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) AS n FROM user_details"))['n'] ?? 0;
-$activeUsers   = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) AS n FROM user_details WHERE account_status = 'active'"))['n'] ?? 0;
-$disabledUsers = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) AS n FROM user_details WHERE account_status = 'disabled'"))['n'] ?? 0;
-$totalClaims   = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) AS n FROM claim_details"))['n'] ?? 0;
-$flaggedClaims = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) AS n FROM claim_details WHERE flagged = 1"))['n'] ?? 0;
+// Dashboard counts — two aggregated queries instead of five separate COUNTs.
+$userStats = mysqli_fetch_assoc(mysqli_query($conn,
+    "SELECT
+        COUNT(*) AS total,
+        SUM(account_status = 'active')   AS active,
+        SUM(account_status = 'disabled') AS disabled
+     FROM user_details"));
+$totalUsers    = (int) ($userStats['total']    ?? 0);
+$activeUsers   = (int) ($userStats['active']   ?? 0);
+$disabledUsers = (int) ($userStats['disabled'] ?? 0);
 
-$disabledUserResult = mysqli_query($conn, "SELECT * FROM user_details WHERE account_status = 'disabled'");
+$claimStats = mysqli_fetch_assoc(mysqli_query($conn,
+    "SELECT COUNT(*) AS total, SUM(flagged = 1) AS flagged FROM claim_details"));
+$totalClaims   = (int) ($claimStats['total']   ?? 0);
+$flaggedClaims = (int) ($claimStats['flagged'] ?? 0);
+
+$disabledUserResult = mysqli_query($conn,
+    "SELECT userId, first_name, last_name, role
+     FROM user_details WHERE account_status = 'disabled'");
 ?>
 <body>
 

@@ -5,6 +5,15 @@ require_once __DIR__ . '/includes/functions.php';
 
 require_post();
 
+// CSRF check — redirect-style (this is a form POST, not an AJAX endpoint).
+$submitted_token = isset($_POST['csrf_token']) ? $_POST['csrf_token'] : '';
+$expected_token  = isset($_SESSION['csrf_token']) ? $_SESSION['csrf_token'] : '';
+if ($expected_token === '' || !hash_equals($expected_token, $submitted_token)) {
+    $_SESSION['message'] = 'Your session expired. Please try submitting the form again.';
+    header('Location: ./registerApp.php');
+    exit;
+}
+
 $first_name   = validated_str(isset($_POST['first_name'])   ? $_POST['first_name']   : '');
 $last_name    = validated_str(isset($_POST['last_name'])    ? $_POST['last_name']    : '');
 $other_names  = validated_str(isset($_POST['other_names'])  ? $_POST['other_names']  : '');
@@ -25,6 +34,34 @@ if ($first_name === '' || $last_name === '' || $email === '' || $raw_password ==
 
 if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
     $_SESSION['message'] = 'Please enter a valid email address.';
+    header('Location: ./registerApp.php');
+    exit;
+}
+
+// Reject duplicate emails up front so the user gets a clear message rather
+// than a generic failure when the UNIQUE constraint fires.
+$dup = mysqli_prepare($conn, 'SELECT 1 FROM login_details WHERE email = ? LIMIT 1');
+if ($dup) {
+    mysqli_stmt_bind_param($dup, 's', $email);
+    mysqli_stmt_execute($dup);
+    $exists = mysqli_fetch_row(mysqli_stmt_get_result($dup)) !== null;
+    mysqli_stmt_close($dup);
+    if ($exists) {
+        $_SESSION['message'] = 'An account with this email address already exists.';
+        header('Location: ./registerApp.php');
+        exit;
+    }
+}
+
+// Clamp the approval stage to the configured range (1..max_approval_stages).
+$max_stage = 5;
+$cfg = mysqli_query($conn,
+    "SELECT settingValue FROM settings WHERE settingName = 'max_approval_stages' LIMIT 1");
+if ($cfg && ($cfg_row = mysqli_fetch_row($cfg)) && (int) $cfg_row[0] > 0) {
+    $max_stage = (int) $cfg_row[0];
+}
+if ($stage < 1 || $stage > $max_stage) {
+    $_SESSION['message'] = 'Please select a valid approval stage (1 to ' . $max_stage . ').';
     header('Location: ./registerApp.php');
     exit;
 }

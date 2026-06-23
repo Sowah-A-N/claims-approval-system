@@ -20,8 +20,19 @@ csrf_verify();
 
 $claimTempId = validated_int(isset($_POST['claimId']) ? $_POST['claimId'] : null, 'claimId');
 $userId      = current_user_id();
-$rate        = isset($_SESSION['rate'])    ? (float)  $_SESSION['rate']    : 0.0;
 $faculty     = isset($_SESSION['faculty']) ? (string) $_SESSION['faculty'] : '';
+
+// Authoritative rate from the database — never trust client- or session-held
+// copies. Mirrors the server-side rate fetch in multiClaimsSubmit (#23/#24).
+$rate_stmt = mysqli_prepare($conn, 'SELECT rate FROM user_details WHERE userId = ?');
+if (!$rate_stmt) {
+    json_response(['ok' => false, 'message' => 'Database error.'], 500);
+}
+mysqli_stmt_bind_param($rate_stmt, 'i', $userId);
+mysqli_stmt_execute($rate_stmt);
+$rate_row = mysqli_fetch_assoc(mysqli_stmt_get_result($rate_stmt));
+mysqli_stmt_close($rate_stmt);
+$rate = isset($rate_row['rate']) ? (float) $rate_row['rate'] : 0.0;
 
 // ── 1. Verify ownership ───────────────────────────────────────────────────────
 
@@ -119,10 +130,31 @@ if (!$ins_data) {
     json_response(['ok' => false, 'message' => 'Submission failed. Please try again.'], 500);
 }
 foreach ($rows as $dr) {
+    // Recompute periods (1 period = 50 min) and subTotal server-side from the
+    // stored session times and the authoritative DB rate. The draft's stored
+    // periods/subTotal came from client input via saveDraft and must never be
+    // trusted when promoting a draft to a real claim (#2).
+    $start_ts = strtotime($dr['start_time']);
+    $end_ts   = strtotime($dr['end_time']);
+    if ($start_ts === false || $end_ts === false) {
+        mysqli_stmt_close($ins_data);
+        mysqli_rollback($conn);
+        json_response(['ok' => false, 'message' => 'This draft contains an invalid session time. Please edit it and try again.'], 400);
+    }
+    $start_mins = (int) date('G', $start_ts) * 60 + (int) date('i', $start_ts);
+    $end_mins   = (int) date('G', $end_ts)   * 60 + (int) date('i', $end_ts);
+    $periods    = $end_mins > $start_mins ? (int) ceil(($end_mins - $start_mins) / 50) : 0;
+    if ($periods === 0) {
+        mysqli_stmt_close($ins_data);
+        mysqli_rollback($conn);
+        json_response(['ok' => false, 'message' => 'This draft has a session with no valid duration. Please edit it and try again.'], 400);
+    }
+    $sub_total = (float) $periods * $rate;
+
     mysqli_stmt_bind_param($ins_data, 'isssidi',
         $newClaimId,
         $dr['date'], $dr['start_time'], $dr['end_time'],
-        $dr['periods'], $dr['subTotal'], $dr['fuelComponent']
+        $periods, $sub_total, $dr['fuelComponent']
     );
     if (!mysqli_stmt_execute($ins_data)) {
         mysqli_stmt_close($ins_data);

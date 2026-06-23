@@ -17,6 +17,10 @@ function run_claim_query($conn, $sql, $userId) {
     return mysqli_stmt_get_result($stmt);
 }
 
+$maxStageRow = mysqli_fetch_assoc(mysqli_query($conn,
+    "SELECT settingValue FROM settings WHERE settingName = 'max_approval_stages' LIMIT 1"));
+$maxStage = $maxStageRow ? max(1, (int)$maxStageRow['settingValue']) : 5;
+
 $results = [
     'flaggedClaims'   => run_claim_query($conn,
         "SELECT cd.*, fc.flagged_at_stage, fc.flagged_msg, 'Flagged' AS status
@@ -25,7 +29,13 @@ $results = [
          WHERE cd.userId = ? AND cd.flagged = 1",
         $userId),
     'pendingClaims'   => run_claim_query($conn,
-        "SELECT * FROM claim_details WHERE userId = ? AND flagged <> 1 AND completed <> 1 ORDER BY claimId DESC",
+        "SELECT cd.*, COALESCE(cas.stage, 1) AS current_stage
+         FROM claim_details cd
+         LEFT JOIN (SELECT claimId, MAX(stage) AS ms FROM claim_approval_stages GROUP BY claimId) ls
+             ON cd.claimId = ls.claimId
+         LEFT JOIN claim_approval_stages cas ON cd.claimId = cas.claimId AND ls.ms = cas.stage
+         WHERE cd.userId = ? AND cd.flagged <> 1 AND completed <> 1
+         ORDER BY cd.claimId DESC",
         $userId),
     'savedClaims'     => run_claim_query($conn,
         "SELECT sc.*, 'Saved' AS status, COUNT(cd.claimId) AS session_count
@@ -130,6 +140,7 @@ $results = [
                                                 <th>Programme</th>
                                                 <th>Course</th>
                                                 <th>Date Submitted</th>
+                                                <th>Stage</th>
                                                 <th>Actions</th>
                                             </tr>
                                         </thead>
@@ -138,12 +149,21 @@ $results = [
                     if ($results['pendingClaims']->num_rows > 0) {
                         $index = 1;
                         while ($row = $results['pendingClaims']->fetch_assoc()) {
+                            $cs   = max(1, (int)($row['current_stage'] ?? 1));
+                            $dots = '';
+                            for ($s = 1; $s <= $maxStage; $s++) {
+                                $col   = $s <= $cs ? '#3b82f6' : 'rgba(255,255,255,0.18)';
+                                $dots .= '<span style="font-size:11px;color:' . $col . ';">●</span>';
+                            }
                             echo '<tr>';
                             echo '<td>' . $index . '</td>';
                             echo '<td>' . h($row['department']) . '</td>';
                             echo '<td>' . h($row['programme']) . '</td>';
                             echo '<td>' . h($row['course']) . '</td>';
                             echo '<td>' . date('d M Y', strtotime($row['time_submitted'])) . '</td>';
+                            echo '<td><span title="Stage ' . $cs . ' of ' . $maxStage . '" style="letter-spacing:2px;">'
+                               . $dots . '</span>'
+                               . ' <span style="font-size:.72rem;color:var(--txt-muted);">' . $cs . '/' . $maxStage . '</span></td>';
                             echo '<td>
                                     <button class="rmu-btn rmu-btn--secondary" style="padding:5px 9px;" onclick="viewClaimDetails(' . (int)$row['claimId'] . ')" title="View">
                                         <i class="ti ti-eye"></i>
@@ -153,7 +173,7 @@ $results = [
                             $index++;
                         }
                     } else {
-                        echo '<tr><td colspan="6" style="text-align:center;color:var(--txt-muted);padding:20px;">No pending claims</td></tr>';
+                        echo '<tr><td colspan="7" style="text-align:center;color:var(--txt-muted);padding:20px;">No pending claims</td></tr>';
                     }
 
                     echo '      </tbody>
@@ -268,8 +288,11 @@ $results = [
                                     <button class="rmu-btn rmu-btn--secondary" style="padding:5px 9px;margin-right:4px;" onclick="viewClaimDetails(' . (int)$row['claimId'] . ')" title="View">
                                         <i class="ti ti-eye"></i>
                                     </button>
-                                    <button class="rmu-btn rmu-btn--secondary" style="padding:5px 9px;" onclick="downloadClaimDetails(' . (int)$row['claimId'] . ')" title="Download">
+                                    <button class="rmu-btn rmu-btn--secondary" style="padding:5px 9px;margin-right:4px;" onclick="downloadClaimDetails(' . (int)$row['claimId'] . ')" title="Download">
                                         <i class="ti ti-download"></i>
+                                    </button>
+                                    <button class="rmu-btn rmu-btn--primary" style="padding:5px 10px;" onclick="cloneClaim(' . (int)$row['claimId'] . ')" title="Reuse as a new draft">
+                                        <i class="ti ti-copy"></i> Clone
                                     </button>
                                   </td>';
                             echo '</tr>';
@@ -489,6 +512,43 @@ const swalOpts = { background: '#0d1b2a', color: '#e2e8f0' };
 
     function downloadClaimDetails(claimId) {
         window.open('downloadClaimPDF.inc.php?claimId=' + encodeURIComponent(claimId), '_blank');
+    }
+
+    function cloneClaim(claimId) {
+        Swal.fire(Object.assign({
+            title: 'Clone this claim?',
+            text: 'A new editable draft will be created with the same course and sessions. The original claim is not affected.',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: 'Yes, Clone',
+            confirmButtonColor: '#3b82f6',
+            cancelButtonColor: 'rgba(255,255,255,0.1)',
+        }, swalOpts)).then(function(result) {
+            if (!result.isConfirmed) return;
+
+            var fd = new FormData();
+            fd.append('claimId',    claimId);
+            fd.append('csrf_token', CSRF);
+
+            fetch('cloneClaim.inc.php', { method: 'POST', body: fd })
+                .then(function(r) { return r.json(); })
+                .then(function(res) {
+                    if (res.success) {
+                        window.location.assign('../fileNewClaim/index.php?claimTempId=' + res.claimTempId);
+                    } else {
+                        Swal.fire(Object.assign({
+                            icon: 'error', title: 'Error',
+                            text: res.message || 'Could not clone the claim.',
+                        }, swalOpts));
+                    }
+                })
+                .catch(function() {
+                    Swal.fire(Object.assign({
+                        icon: 'error', title: 'Network Error',
+                        text: 'Could not reach the server. Please try again.',
+                    }, swalOpts));
+                });
+        });
     }
 
 

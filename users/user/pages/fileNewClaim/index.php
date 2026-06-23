@@ -172,7 +172,12 @@ if ($draftSlotsJson === false) $draftSlotsJson = '[]';
                 </div>
 
                 <!-- ── Action Bar ─────────────────────────────────────────── -->
-                <div style="display:flex;gap:12px;justify-content:flex-end;margin-bottom:40px;">
+                <div style="display:flex;gap:12px;justify-content:flex-end;align-items:center;margin-bottom:40px;">
+                    <span id="autoSaveStatus"
+                          style="font-size:.78rem;color:var(--txt-muted);display:flex;
+                                 align-items:center;gap:5px;margin-right:4px;">
+                        ○ Not saved yet
+                    </span>
                     <button type="button" class="rmu-btn rmu-btn--secondary" id="saveDraftBtn" onclick="saveDraft()">
                         <i class="ti ti-device-floppy"></i> Save Draft
                     </button>
@@ -499,7 +504,7 @@ function buildPayload() {
     fd.append('department', dept);
     fd.append('programme',  prog);
     fd.append('course',     course);
-    fd.append('rate',       RATE);
+    // rate is looked up server-side from the database; do not send it.
 
     for (let i = 0; i < slotCards.length; i++) {
         const card      = slotCards[i];
@@ -592,6 +597,8 @@ function saveDraft() {
             if (data.claimTempId) {
                 currentClaimTempId = data.claimTempId;
                 history.replaceState({}, '', `?claimTempId=${data.claimTempId}`);
+                _autoSaveDirty = false;
+                setAutoSaveStatus('saved');
                 swalSuccess('Draft saved. You can return to it from My Claims.');
             } else {
                 swal('error', 'Save Failed', data.error || 'Please try again.');
@@ -602,9 +609,110 @@ function saveDraft() {
             '<i class="ti ti-device-floppy"></i> Save Draft'));
 }
 
+// ── Auto-save ─────────────────────────────────────────────────────────────────
+
+let _autoSaveDirty    = false;
+let _autoSaveInFlight = false;
+let _autoSaveTimer    = null;
+
+function setAutoSaveStatus(state) {
+    const el = document.getElementById('autoSaveStatus');
+    if (!el) return;
+    const cfg = {
+        init:    { dot: '○', text: 'Not saved yet',      color: 'var(--txt-muted)' },
+        unsaved: { dot: '○', text: 'Unsaved changes',    color: '#f59e0b' },
+        saving:  { dot: '◌', text: 'Saving…',           color: 'var(--txt-muted)' },
+        saved:   { dot: '●', text: 'Draft saved',        color: '#22c55e' },
+        error:   { dot: '●', text: 'Auto-save failed',   color: '#ef4444' },
+    };
+    const c = cfg[state] || cfg.init;
+    el.innerHTML = `<span style="color:${c.color};">${c.dot}</span> ${c.text}`;
+}
+
+function markDirty() {
+    _autoSaveDirty = true;
+    setAutoSaveStatus('unsaved');
+    clearTimeout(_autoSaveTimer);
+    _autoSaveTimer = setTimeout(autoSaveSilent, 3000);
+}
+
+function autoSaveSilent() {
+    if (_autoSaveInFlight || !_autoSaveDirty) return;
+
+    const dept   = document.getElementById('department').value.trim();
+    const prog   = document.getElementById('programme').value.trim();
+    const course = document.getElementById('course').value.trim();
+    if (!dept || !prog || !course) return;
+
+    const slotCards = Array.from(document.querySelectorAll('.rmu-slot-card'));
+    if (!slotCards.length) return;
+
+    const fd = new FormData();
+    fd.append('csrf_token', CSRF);
+    fd.append('department', dept);
+    fd.append('programme',  prog);
+    fd.append('course',     course);
+    if (currentClaimTempId) fd.append('claimTempId', currentClaimTempId);
+
+    for (let i = 0; i < slotCards.length; i++) {
+        const card  = slotCards[i];
+        const start = card.querySelector('.slot-start').value;
+        const end   = card.querySelector('.slot-end').value;
+        if (!start || !end) return; // slot not ready yet
+        const fuelChk = card.querySelector('.slot-fuel');
+        const fuel    = fuelChk && fuelChk.checked ? 1 : 0;
+        const periods = parseInt(card.querySelector('.slot-periods').value)    || 0;
+        const sub     = parseFloat(card.querySelector('.slot-subtotal').value) || 0;
+        const dates   = Array.from(card.querySelectorAll('.slot-date'))
+                             .map(d => d.value).filter(d => d);
+        fd.append(`timeSlots[${i}][startTime]`,     start);
+        fd.append(`timeSlots[${i}][endTime]`,       end);
+        fd.append(`timeSlots[${i}][periods]`,       periods);
+        fd.append(`timeSlots[${i}][subTotal]`,      sub);
+        fd.append(`timeSlots[${i}][fuelComponent]`, fuel);
+        dates.forEach((d, di) => fd.append(`timeSlots[${i}][dates][${di}]`, d));
+    }
+
+    _autoSaveInFlight = true;
+    setAutoSaveStatus('saving');
+
+    fetch('saveDraft.inc.php', { method: 'POST', body: fd })
+        .then(r => r.json())
+        .then(data => {
+            if (data.claimTempId) {
+                currentClaimTempId = data.claimTempId;
+                history.replaceState({}, '', `?claimTempId=${data.claimTempId}`);
+                _autoSaveDirty = false;
+                setAutoSaveStatus('saved');
+            } else {
+                setAutoSaveStatus('error');
+            }
+        })
+        .catch(() => setAutoSaveStatus('error'))
+        .finally(() => { _autoSaveInFlight = false; });
+}
+
+// Periodic backup save every 60 s
+setInterval(() => { if (_autoSaveDirty) autoSaveSilent(); }, 60000);
+
+function observeFormChanges() {
+    ['department', 'programme', 'course'].forEach(id => {
+        document.getElementById(id).addEventListener('change', markDirty);
+    });
+    const sc = document.getElementById('slotsContainer');
+    sc.addEventListener('change', markDirty);
+    sc.addEventListener('input',  markDirty);
+    // Catch slot additions / removals via MutationObserver
+    new MutationObserver(markDirty).observe(sc, { childList: true });
+}
+
+
 // ── Draft pre-population ──────────────────────────────────────────────────────
 
 document.addEventListener('DOMContentLoaded', function () {
+    observeFormChanges();
+    setAutoSaveStatus(currentClaimTempId ? 'saved' : 'init');
+
     if (!DRAFT) return;
 
     document.getElementById('department').value = DRAFT.department;

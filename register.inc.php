@@ -5,6 +5,15 @@ require_once __DIR__ . '/includes/functions.php';
 
 require_post();
 
+// CSRF check — redirect-style (this is a form POST, not an AJAX endpoint).
+$submitted_token = isset($_POST['csrf_token']) ? $_POST['csrf_token'] : '';
+$expected_token  = isset($_SESSION['csrf_token']) ? $_SESSION['csrf_token'] : '';
+if ($expected_token === '' || !hash_equals($expected_token, $submitted_token)) {
+    $_SESSION['message'] = 'Your session expired. Please try submitting the form again.';
+    header('Location: ./register.php');
+    exit;
+}
+
 $first_name     = validated_str(isset($_POST['first_name'])     ? $_POST['first_name']     : '');
 $last_name      = validated_str(isset($_POST['last_name'])      ? $_POST['last_name']      : '');
 $other_names    = validated_str(isset($_POST['other_names'])    ? $_POST['other_names']    : '');
@@ -15,7 +24,9 @@ $raw_password   =               isset($_POST['password'])       ? $_POST['passwo
 $faculty        = validated_str(isset($_POST['faculty'])        ? $_POST['faculty']        : '');
 $department     = validated_str(isset($_POST['department'])     ? $_POST['department']     : '');
 $rank           = validated_str(isset($_POST['rank'])           ? $_POST['rank']           : '');
-$rate           = (float) (isset($_POST['rate'])                ? $_POST['rate']           : 0);
+// Rate is assigned by an administrator after the account is approved — it must
+// never be self-declared at registration. Any client-supplied 'rate' is ignored.
+$rate           = 0.0;
 $bank_name      = validated_str(isset($_POST['bank_name'])      ? $_POST['bank_name']      : '');
 $bank_branch    = validated_str(isset($_POST['bank_branch'])    ? $_POST['bank_branch']    : '');
 $account_name   = validated_str(isset($_POST['account_name'])   ? $_POST['account_name']   : '');
@@ -31,6 +42,21 @@ if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
     $_SESSION['message'] = 'Please enter a valid email address.';
     header('Location: ./register.php');
     exit;
+}
+
+// Reject duplicate emails up front so the user gets a clear message rather
+// than a generic failure when the UNIQUE constraint fires.
+$dup = mysqli_prepare($conn, 'SELECT 1 FROM login_details WHERE email = ? LIMIT 1');
+if ($dup) {
+    mysqli_stmt_bind_param($dup, 's', $email);
+    mysqli_stmt_execute($dup);
+    $exists = mysqli_fetch_row(mysqli_stmt_get_result($dup)) !== null;
+    mysqli_stmt_close($dup);
+    if ($exists) {
+        $_SESSION['message'] = 'An account with this email address already exists.';
+        header('Location: ./register.php');
+        exit;
+    }
 }
 
 // Hash the password — never store plaintext credentials.
