@@ -338,7 +338,7 @@ $results = [
 
 <script>
 const CSRF     = '<?php echo h(csrf_token()); ?>';
-const swalOpts = { background: '#0d1b2a', color: '#e2e8f0' };
+const swalOpts = { background: '#ffffff', color: '#0f2744' };
 
    function editClaim(claimId) {
         // $.ajax({
@@ -401,11 +401,11 @@ const swalOpts = { background: '#0d1b2a', color: '#e2e8f0' };
             title: 'Delete Draft?',
             text: 'This draft will be permanently removed.',
             icon: 'warning',
-            background: '#0d1b2a', color: '#e2e8f0',
+            background: '#ffffff', color: '#0f2744',
             showCancelButton: true,
             confirmButtonText: 'Yes, Delete',
             confirmButtonColor: '#ef4444',
-            cancelButtonColor: 'rgba(255,255,255,0.1)',
+            cancelButtonColor: '#64748b',
         }).then(function(result) {
             if (!result.isConfirmed) return;
             $.ajax({
@@ -417,7 +417,7 @@ const swalOpts = { background: '#0d1b2a', color: '#e2e8f0' };
                     Swal.fire({
                         icon: 'success', title: 'Deleted',
                         text: response.success || 'Draft removed.',
-                        background: '#0d1b2a', color: '#e2e8f0',
+                        background: '#ffffff', color: '#0f2744',
                         timer: 2000, showConfirmButton: false
                     }).then(function() { location.reload(); });
                 },
@@ -425,7 +425,7 @@ const swalOpts = { background: '#0d1b2a', color: '#e2e8f0' };
                     Swal.fire({
                         icon: 'error', title: 'Error',
                         text: 'Could not delete the draft. Please try again.',
-                        background: '#0d1b2a', color: '#e2e8f0',
+                        background: '#ffffff', color: '#0f2744',
                     });
                 }
             });
@@ -440,7 +440,7 @@ const swalOpts = { background: '#0d1b2a', color: '#e2e8f0' };
             showCancelButton: true,
             confirmButtonText: 'Yes, Edit & Resubmit',
             confirmButtonColor: 'var(--accent)',
-            cancelButtonColor: 'rgba(255,255,255,0.1)',
+            cancelButtonColor: '#64748b',
         }, swalOpts)).then(function(result) {
             if (!result.isConfirmed) return;
 
@@ -476,8 +476,8 @@ const swalOpts = { background: '#0d1b2a', color: '#e2e8f0' };
             icon: 'question',
             showCancelButton: true,
             confirmButtonText: 'Yes, Submit',
-            confirmButtonColor: '#3b82f6',
-            cancelButtonColor: 'rgba(255,255,255,0.1)',
+            confirmButtonColor: '#1d4ed8',
+            cancelButtonColor: '#64748b',
         }, swalOpts)).then(function(result) {
             if (!result.isConfirmed) return;
 
@@ -521,8 +521,8 @@ const swalOpts = { background: '#0d1b2a', color: '#e2e8f0' };
             icon: 'question',
             showCancelButton: true,
             confirmButtonText: 'Yes, Clone',
-            confirmButtonColor: '#3b82f6',
-            cancelButtonColor: 'rgba(255,255,255,0.1)',
+            confirmButtonColor: '#1d4ed8',
+            cancelButtonColor: '#64748b',
         }, swalOpts)).then(function(result) {
             if (!result.isConfirmed) return;
 

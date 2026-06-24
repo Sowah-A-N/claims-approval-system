@@ -180,7 +180,7 @@ $disabledUserResult = mysqli_query($conn,
 
 <script>
 const CSRF = '<?php echo h(csrf_token()); ?>';
-const swalOpts = { background: '#0d1b2a', color: '#e2e8f0' };
+const swalOpts = { background: '#ffffff', color: '#0f2744' };
 
 function activateAccount(userId) {
   Swal.fire(Object.assign({
@@ -190,7 +190,7 @@ function activateAccount(userId) {
     showCancelButton: true,
     confirmButtonText: 'Yes, Activate',
     confirmButtonColor: '#22c55e',
-    cancelButtonColor: 'rgba(255,255,255,0.1)',
+    cancelButtonColor: '#64748b',
   }, swalOpts)).then(function(result) {
     if (!result.isConfirmed) return;
 

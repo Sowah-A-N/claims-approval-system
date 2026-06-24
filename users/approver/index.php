@@ -192,7 +192,7 @@ $claims = db_get_pending_claims_for_stage($conn, $approverStage, $approverDepart
 <script>
 const CSRF = '<?php echo h(csrf_token()); ?>';
 
-const swalOpts = { background: '#0d1b2a', color: '#e2e8f0' };
+const swalOpts = { background: '#ffffff', color: '#0f2744' };
 
 function swalErr(title, text) {
     Swal.fire(Object.assign({ icon: 'error', title, text }, swalOpts));
@@ -251,7 +251,7 @@ function bulkApprove() {
         text:  'Each will advance to the next approval stage.',
         icon:  'question', showCancelButton: true,
         confirmButtonText: 'Yes, Approve', confirmButtonColor: '#22c55e',
-        cancelButtonColor: 'rgba(255,255,255,0.1)',
+        cancelButtonColor: '#64748b',
     }, swalOpts)).then(function(result) {
         if (!result.isConfirmed) return;
         var fd = new FormData();

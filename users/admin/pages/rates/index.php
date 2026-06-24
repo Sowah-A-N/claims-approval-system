@@ -83,7 +83,7 @@ $pageTitle = 'Rank Rates';
 
 <script>
 const CSRF     = '<?php echo h(csrf_token()); ?>';
-const swalOpts = { background: '#0d1b2a', color: '#e2e8f0' };
+const swalOpts = { background: '#ffffff', color: '#0f2744' };
 
 function saveRate(btn) {
   var row   = btn.closest('tr');
@@ -95,8 +95,8 @@ function saveRate(btn) {
     title: 'Update rate for "' + rank + '"?',
     text:  'This overwrites the rate for every user on this rank.',
     icon:  'question', showCancelButton: true,
-    confirmButtonText: 'Yes, Save', confirmButtonColor: '#3b82f6',
-    cancelButtonColor: 'rgba(255,255,255,0.1)',
+    confirmButtonText: 'Yes, Save', confirmButtonColor: '#1d4ed8',
+    cancelButtonColor: '#64748b',
   }, swalOpts)).then(function(result) {
     if (!result.isConfirmed) return;
     btn.disabled = true;

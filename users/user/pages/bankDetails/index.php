@@ -122,7 +122,7 @@ function saveBankDetails() {
         Swal.fire({
             icon: 'error', title: 'Validation Error',
             text: 'Bank name, account number, and account name are required.',
-            background: '#0d1b2a', color: '#e2e8f0', confirmButtonColor: '#3b82f6',
+            background: '#ffffff', color: '#0f2744', confirmButtonColor: '#1d4ed8',
         });
         return;
     }
@@ -147,7 +147,7 @@ function saveBankDetails() {
                 Swal.fire({
                     icon: 'success', title: 'Saved',
                     text: data.message || 'Bank details updated.',
-                    background: '#0d1b2a', color: '#e2e8f0',
+                    background: '#ffffff', color: '#0f2744',
                     timer: 2200, showConfirmButton: false,
                 });
                 status.innerHTML = '<span style="color:#22c55e;">● Saved</span>';
@@ -155,7 +155,7 @@ function saveBankDetails() {
                 Swal.fire({
                     icon: 'error', title: 'Save Failed',
                     text: data.message || 'Please try again.',
-                    background: '#0d1b2a', color: '#e2e8f0', confirmButtonColor: '#3b82f6',
+                    background: '#ffffff', color: '#0f2744', confirmButtonColor: '#1d4ed8',
                 });
             }
         })
@@ -163,7 +163,7 @@ function saveBankDetails() {
             Swal.fire({
                 icon: 'error', title: 'Network Error',
                 text: 'Could not reach the server. Please try again.',
-                background: '#0d1b2a', color: '#e2e8f0', confirmButtonColor: '#3b82f6',
+                background: '#ffffff', color: '#0f2744', confirmButtonColor: '#1d4ed8',
             });
         })
         .finally(() => {

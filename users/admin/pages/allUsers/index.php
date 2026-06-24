@@ -273,7 +273,7 @@ $pageTitle = 'All Users';
 
 <script>
 const CSRF     = '<?php echo h(csrf_token()); ?>';
-const swalOpts = { background: '#0d1b2a', color: '#e2e8f0' };
+const swalOpts = { background: '#ffffff', color: '#0f2744' };
 
 function escHtml(s) {
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
@@ -449,7 +449,7 @@ function bulkUserStatus(status) {
     icon: 'question', showCancelButton: true,
     confirmButtonText: activate ? 'Yes, Activate' : 'Yes, Disable',
     confirmButtonColor: activate ? '#22c55e' : '#ef4444',
-    cancelButtonColor: 'rgba(255,255,255,0.1)',
+    cancelButtonColor: '#64748b',
   }, swalOpts)).then(function(result) {
     if (!result.isConfirmed) return;
     var fd = new FormData();
@@ -485,7 +485,7 @@ function setStatus(userId, newStatus) {
     showCancelButton: true,
     confirmButtonText: isActivate ? 'Yes, Activate' : 'Yes, Disable',
     confirmButtonColor: isActivate ? '#22c55e' : '#ef4444',
-    cancelButtonColor: 'rgba(255,255,255,0.1)',
+    cancelButtonColor: '#64748b',
   }, swalOpts)).then(function(result) {
     if (!result.isConfirmed) return;
 

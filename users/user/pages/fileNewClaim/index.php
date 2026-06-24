@@ -226,16 +226,16 @@ function fmt(n) { return Number(n).toFixed(2); }
 function swal(icon, title, text) {
     Swal.fire({
         icon, title, text,
-        background: '#0d1b2a',
-        color: '#e2e8f0',
-        confirmButtonColor: '#3b82f6'
+        background: '#ffffff',
+        color: '#0f2744',
+        confirmButtonColor: '#1d4ed8'
     });
 }
 
 function swalSuccess(text) {
     Swal.fire({
         icon: 'success', title: 'Done', text,
-        background: '#0d1b2a', color: '#e2e8f0',
+        background: '#ffffff', color: '#0f2744',
         timer: 2500, showConfirmButton: false
     });
 }
@@ -480,7 +480,7 @@ function generateRecurring(btn) {
         Swal.fire({
             icon: added ? 'success' : 'info',
             title: added ? 'Dates Generated' : 'Nothing Added',
-            text: msg, background: '#0d1b2a', color: '#e2e8f0',
+            text: msg, background: '#ffffff', color: '#0f2744',
             timer: 2800, showConfirmButton: false,
         });
     } else {
@@ -642,11 +642,11 @@ function submitClaim() {
         title: 'Submit Claim?',
         text: 'Once submitted, the claim will be sent for approval and cannot be edited.',
         icon: 'question',
-        background: '#0d1b2a', color: '#e2e8f0',
+        background: '#ffffff', color: '#0f2744',
         showCancelButton: true,
         confirmButtonText: 'Yes, Submit',
-        confirmButtonColor: '#3b82f6',
-        cancelButtonColor: 'rgba(255,255,255,0.1)',
+        confirmButtonColor: '#1d4ed8',
+        cancelButtonColor: '#64748b',
     }).then(result => {
         if (!result.isConfirmed) return;
 
