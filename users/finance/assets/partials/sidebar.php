@@ -23,6 +23,11 @@ $base_url = (isset($_SERVER['HTTP_HOST']) && strpos($_SERVER['HTTP_HOST'], 'loca
       <span>Dashboard</span>
     </a>
 
+    <a class="rmu-sidebar__link" href="<?php echo $base_url; ?>users/finance/pages/paidClaims">
+      <i class="ti ti-receipt"></i>
+      <span>Paid Claims</span>
+    </a>
+
     <div class="rmu-sidebar__section">Account</div>
 
     <a class="rmu-sidebar__link" href="<?php echo $base_url; ?>logout.php">

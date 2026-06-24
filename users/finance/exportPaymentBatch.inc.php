@@ -49,7 +49,7 @@ fwrite($out, "\xEF\xBB\xBF"); // UTF-8 BOM for Excel
 
 fputcsv($out, array(
     'Account Name', 'Account Number', 'Bank', 'Branch', 'Amount (GHS)', 'Reference',
-));
+), ',', '"', '');
 
 while ($row = mysqli_fetch_assoc($result)) {
     fputcsv($out, array_map('csv_safe', array(
@@ -59,7 +59,7 @@ while ($row = mysqli_fetch_assoc($result)) {
         $row['bank_branch'],
         number_format((float) $row['amount'], 2, '.', ''),
         'RMU-CLAIM-' . (int) $row['claimId'],
-    )));
+    )), ',', '"', '');
 }
 
 fclose($out);
