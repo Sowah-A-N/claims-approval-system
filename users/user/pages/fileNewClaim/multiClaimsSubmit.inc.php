@@ -83,7 +83,18 @@ if ($ok) {
 
         foreach ($dates as $raw_date) {
             $date = validated_str($raw_date);
-            $ok   = db_insert_claim_data_row($conn, $claim_id, $date, $start_time, $end_time, $periods, $sub_total, $fuel_component);
+            if ($date === '') continue;
+
+            // Reject sessions that overlap one the claimant has already submitted
+            // (or an earlier session in this same submission) — prevents double-claiming.
+            if (db_has_overlapping_session($conn, $user_id, $date, $start_time, $end_time)) {
+                mysqli_rollback($conn);
+                json_response(array('status' => 'error',
+                    'message' => 'A session on ' . $date . ' (' . $start_time . '–' . $end_time
+                               . ') overlaps a claim you have already submitted.'), 409);
+            }
+
+            $ok = db_insert_claim_data_row($conn, $claim_id, $date, $start_time, $end_time, $periods, $sub_total, $fuel_component);
             if (!$ok) break 2;
             $total_dates++;
         }

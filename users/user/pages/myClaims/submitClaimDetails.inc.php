@@ -13,6 +13,7 @@
 require_once __DIR__ . '/../../../../includes/auth.php';
 require_once __DIR__ . '/../../../../includes/db.php';
 require_once __DIR__ . '/../../../../includes/functions.php';
+require_once __DIR__ . '/../../queries/claim.queries.php';
 
 require_post();
 require_role(['user', 'claimant']);
@@ -150,6 +151,14 @@ foreach ($rows as $dr) {
         json_response(['ok' => false, 'message' => 'This draft has a session with no valid duration. Please edit it and try again.'], 400);
     }
     $sub_total = (float) $periods * $rate;
+
+    // Reject sessions that overlap one the claimant has already submitted (#9).
+    if (db_has_overlapping_session($conn, $userId, $dr['date'], $dr['start_time'], $dr['end_time'], $newClaimId)) {
+        mysqli_stmt_close($ins_data);
+        mysqli_rollback($conn);
+        json_response(['ok' => false,
+            'message' => 'A session on ' . $dr['date'] . ' overlaps a claim you have already submitted. Please edit the draft.'], 409);
+    }
 
     mysqli_stmt_bind_param($ins_data, 'isssidi',
         $newClaimId,
