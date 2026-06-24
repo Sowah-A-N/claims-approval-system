@@ -54,6 +54,48 @@ function db_get_user_by_id($conn, $userId) {
 // ── Account status ────────────────────────────────────────────────────────────
 
 /*
+ * Look up the configured rate for a lecturer rank, or null if unknown.
+ */
+function db_rate_for_rank($conn, $rank) {
+    if ($rank === null || $rank === '') return null;
+    $stmt = mysqli_prepare($conn, 'SELECT rate FROM lecturer_rank_rate WHERE `rank` = ? LIMIT 1');
+    if (!$stmt) return null;
+    mysqli_stmt_bind_param($stmt, 's', $rank);
+    mysqli_stmt_execute($stmt);
+    $row = mysqli_fetch_row(mysqli_stmt_get_result($stmt));
+    mysqli_stmt_close($stmt);
+    return $row ? (float) $row[0] : null;
+}
+
+/*
+ * Activate a user and, if they have no rate yet, auto-fill it from their rank
+ * (#3). Returns true if the user exists and was updated.
+ */
+function db_activate_user($conn, $userId) {
+    $stmt = mysqli_prepare($conn, 'SELECT `rank`, rate FROM user_details WHERE userId = ?');
+    if (!$stmt) return false;
+    mysqli_stmt_bind_param($stmt, 'i', $userId);
+    mysqli_stmt_execute($stmt);
+    $u = mysqli_fetch_assoc(mysqli_stmt_get_result($stmt));
+    mysqli_stmt_close($stmt);
+    if (!$u) return false;
+
+    $rate = (float) $u['rate'];
+    if ($rate <= 0) {
+        $from_rank = db_rate_for_rank($conn, $u['rank']);
+        if ($from_rank !== null) $rate = $from_rank;
+    }
+
+    $up = mysqli_prepare($conn,
+        "UPDATE user_details SET account_status = 'active', rate = ? WHERE userId = ?");
+    if (!$up) return false;
+    mysqli_stmt_bind_param($up, 'di', $rate, $userId);
+    $ok = mysqli_stmt_execute($up);
+    mysqli_stmt_close($up);
+    return (bool) $ok;
+}
+
+/*
  * Set account_status to 'active' or 'disabled'.
  * Returns true if a row was updated, false otherwise.
  */

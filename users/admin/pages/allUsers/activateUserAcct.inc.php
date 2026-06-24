@@ -10,7 +10,8 @@ csrf_verify();
 
 $user_id = validated_int(isset($_POST['userId']) ? $_POST['userId'] : null, 'userId');
 
-$updated = db_set_account_status($conn, $user_id, 'active');
+// Activates and auto-fills the rate from the user's rank if not yet set (#3).
+$updated = db_activate_user($conn, $user_id);
 
 if ($updated) {
     log_audit($conn, 'user.activate', 'user', $user_id);

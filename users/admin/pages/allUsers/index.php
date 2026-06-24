@@ -81,6 +81,21 @@ $pageTitle = 'All Users';
         </div>
       </div>
 
+      <!-- Bulk action bar -->
+      <div id="userBulkBar" style="display:none;align-items:center;gap:12px;margin-bottom:16px;
+                  background:rgba(59,130,246,0.08);border:1px solid rgba(59,130,246,0.25);
+                  border-radius:8px;padding:12px 16px;">
+        <span id="userBulkCount" style="font-weight:600;">0 selected</span>
+        <div style="margin-left:auto;display:flex;gap:8px;">
+          <button class="rmu-btn rmu-btn--success rmu-btn--sm" onclick="bulkUserStatus('active')">
+            <i class="ti ti-user-check"></i> Activate Selected
+          </button>
+          <button class="rmu-btn rmu-btn--danger rmu-btn--sm" onclick="bulkUserStatus('disabled')">
+            <i class="ti ti-ban"></i> Disable Selected
+          </button>
+        </div>
+      </div>
+
       <!-- Table -->
       <div class="rmu-card">
         <div class="rmu-card__header">
@@ -92,6 +107,10 @@ $pageTitle = 'All Users';
             <table class="rmu-table" id="usersTable">
               <thead>
                 <tr>
+                  <th style="width:36px;text-align:center;">
+                    <input type="checkbox" id="selectAllUsers" onclick="toggleAllUsers(this)"
+                           title="Select all" style="cursor:pointer;">
+                  </th>
                   <th>#</th>
                   <th>Full Name</th>
                   <th>Email</th>
@@ -103,11 +122,15 @@ $pageTitle = 'All Users';
               </thead>
               <tbody>
                 <?php if (empty($users)): ?>
-                <tr><td colspan="7" style="text-align:center;color:var(--txt-muted);padding:20px;">No users found.</td></tr>
+                <tr><td colspan="8" style="text-align:center;color:var(--txt-muted);padding:20px;">No users found.</td></tr>
                 <?php else: $i = 1; foreach ($users as $u): ?>
                 <tr data-dept="<?php echo h(strtolower($u['department'] ?? '')); ?>"
                     data-role="<?php echo h(strtolower($u['role'] ?? '')); ?>"
                     data-status="<?php echo h(strtolower($u['account_status'] ?? '')); ?>">
+                  <td style="text-align:center;">
+                    <input type="checkbox" class="u-check" value="<?php echo (int)$u['userId']; ?>"
+                           onclick="updateUserSelection()" style="cursor:pointer;">
+                  </td>
                   <td><?php echo $i++; ?></td>
                   <td><?php echo h($u['full_name']); ?></td>
                   <td><?php echo h($u['email']); ?></td>
@@ -396,6 +419,60 @@ function saveUser() {
 document.getElementById('editModal').addEventListener('click', function(e) {
   if (e.target === this) closeEditModal();
 });
+
+// ── Bulk selection (#2) ─────────────────────────────────────────────────────────
+function visibleUserChecks() {
+  return Array.prototype.filter.call(document.querySelectorAll('.u-check'),
+    function(cb) { return cb.closest('tr').style.display !== 'none'; });
+}
+function toggleAllUsers(master) {
+  visibleUserChecks().forEach(function(cb) { cb.checked = master.checked; });
+  updateUserSelection();
+}
+function selectedUserIds() {
+  return visibleUserChecks().filter(function(cb) { return cb.checked; })
+                            .map(function(cb) { return cb.value; });
+}
+function updateUserSelection() {
+  var n = selectedUserIds().length;
+  var bar = document.getElementById('userBulkBar');
+  if (bar) bar.style.display = n > 0 ? 'flex' : 'none';
+  var lbl = document.getElementById('userBulkCount');
+  if (lbl) lbl.textContent = n + ' selected';
+}
+function bulkUserStatus(status) {
+  var ids = selectedUserIds();
+  if (!ids.length) return;
+  var activate = status === 'active';
+  Swal.fire(Object.assign({
+    title: (activate ? 'Activate ' : 'Disable ') + ids.length + ' account(s)?',
+    icon: 'question', showCancelButton: true,
+    confirmButtonText: activate ? 'Yes, Activate' : 'Yes, Disable',
+    confirmButtonColor: activate ? '#22c55e' : '#ef4444',
+    cancelButtonColor: 'rgba(255,255,255,0.1)',
+  }, swalOpts)).then(function(result) {
+    if (!result.isConfirmed) return;
+    var fd = new FormData();
+    fd.append('status', status);
+    fd.append('csrf_token', CSRF);
+    ids.forEach(function(id) { fd.append('userIds[]', id); });
+    fetch('bulkUserStatus.inc.php', { method: 'POST', body: fd })
+      .then(function(r) { return r.json(); })
+      .then(function(res) {
+        if (res.success) {
+          Swal.fire(Object.assign({ icon: 'success', title: 'Done', text: res.message,
+            timer: 1800, showConfirmButton: false }, swalOpts)).then(function() { location.reload(); });
+        } else {
+          Swal.fire(Object.assign({ icon: 'error', title: 'Failed',
+            text: res.message || 'Action failed.' }, swalOpts));
+        }
+      })
+      .catch(function() {
+        Swal.fire(Object.assign({ icon: 'error', title: 'Network Error',
+          text: 'Please try again.' }, swalOpts));
+      });
+  });
+}
 
 // ── Activate / Disable ────────────────────────────────────────────────────────
 function setStatus(userId, newStatus) {

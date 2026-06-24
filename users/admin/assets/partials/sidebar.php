@@ -30,6 +30,11 @@ $base_url = (isset($_SERVER['HTTP_HOST']) && strpos($_SERVER['HTTP_HOST'], 'loca
       <span>Users</span>
     </a>
 
+    <a class="rmu-sidebar__link" href="<?php echo $base_url; ?>users/admin/pages/import">
+      <i class="ti ti-file-import"></i>
+      <span>Bulk Import</span>
+    </a>
+
     <a class="rmu-sidebar__link" href="<?php echo $base_url; ?>users/admin/pages/allClaims">
       <i class="ti ti-cards"></i>
       <span>Claims</span>
