@@ -103,16 +103,24 @@ function log_audit($conn, $action, $entity_type = null, $entity_id = null, $deta
     $actor_role = isset($_SESSION['role'])    ? (string) $_SESSION['role'] : null;
     $ip         = isset($_SERVER['REMOTE_ADDR']) ? $_SERVER['REMOTE_ADDR'] : null;
     $entity_id  = ($entity_id === null || $entity_id === '') ? null : (int) $entity_id;
-    $detail     = ($detail === null) ? null : mb_substr((string) $detail, 0, 255);
+    // detail is a JSON column — encode scalars as a JSON value (NULL stays NULL).
+    $detail_json = ($detail === null) ? null : json_encode(mb_substr((string) $detail, 0, 255));
 
-    $stmt = @mysqli_prepare($conn,
-        'INSERT INTO audit_log
-            (actor_id, actor_role, action, entity_type, entity_id, detail, ip_address, created_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, NOW())'
-    );
-    if (!$stmt) return; // table missing or DB error — never block the caller
-    mysqli_stmt_bind_param($stmt, 'isssiss',
-        $actor_id, $actor_role, $action, $entity_type, $entity_id, $detail, $ip);
-    @mysqli_stmt_execute($stmt);
-    mysqli_stmt_close($stmt);
+    // Audit logging must never break the request that triggered it. Under
+    // mysqli's exception mode (PHP 8.1+), the '@' operator does NOT suppress
+    // thrown errors, so wrap the whole thing in a try/catch as the real guard.
+    try {
+        $stmt = mysqli_prepare($conn,
+            'INSERT INTO audit_log
+                (actor_id, actor_role, action, entity_type, entity_id, detail, ip_address, created_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?, NOW())'
+        );
+        if (!$stmt) return;
+        mysqli_stmt_bind_param($stmt, 'isssiss',
+            $actor_id, $actor_role, $action, $entity_type, $entity_id, $detail_json, $ip);
+        mysqli_stmt_execute($stmt);
+        mysqli_stmt_close($stmt);
+    } catch (\Throwable $e) {
+        error_log('[audit] ' . $e->getMessage());
+    }
 }
