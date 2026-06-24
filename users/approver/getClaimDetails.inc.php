@@ -51,8 +51,10 @@ if ($claim === null) {
 
     <?php if (!empty($claim['rows'])):
         $grandTotal = 0;
+        $showFuel   = false;
         foreach ($claim['rows'] as $r) {
             $grandTotal += (float)$r['rate'] * (int)$r['periods'];
+            if (!empty($r['fuelComponent']) && (int)$r['fuelComponent']) $showFuel = true;
         }
     ?>
     <div class="rmu-table-wrap" style="border-radius:8px;overflow:hidden;margin-bottom:0;">
@@ -65,7 +67,7 @@ if ($claim === null) {
                     <th>Periods</th>
                     <th>Rate (GH&#8373;)</th>
                     <th>Amount (GH&#8373;)</th>
-                    <th>Fuel</th>
+                    <?php if ($showFuel): ?><th>Fuel</th><?php endif; ?>
                 </tr>
             </thead>
             <tbody>
@@ -79,20 +81,22 @@ if ($claim === null) {
                     <td><?php echo h($r['periods']); ?></td>
                     <td><?php echo h(number_format((float)$r['rate'], 2)); ?></td>
                     <td><strong><?php echo h(number_format($amount, 2)); ?></strong></td>
+                    <?php if ($showFuel): ?>
                     <td>
                         <?php if (!empty($r['fuelComponent']) && (int)$r['fuelComponent']): ?>
                             <span class="rmu-badge rmu-badge--primary">Yes</span>
                         <?php else: ?>
-                            <span style="color:var(--txt-muted);">No</span>
+                            <span style="color:var(--txt-muted);">—</span>
                         <?php endif; ?>
                     </td>
+                    <?php endif; ?>
                 </tr>
                 <?php endforeach; ?>
             </tbody>
         </table>
     </div>
     <div style="display:flex;justify-content:flex-end;align-items:center;gap:14px;
-                padding:14px 0 4px;border-top:1px solid rgba(255,255,255,0.08);margin-top:0;">
+                padding:14px 0 4px;border-top:1px solid var(--divider);margin-top:0;">
         <span style="color:var(--txt-secondary);font-size:.9rem;font-weight:500;">Grand Total</span>
         <span style="font-size:1.2rem;font-weight:700;color:var(--txt-primary);">
             GH&#8373; <?php echo h(number_format($grandTotal, 2)); ?>

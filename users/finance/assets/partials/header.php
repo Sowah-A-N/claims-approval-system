@@ -25,7 +25,7 @@ if ($_finance_initials === '') $_finance_initials = 'F';
         <?php echo $_finance_initials; ?>
       </div>
       <div class="rmu-dropdown__menu">
-        <div style="padding:12px 16px 10px;border-bottom:1px solid rgba(255,255,255,0.08);">
+        <div style="padding:12px 16px 10px;border-bottom:1px solid var(--divider);">
           <div style="font-size:.85rem;font-weight:600;color:var(--txt-primary);"><?php echo $_finance_name; ?></div>
           <div style="font-size:.75rem;color:var(--txt-muted);">Finance Officer</div>
         </div>

@@ -312,7 +312,7 @@ $pageTitle = "Settings";
                     <?php endif; ?>
 
                     <!-- Add Branch -->
-                    <div style="border-top:1px solid rgba(255,255,255,0.08);padding-top:20px;">
+                    <div style="border-top:1px solid var(--divider);padding-top:20px;">
                         <div style="font-weight:600;color:var(--txt-primary);margin-bottom:14px;">
                             Add Branch to <?php echo h($selected_bank); ?>
                         </div>

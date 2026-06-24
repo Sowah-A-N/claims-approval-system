@@ -152,7 +152,7 @@ $results = [
                             $cs   = max(1, (int)($row['current_stage'] ?? 1));
                             $dots = '';
                             for ($s = 1; $s <= $maxStage; $s++) {
-                                $col   = $s <= $cs ? '#3b82f6' : 'rgba(255,255,255,0.18)';
+                                $col   = $s <= $cs ? 'var(--clr-primary)' : 'rgba(15,23,42,0.18)';
                                 $dots .= '<span style="font-size:11px;color:' . $col . ';">●</span>';
                             }
                             echo '<tr>';

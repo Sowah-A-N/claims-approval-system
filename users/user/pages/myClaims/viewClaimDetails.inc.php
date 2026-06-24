@@ -54,7 +54,11 @@ if ($claim === null) {
     <?php
     $rows       = db_get_claim_data_rows($conn, $claim_id);
     $grandTotal = 0;
-    foreach ($rows as $r) $grandTotal += (float)$r['subTotal'];
+    $showFuel   = false;
+    foreach ($rows as $r) {
+        $grandTotal += (float)$r['subTotal'];
+        if ((int)$r['fuelComponent']) $showFuel = true;
+    }
 
     if (!empty($rows)):
     ?>
@@ -67,7 +71,7 @@ if ($claim === null) {
                     <th>End</th>
                     <th>Periods</th>
                     <th>Sub-Total (GH&#8373;)</th>
-                    <th>Fuel</th>
+                    <?php if ($showFuel): ?><th>Fuel</th><?php endif; ?>
                 </tr>
             </thead>
             <tbody>
@@ -78,20 +82,22 @@ if ($claim === null) {
                     <td><?php echo h(date('g:iA',  strtotime($r['end_time']))); ?></td>
                     <td><?php echo h($r['periods']); ?></td>
                     <td><?php echo h(number_format((float)$r['subTotal'], 2)); ?></td>
+                    <?php if ($showFuel): ?>
                     <td>
                         <?php if ((int)$r['fuelComponent']): ?>
                             <span class="rmu-badge rmu-badge--primary">Yes</span>
                         <?php else: ?>
-                            <span style="color:var(--txt-muted);">No</span>
+                            <span style="color:var(--txt-muted);">—</span>
                         <?php endif; ?>
                     </td>
+                    <?php endif; ?>
                 </tr>
                 <?php endforeach; ?>
             </tbody>
         </table>
     </div>
     <div style="display:flex;justify-content:flex-end;align-items:center;gap:14px;
-                padding:14px 0 4px;border-top:1px solid rgba(255,255,255,0.08);margin-top:0;">
+                padding:14px 0 4px;border-top:1px solid var(--divider);margin-top:0;">
         <span style="color:var(--txt-secondary);font-size:.9rem;font-weight:500;">Grand Total</span>
         <span style="font-size:1.2rem;font-weight:700;color:var(--txt-primary);">
             GH&#8373; <?php echo h(number_format($grandTotal, 2)); ?>

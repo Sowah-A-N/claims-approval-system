@@ -393,7 +393,7 @@ function approve(claimId) {
         showCancelButton:    true,
         confirmButtonText:   'Yes, Approve',
         confirmButtonColor:  '#22c55e',
-        cancelButtonColor:   'rgba(255,255,255,0.1)',
+        cancelButtonColor: '#64748b',
     }, swalOpts)).then(function(result) {
         if (!result.isConfirmed) return;
 

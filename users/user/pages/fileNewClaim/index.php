@@ -138,7 +138,7 @@ if ($draftSlotsJson === false) $draftSlotsJson = '[]';
                 <div id="slotsContainer"></div>
 
                 <div id="emptySlots" style="text-align:center;padding:36px 20px;color:var(--txt-muted);
-                    background:rgba(255,255,255,0.02);border:1px dashed rgba(255,255,255,0.1);
+                    background:var(--surface-2);border:1px dashed var(--divider);
                     border-radius:12px;margin-bottom:24px;">
                     <i class="ti ti-calendar-off" style="font-size:2.2rem;display:block;margin-bottom:10px;opacity:.5;"></i>
                     No sessions yet. Click <strong style="color:var(--txt-primary);">Add Session</strong> to begin.
@@ -166,7 +166,7 @@ if ($draftSlotsJson === false) $draftSlotsJson = '[]';
                             </table>
                         </div>
                         <div style="display:flex;justify-content:flex-end;align-items:center;gap:16px;
-                            padding:16px 0;border-top:1px solid rgba(255,255,255,0.08);margin-top:4px;">
+                            padding:16px 0;border-top:1px solid var(--divider);margin-top:4px;">
                             <span style="color:var(--txt-secondary);font-size:.9rem;font-weight:500;">Grand Total</span>
                             <span style="font-size:1.3rem;font-weight:700;color:var(--txt-primary);">
                                 GH₵ <span id="grandTotal">0.00</span>
@@ -199,7 +199,41 @@ if ($draftSlotsJson === false) $draftSlotsJson = '[]';
 <style>
 @keyframes spin { to { transform: rotate(360deg); } }
 .slot-periods, .slot-subtotal { color: var(--txt-secondary) !important; }
+.rmu-chip { display:inline-flex; align-items:center; gap:4px; background:var(--surface-2);
+  border:1px solid var(--divider); border-radius:6px; padding:3px 4px 3px 10px;
+  font-size:.82rem; color:var(--txt-primary); }
+.rmu-chip__x { background:none; border:none; color:var(--txt-muted); cursor:pointer;
+  font-size:1.05rem; line-height:1; padding:0 4px; border-radius:4px; }
+.rmu-chip__x:hover { color:var(--clr-danger); }
+.rmu-preview-session { padding:12px 0; border-bottom:1px solid var(--divider); }
+.rmu-preview-session:last-child { border-bottom:none; }
 </style>
+
+<!-- Editable review / preview modal -->
+<div class="rmu-modal-backdrop" id="previewBackdrop" role="dialog" aria-modal="true" aria-labelledby="previewTitle">
+  <div class="rmu-modal" style="max-width:640px;width:calc(100% - 48px);">
+    <div class="rmu-modal__header">
+      <span class="rmu-modal__title" id="previewTitle"><i class="ti ti-eye"></i> Review Claim</span>
+      <button class="rmu-modal__close" onclick="closePreview()" aria-label="Close review"><i class="ti ti-x"></i></button>
+    </div>
+    <div class="rmu-modal__body">
+      <p style="font-size:.8rem;color:var(--txt-muted);margin-bottom:12px;">
+        Review your sessions below. Remove any date with its &times; before confirming.
+      </p>
+      <div id="previewMeta" style="margin-bottom:8px;font-size:.85rem;color:var(--txt-secondary);"></div>
+      <div id="previewSessions"></div>
+      <div style="display:flex;justify-content:flex-end;align-items:center;gap:14px;
+                  padding-top:14px;border-top:1px solid var(--divider);margin-top:8px;">
+        <span style="color:var(--txt-secondary);font-weight:500;">Grand Total</span>
+        <span style="font-size:1.2rem;font-weight:700;color:var(--txt-primary);">GH&#8373; <span id="previewTotal">0.00</span></span>
+      </div>
+      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px;">
+        <button type="button" class="rmu-btn rmu-btn--secondary" onclick="closePreview()">Cancel</button>
+        <button type="button" class="rmu-btn rmu-btn--primary" id="previewConfirmBtn" onclick="confirmPreview()">Confirm</button>
+      </div>
+    </div>
+  </div>
+</div>
 
 <script>
 const RATE         = <?php echo json_encode($currentRate); ?>;
@@ -296,7 +330,7 @@ function addSlot(prefill) {
             <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">
                 <input type="checkbox" class="slot-fuel" id="fuel-${n}"
                        onchange="recalculate()"
-                       style="width:16px;height:16px;accent-color:#3b82f6;cursor:pointer;flex-shrink:0;">
+                       style="width:16px;height:16px;accent-color:var(--clr-primary);cursor:pointer;flex-shrink:0;">
                 <label for="fuel-${n}" class="rmu-label"
                        style="margin-bottom:0;cursor:pointer;font-size:.82rem;">
                     Include Fuel Component
@@ -304,10 +338,10 @@ function addSlot(prefill) {
                 </label>
             </div>` : ''}
 
-            <div style="border-top:1px solid rgba(255,255,255,0.08);margin-bottom:14px;"></div>
+            <div style="border-top:1px solid var(--divider);margin-bottom:14px;"></div>
 
             <!-- Recurring-date generator -->
-            <div class="recur-panel" style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:8px;padding:12px;margin-bottom:14px;">
+            <div class="recur-panel" style="background:var(--surface-2);border:1px solid var(--divider);border-radius:8px;padding:12px;margin-bottom:14px;">
                 <div style="font-size:.74rem;color:var(--txt-muted);margin-bottom:8px;">
                     <i class="ti ti-repeat"></i> Generate recurring dates (weekly) &mdash; skips public holidays
                 </div>
@@ -397,7 +431,7 @@ function addDateToCard(card, val) {
     pill.className  = 'date-pill';
     pill.style.cssText =
         'display:flex;align-items:center;gap:4px;' +
-        'background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);' +
+        'background:var(--surface-2);border:1px solid var(--divider);' +
         'border-radius:6px;padding:3px 6px 3px 10px;';
     pill.innerHTML = `
         <input type="date" class="slot-date" value="${val || ''}"
@@ -444,12 +478,12 @@ function generateRecurring(btn) {
     const days  = Array.from(card.querySelectorAll('.recur-day:checked'))
                        .map(function(c) { return parseInt(c.value, 10); });
 
-    if (!fromV || !toV) { alert('Please choose both a From and To date.'); return; }
-    if (!days.length)   { alert('Please select at least one weekday.'); return; }
+    if (!fromV || !toV) { swal('error', 'Missing Range', 'Please choose both a From and To date.'); return; }
+    if (!days.length)   { swal('error', 'No Weekdays', 'Please select at least one weekday.'); return; }
 
     const from = new Date(fromV + 'T00:00:00');
     const to   = new Date(toV   + 'T00:00:00');
-    if (from > to) { alert('The From date must be on or before the To date.'); return; }
+    if (from > to) { swal('error', 'Invalid Range', 'The From date must be on or before the To date.'); return; }
 
     const existing = new Set(
         Array.from(card.querySelectorAll('.slot-date'))
@@ -634,47 +668,177 @@ function buildPayload() {
 
 // ── Submit ────────────────────────────────────────────────────────────────────
 
-function submitClaim() {
+// Submit / Save Draft now route through an editable review modal first, so the
+// claimant can verify every session and remove individual dates before the
+// claim is sent or saved.
+function submitClaim() { openPreview('submit'); }
+
+function doSubmit() {
     const payload = buildPayload();
     if (!payload) return;
 
-    Swal.fire({
-        title: 'Submit Claim?',
-        text: 'Once submitted, the claim will be sent for approval and cannot be edited.',
-        icon: 'question',
-        background: '#ffffff', color: '#0f2744',
-        showCancelButton: true,
-        confirmButtonText: 'Yes, Submit',
-        confirmButtonColor: '#1d4ed8',
-        cancelButtonColor: '#64748b',
-    }).then(result => {
-        if (!result.isConfirmed) return;
+    setBusy('submitClaimBtn', true, 'Submitting…');
 
-        setBusy('submitClaimBtn', true, 'Submitting…');
-
-        fetch('multiClaimsSubmit.inc.php', { method: 'POST', body: payload })
-            .then(r => r.json())
-            .then(data => {
-                if (data.status === 'success' || data.success) {
-                    swalSuccess(data.message || 'Claim submitted successfully.');
-                    setTimeout(() => { window.location.href = '../myClaims/'; }, 2600);
-                } else {
-                    swal('error', 'Submission Failed', data.message || data.error || 'Please try again.');
-                    setBusy('submitClaimBtn', false,
-                        '<i class="ti ti-send"></i> Submit Claim');
-                }
-            })
-            .catch(() => {
-                swal('error', 'Network Error', 'Could not reach the server. Please try again.');
-            })
-            .finally(() => setBusy('submitClaimBtn', false,
-                '<i class="ti ti-send"></i> Submit Claim'));
-    });
+    fetch('multiClaimsSubmit.inc.php', { method: 'POST', body: payload })
+        .then(r => r.json())
+        .then(data => {
+            if (data.status === 'success' || data.success) {
+                swalSuccess(data.message || 'Claim submitted successfully.');
+                setTimeout(() => { window.location.href = '../myClaims/'; }, 2600);
+            } else {
+                swal('error', 'Submission Failed', data.message || data.error || 'Please try again.');
+                setBusy('submitClaimBtn', false, '<i class="ti ti-send"></i> Submit Claim');
+            }
+        })
+        .catch(() => swal('error', 'Network Error', 'Could not reach the server. Please try again.'))
+        .finally(() => setBusy('submitClaimBtn', false, '<i class="ti ti-send"></i> Submit Claim'));
 }
+
+// ── Editable preview / review modal ─────────────────────────────────────────────
+
+let _previewMode = null, _previewTrigger = null;
+
+function _esc(s) {
+    return String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+}
+
+function openPreview(mode) {
+    const dept   = document.getElementById('department').value.trim();
+    const prog   = document.getElementById('programme').value.trim();
+    const course = document.getElementById('course').value.trim();
+    if (!dept || !prog || !course) {
+        swal('error', 'Validation Error', 'Please select Department, Programme, and Course.');
+        return;
+    }
+    const cards = Array.from(document.querySelectorAll('.rmu-slot-card'));
+    if (!cards.length) {
+        swal('error', 'Validation Error', 'Please add at least one teaching session.');
+        return;
+    }
+    for (let i = 0; i < cards.length; i++) {
+        const s = cards[i].querySelector('.slot-start').value;
+        const e = cards[i].querySelector('.slot-end').value;
+        if (!s || !e) {
+            swal('error', 'Validation Error', `Session ${i + 1}: start and end time are required.`);
+            return;
+        }
+        if (timeToMins(e) <= timeToMins(s)) {
+            swal('error', 'Validation Error', `Session ${i + 1}: end time must be after start time.`);
+            return;
+        }
+    }
+
+    _previewMode    = mode;
+    _previewTrigger = document.activeElement;
+    document.getElementById('previewTitle').innerHTML = (mode === 'submit')
+        ? '<i class="ti ti-eye"></i> Review &amp; Submit Claim'
+        : '<i class="ti ti-eye"></i> Review &amp; Save Draft';
+    const btn = document.getElementById('previewConfirmBtn');
+    btn.innerHTML = (mode === 'submit')
+        ? '<i class="ti ti-send"></i> Confirm &amp; Submit'
+        : '<i class="ti ti-device-floppy"></i> Confirm &amp; Save Draft';
+
+    renderPreview();
+
+    const bd = document.getElementById('previewBackdrop');
+    bd.classList.add('open');
+    document.body.style.overflow = 'hidden';
+    setTimeout(() => btn.focus(), 60);
+}
+
+function renderPreview() {
+    const cards  = Array.from(document.querySelectorAll('.rmu-slot-card'));
+    const dept   = document.getElementById('department').value;
+    const prog   = document.getElementById('programme').value;
+    const course = document.getElementById('course').value;
+
+    document.getElementById('previewMeta').innerHTML =
+        '<strong style="color:var(--txt-primary);">' + _esc(course) + '</strong> &middot; ' +
+        _esc(prog) + ' &middot; ' + _esc(dept) +
+        ' &middot; Rate GH&#8373; ' + fmt(RATE) + ' / period';
+
+    let grand = 0, totalDates = 0, anyEmpty = false;
+
+    const html = cards.map((card, i) => {
+        const start      = card.querySelector('.slot-start').value || '—';
+        const end        = card.querySelector('.slot-end').value || '—';
+        const periods    = parseInt(card.querySelector('.slot-periods').value) || 0;
+        const perSession = parseFloat(card.querySelector('.slot-subtotal').value) || 0;
+        const fuelChk    = card.querySelector('.slot-fuel');
+        const hasFuel    = FUEL_ENABLED && fuelChk && fuelChk.checked;
+        const dates      = Array.from(card.querySelectorAll('.slot-date')).map(d => d.value).filter(Boolean);
+
+        totalDates += dates.length;
+        if (!dates.length) anyEmpty = true;
+        grand += perSession * dates.length;
+
+        const chips = dates.length
+            ? dates.map(d =>
+                '<span class="rmu-chip">' + _esc(d) +
+                '<button type="button" class="rmu-chip__x" aria-label="Remove date ' + _esc(d) + '"' +
+                ' onclick="removePreviewDate(' + i + ',&quot;' + _esc(d) + '&quot;)">&times;</button></span>'
+              ).join('')
+            : '<span style="color:var(--clr-danger);font-size:.8rem;">No dates — add some, or cancel and remove this session.</span>';
+
+        return '<div class="rmu-preview-session">' +
+            '<div style="display:flex;justify-content:space-between;gap:10px;font-weight:600;margin-bottom:6px;">' +
+              '<span>Session ' + (i + 1) + ' &middot; ' + _esc(start) + '–' + _esc(end) +
+                (periods ? (' &middot; ' + periods + ' period(s)') : '') +
+                (hasFuel ? ' &middot; <span style="color:var(--clr-primary);">+ fuel</span>' : '') + '</span>' +
+              '<span style="color:var(--txt-secondary);font-weight:500;white-space:nowrap;">' + dates.length + ' date(s)</span>' +
+            '</div><div style="display:flex;flex-wrap:wrap;gap:6px;">' + chips + '</div></div>';
+    }).join('');
+
+    document.getElementById('previewSessions').innerHTML = html;
+    document.getElementById('previewTotal').textContent = fmt(grand);
+
+    const btn = document.getElementById('previewConfirmBtn');
+    btn.disabled      = anyEmpty || totalDates === 0;
+    btn.style.opacity = btn.disabled ? '0.5' : '';
+    btn.style.cursor  = btn.disabled ? 'not-allowed' : 'pointer';
+}
+
+function removePreviewDate(i, val) {
+    const card = document.querySelectorAll('.rmu-slot-card')[i];
+    if (!card) return;
+    const input = Array.from(card.querySelectorAll('.slot-date')).find(d => d.value === val);
+    if (input) {
+        const pill = input.closest('.date-pill');
+        if (pill) pill.remove();
+    }
+    const empty = card.querySelector('.slot-dates-empty');
+    if (empty && !card.querySelectorAll('.slot-date').length) empty.style.display = '';
+    recalculate();
+    renderPreview();
+}
+
+function closePreview() {
+    document.getElementById('previewBackdrop').classList.remove('open');
+    document.body.style.overflow = '';
+    if (_previewTrigger && _previewTrigger.focus) _previewTrigger.focus();
+}
+
+function confirmPreview() {
+    const mode = _previewMode;
+    closePreview();
+    if (mode === 'submit') doSubmit();
+    else doSaveDraft();
+}
+
+document.getElementById('previewBackdrop').addEventListener('click', function (e) {
+    if (e.target === this) closePreview();
+});
+document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && document.getElementById('previewBackdrop').classList.contains('open')) {
+        closePreview();
+    }
+});
 
 // ── Save Draft ────────────────────────────────────────────────────────────────
 
-function saveDraft() {
+function saveDraft() { openPreview('draft'); }
+
+function doSaveDraft() {
     const payload = buildPayload();
     if (!payload) return;
 

@@ -107,39 +107,94 @@ $CSRF = csrf_token();
   </div><!-- .rmu-content -->
 </div><!-- .rmu-main -->
 
+<!-- Mark-as-paid modal -->
+<div class="rmu-modal-backdrop" id="payBackdrop" role="dialog" aria-modal="true" aria-labelledby="payTitle">
+  <div class="rmu-modal" style="max-width:440px;width:calc(100% - 48px);">
+    <div class="rmu-modal__header">
+      <span class="rmu-modal__title" id="payTitle"><i class="ti ti-credit-card"></i> Mark Claim as Paid</span>
+      <button class="rmu-modal__close" onclick="closePayModal()" aria-label="Close"><i class="ti ti-x"></i></button>
+    </div>
+    <div class="rmu-modal__body">
+      <p id="payClaimLabel" style="font-size:.85rem;color:var(--txt-secondary);margin-bottom:14px;"></p>
+      <div class="rmu-form-group">
+        <label class="rmu-label" for="payRef">Payment Reference <span style="color:var(--txt-muted);">(optional)</span></label>
+        <input type="text" class="rmu-input" id="payRef" maxlength="50" placeholder="e.g. bank transfer ref">
+      </div>
+      <div id="payError" class="rmu-alert rmu-alert--danger" style="display:none;"></div>
+      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:18px;">
+        <button type="button" class="rmu-btn rmu-btn--secondary" onclick="closePayModal()">Cancel</button>
+        <button type="button" class="rmu-btn rmu-btn--primary" id="payConfirmBtn" onclick="confirmPay()">
+          <i class="ti ti-check"></i> Confirm Payment
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script>
+var CSRF = <?php echo json_encode($CSRF); ?>;
+var _payClaimId = null, _payRow = null, _payTrigger = null;
+
 function downloadClaimPDF(claimId) {
   window.open('downloadClaimPDF.inc.php?claimId=' + encodeURIComponent(claimId), '_blank');
 }
 
-var CSRF = <?php echo json_encode($CSRF); ?>;
-
 function markPaid(claimId, btn) {
-  var ref = prompt('Optional payment reference for Claim #' + claimId + ' (leave blank to skip):', '');
-  if (ref === null) return; // cancelled
+  _payClaimId = claimId;
+  _payRow     = btn.closest('tr');
+  _payTrigger = btn;
+  document.getElementById('payClaimLabel').textContent = 'Claim #' + claimId + ' will be marked as paid and removed from the queue.';
+  document.getElementById('payRef').value = '';
+  var err = document.getElementById('payError'); err.style.display = 'none'; err.textContent = '';
+  var cb = document.getElementById('payConfirmBtn'); cb.disabled = false;
+  document.getElementById('payBackdrop').classList.add('open');
+  document.body.style.overflow = 'hidden';
+  setTimeout(function() { document.getElementById('payRef').focus(); }, 60);
+}
 
-  btn.disabled = true;
+function closePayModal() {
+  document.getElementById('payBackdrop').classList.remove('open');
+  document.body.style.overflow = '';
+  if (_payTrigger && _payTrigger.focus) _payTrigger.focus();
+}
+
+function confirmPay() {
+  if (_payClaimId === null) return;
+  var cb  = document.getElementById('payConfirmBtn');
+  var err = document.getElementById('payError');
+  cb.disabled = true;
+  err.style.display = 'none';
+
   var fd = new FormData();
-  fd.append('claimId', claimId);
-  fd.append('payment_ref', ref);
+  fd.append('claimId', _payClaimId);
+  fd.append('payment_ref', document.getElementById('payRef').value);
   fd.append('csrf_token', CSRF);
 
   fetch('markPaid.inc.php', { method: 'POST', body: fd })
     .then(function(r) { return r.json(); })
     .then(function(res) {
       if (res.success) {
-        var row = btn.closest('tr');
-        if (row) row.parentNode.removeChild(row);
+        if (_payRow) _payRow.parentNode.removeChild(_payRow);
+        closePayModal();
       } else {
-        alert(res.message || 'Could not mark as paid.');
-        btn.disabled = false;
+        err.textContent = res.message || 'Could not mark as paid.';
+        err.style.display = 'block';
+        cb.disabled = false;
       }
     })
     .catch(function() {
-      alert('Network error. Please try again.');
-      btn.disabled = false;
+      err.textContent = 'Network error. Please try again.';
+      err.style.display = 'block';
+      cb.disabled = false;
     });
 }
+
+document.getElementById('payBackdrop').addEventListener('click', function(e) {
+  if (e.target === this) closePayModal();
+});
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape' && document.getElementById('payBackdrop').classList.contains('open')) closePayModal();
+});
 </script>
 
 </body>
