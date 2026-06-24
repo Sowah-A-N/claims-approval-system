@@ -24,6 +24,63 @@ function db_get_courses_by_department($conn, $department) {
 }
 
 
+// ── Holidays ──────────────────────────────────────────────────────────────────
+
+/*
+ * Return all holiday dates as a flat array of 'YYYY-MM-DD' strings.
+ * Degrades to an empty array if the holidays table is absent.
+ */
+function db_get_holiday_dates($conn) {
+    $res = @mysqli_query($conn, 'SELECT holiday_date FROM holidays ORDER BY holiday_date');
+    if (!$res) return array();
+    $dates = array();
+    while ($row = mysqli_fetch_row($res)) {
+        $dates[] = $row[0];
+    }
+    return $dates;
+}
+
+
+// ── Overlap detection ─────────────────────────────────────────────────────────
+
+/*
+ * Return true if $userId already has a non-flagged claim with a teaching
+ * session on $date whose time window overlaps [$start, $end).
+ *
+ * Two intervals overlap when existing.start < new.end AND existing.end > new.start.
+ * Pass $excludeClaimId to ignore a specific claim (e.g. the one being edited).
+ * Times are 'HH:MM' or 'HH:MM:SS' strings — MySQL compares them to TIME safely.
+ */
+function db_has_overlapping_session($conn, $userId, $date, $start, $end, $excludeClaimId = null) {
+    $sql =
+        'SELECT 1
+         FROM claim_data cda
+         JOIN claim_details cd ON cd.claimId = cda.claimId
+         WHERE cd.userId = ?
+           AND cd.flagged = 0
+           AND cda.date = ?
+           AND cda.start_time < ?
+           AND cda.end_time   > ?';
+    if ($excludeClaimId !== null) {
+        $sql .= ' AND cd.claimId <> ?';
+    }
+    $sql .= ' LIMIT 1';
+
+    $stmt = mysqli_prepare($conn, $sql);
+    if (!$stmt) return false; // fail-open: never block on a query-build error
+    if ($excludeClaimId !== null) {
+        $excl = (int) $excludeClaimId;
+        mysqli_stmt_bind_param($stmt, 'isssi', $userId, $date, $end, $start, $excl);
+    } else {
+        mysqli_stmt_bind_param($stmt, 'isss', $userId, $date, $end, $start);
+    }
+    mysqli_stmt_execute($stmt);
+    $found = mysqli_num_rows(mysqli_stmt_get_result($stmt)) > 0;
+    mysqli_stmt_close($stmt);
+    return $found;
+}
+
+
 // ── Claim submission ──────────────────────────────────────────────────────────
 
 /*

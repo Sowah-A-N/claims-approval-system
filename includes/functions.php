@@ -68,3 +68,51 @@ function validated_int($val, $field = 'value') {
 function validated_str($val, $max_len = 500) {
     return mb_substr(trim((string) $val), 0, $max_len);
 }
+
+/*
+ * Neutralise CSV/spreadsheet formula injection.
+ * A leading =, +, -, @, tab or CR can be interpreted as a formula by Excel /
+ * Sheets; prefix such values with a single quote so they render as text.
+ *
+ *   fputcsv($out, array_map('csv_safe', $row));
+ */
+function csv_safe($val) {
+    $val = (string) $val;
+    if ($val !== '' && strpbrk($val[0], "=+-@\t\r") !== false) {
+        return "'" . $val;
+    }
+    return $val;
+}
+
+/*
+ * Append an entry to the audit_log table.
+ *
+ * Actor identity and IP are taken from the current session/request — callers
+ * only supply what happened. Degrades gracefully (does nothing) if the
+ * audit_log table is absent, so it can never break a request.
+ *
+ *   log_audit($conn, 'claim.approve', 'claim', $claimId, 'stage 2 -> 3');
+ *
+ * @param string      $action      machine action name, e.g. 'user.activate'
+ * @param string|null $entity_type e.g. 'claim', 'user'
+ * @param int|null    $entity_id   primary key of the affected entity
+ * @param string|null $detail      free-text context (kept short)
+ */
+function log_audit($conn, $action, $entity_type = null, $entity_id = null, $detail = null) {
+    $actor_id   = isset($_SESSION['user_id']) ? (int) $_SESSION['user_id'] : null;
+    $actor_role = isset($_SESSION['role'])    ? (string) $_SESSION['role'] : null;
+    $ip         = isset($_SERVER['REMOTE_ADDR']) ? $_SERVER['REMOTE_ADDR'] : null;
+    $entity_id  = ($entity_id === null || $entity_id === '') ? null : (int) $entity_id;
+    $detail     = ($detail === null) ? null : mb_substr((string) $detail, 0, 255);
+
+    $stmt = @mysqli_prepare($conn,
+        'INSERT INTO audit_log
+            (actor_id, actor_role, action, entity_type, entity_id, detail, ip_address, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, NOW())'
+    );
+    if (!$stmt) return; // table missing or DB error — never block the caller
+    mysqli_stmt_bind_param($stmt, 'isssiss',
+        $actor_id, $actor_role, $action, $entity_type, $entity_id, $detail, $ip);
+    @mysqli_stmt_execute($stmt);
+    mysqli_stmt_close($stmt);
+}

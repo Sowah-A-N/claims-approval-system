@@ -17,6 +17,10 @@ while ($r = mysqli_fetch_assoc($fsq)) $fs[$r['settingName']] = $r['settingValue'
 $fuelEnabled = (int)($fs['fuelComponent'] ?? 0) === 1;
 $fuelValue   = $fuelEnabled ? (float)($fs['fuelAmount'] ?? 0) : 0;
 
+// Holiday dates the recurring-session generator should skip (#8).
+$holidaysJson = json_encode(db_get_holiday_dates($conn));
+if ($holidaysJson === false) $holidaysJson = '[]';
+
 // Draft loading — populate if ?claimTempId= is set
 $draft       = null;
 $draftSlots  = [];
@@ -204,6 +208,7 @@ const FUEL_VALUE   = <?php echo json_encode($fuelValue); ?>;
 const DRAFT        = <?php echo $draftJson; ?>;
 const DRAFT_SLOTS  = <?php echo $draftSlotsJson; ?>;
 const CSRF         = '<?php echo h(csrf_token()); ?>';
+const HOLIDAYS     = new Set(<?php echo $holidaysJson; ?>);
 
 let slotCounter          = 0;
 let currentClaimTempId   = DRAFT ? DRAFT.claimTempId : 0;
@@ -301,6 +306,36 @@ function addSlot(prefill) {
 
             <div style="border-top:1px solid rgba(255,255,255,0.08);margin-bottom:14px;"></div>
 
+            <!-- Recurring-date generator -->
+            <div class="recur-panel" style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:8px;padding:12px;margin-bottom:14px;">
+                <div style="font-size:.74rem;color:var(--txt-muted);margin-bottom:8px;">
+                    <i class="ti ti-repeat"></i> Generate recurring dates (weekly) &mdash; skips public holidays
+                </div>
+                <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;">
+                    <div class="rmu-form-group" style="margin-bottom:0;">
+                        <label class="rmu-label" style="font-size:.72rem;">From</label>
+                        <input type="date" class="rmu-input recur-from" style="width:150px;">
+                    </div>
+                    <div class="rmu-form-group" style="margin-bottom:0;">
+                        <label class="rmu-label" style="font-size:.72rem;">To</label>
+                        <input type="date" class="rmu-input recur-to" style="width:150px;">
+                    </div>
+                    <div class="recur-days" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;font-size:.8rem;">
+                        <label style="display:flex;gap:3px;align-items:center;cursor:pointer;"><input type="checkbox" class="recur-day" value="1">Mon</label>
+                        <label style="display:flex;gap:3px;align-items:center;cursor:pointer;"><input type="checkbox" class="recur-day" value="2">Tue</label>
+                        <label style="display:flex;gap:3px;align-items:center;cursor:pointer;"><input type="checkbox" class="recur-day" value="3">Wed</label>
+                        <label style="display:flex;gap:3px;align-items:center;cursor:pointer;"><input type="checkbox" class="recur-day" value="4">Thu</label>
+                        <label style="display:flex;gap:3px;align-items:center;cursor:pointer;"><input type="checkbox" class="recur-day" value="5">Fri</label>
+                        <label style="display:flex;gap:3px;align-items:center;cursor:pointer;"><input type="checkbox" class="recur-day" value="6">Sat</label>
+                        <label style="display:flex;gap:3px;align-items:center;cursor:pointer;"><input type="checkbox" class="recur-day" value="0">Sun</label>
+                    </div>
+                    <button type="button" class="rmu-btn rmu-btn--secondary" style="padding:5px 12px;font-size:.78rem;"
+                            onclick="generateRecurring(this)">
+                        <i class="ti ti-calendar-plus"></i> Generate
+                    </button>
+                </div>
+            </div>
+
             <!-- Dates -->
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
                 <label class="rmu-label" style="margin-bottom:0;">
@@ -395,6 +430,62 @@ function removeDate(btn) {
     pill.remove();
     if (!card.querySelectorAll('.slot-date').length && empty) empty.style.display = '';
     recalculate();
+}
+
+// ── Recurring-date generator (#6) ───────────────────────────────────────────────
+
+function _pad2(n) { return (n < 10 ? '0' : '') + n; }
+function _fmtDate(d) { return d.getFullYear() + '-' + _pad2(d.getMonth() + 1) + '-' + _pad2(d.getDate()); }
+
+function generateRecurring(btn) {
+    const card  = btn.closest('.rmu-slot-card');
+    const fromV = card.querySelector('.recur-from').value;
+    const toV   = card.querySelector('.recur-to').value;
+    const days  = Array.from(card.querySelectorAll('.recur-day:checked'))
+                       .map(function(c) { return parseInt(c.value, 10); });
+
+    if (!fromV || !toV) { alert('Please choose both a From and To date.'); return; }
+    if (!days.length)   { alert('Please select at least one weekday.'); return; }
+
+    const from = new Date(fromV + 'T00:00:00');
+    const to   = new Date(toV   + 'T00:00:00');
+    if (from > to) { alert('The From date must be on or before the To date.'); return; }
+
+    const existing = new Set(
+        Array.from(card.querySelectorAll('.slot-date'))
+             .map(function(i) { return i.value; })
+             .filter(Boolean));
+
+    const daySet = new Set(days);
+    let added = 0, skippedHoliday = 0, skippedDup = 0, capped = false;
+
+    for (let d = new Date(from); d <= to; d.setDate(d.getDate() + 1)) {
+        if (!daySet.has(d.getDay())) continue;
+        const ds = _fmtDate(d);
+        if (HOLIDAYS.has(ds))   { skippedHoliday++; continue; }
+        if (existing.has(ds))   { skippedDup++;     continue; }
+        if (existing.size + added >= 365) { capped = true; break; }
+        addDateToCard(card, ds);
+        existing.add(ds);
+        added++;
+    }
+    recalculate();
+
+    let msg = added + ' date(s) added.';
+    if (skippedHoliday) msg += ' ' + skippedHoliday + ' holiday(s) skipped.';
+    if (skippedDup)     msg += ' ' + skippedDup + ' duplicate(s) skipped.';
+    if (capped)         msg += ' Stopped at the 365-date limit.';
+
+    if (typeof Swal !== 'undefined') {
+        Swal.fire({
+            icon: added ? 'success' : 'info',
+            title: added ? 'Dates Generated' : 'Nothing Added',
+            text: msg, background: '#0d1b2a', color: '#e2e8f0',
+            timer: 2800, showConfirmButton: false,
+        });
+    } else {
+        alert(msg);
+    }
 }
 
 // ── Calculation ───────────────────────────────────────────────────────────────

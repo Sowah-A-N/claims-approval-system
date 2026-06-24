@@ -13,6 +13,7 @@
 require_once __DIR__ . '/../../../../includes/auth.php';
 require_once __DIR__ . '/../../../../includes/db.php';
 require_once __DIR__ . '/../../../../includes/functions.php';
+require_once __DIR__ . '/../../queries/claim.queries.php';
 
 require_post();
 require_role(['user', 'claimant']);
@@ -151,6 +152,14 @@ foreach ($rows as $dr) {
     }
     $sub_total = (float) $periods * $rate;
 
+    // Reject sessions that overlap one the claimant has already submitted (#9).
+    if (db_has_overlapping_session($conn, $userId, $dr['date'], $dr['start_time'], $dr['end_time'], $newClaimId)) {
+        mysqli_stmt_close($ins_data);
+        mysqli_rollback($conn);
+        json_response(['ok' => false,
+            'message' => 'A session on ' . $dr['date'] . ' overlaps a claim you have already submitted. Please edit the draft.'], 409);
+    }
+
     mysqli_stmt_bind_param($ins_data, 'isssidi',
         $newClaimId,
         $dr['date'], $dr['start_time'], $dr['end_time'],
@@ -184,5 +193,7 @@ if ($del_draft) {
 }
 
 mysqli_commit($conn);
+
+log_audit($conn, 'claim.submit', 'claim', $newClaimId, 'from draft #' . $claimTempId);
 
 json_response(['ok' => true, 'message' => 'Claim submitted successfully and sent for approval.']);

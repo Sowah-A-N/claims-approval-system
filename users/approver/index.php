@@ -44,6 +44,22 @@ $claims = db_get_pending_claims_for_stage($conn, $approverStage, $approverDepart
             </div>
             <?php endif; ?>
 
+            <?php if (!empty($claims)): ?>
+            <div id="bulkBar" style="display:none;margin-bottom:16px;align-items:center;gap:12px;
+                        background:rgba(59,130,246,0.08);border:1px solid rgba(59,130,246,0.25);
+                        border-radius:8px;padding:12px 16px;">
+                <span id="bulkCount" style="font-weight:600;">0 selected</span>
+                <div style="margin-left:auto;display:flex;gap:8px;">
+                    <button class="rmu-btn rmu-btn--primary" style="padding:6px 14px;" onclick="bulkApprove()">
+                        <i class="ti ti-checks"></i> Approve Selected
+                    </button>
+                    <button class="rmu-btn rmu-btn--danger" style="padding:6px 14px;" onclick="openBulkFlag()">
+                        <i class="ti ti-flag"></i> Flag Selected
+                    </button>
+                </div>
+            </div>
+            <?php endif; ?>
+
             <div class="rmu-card">
                 <div class="rmu-card__header">
                     <span class="rmu-card__title">Claims Queue</span>
@@ -54,6 +70,10 @@ $claims = db_get_pending_claims_for_stage($conn, $approverStage, $approverDepart
                         <table class="rmu-table">
                             <thead>
                                 <tr>
+                                    <th style="width:36px;text-align:center;">
+                                        <input type="checkbox" id="selectAll" onclick="toggleAll(this)"
+                                               title="Select all" style="cursor:pointer;">
+                                    </th>
                                     <th>#</th>
                                     <th>Claimant</th>
                                     <th>Department</th>
@@ -68,6 +88,10 @@ $claims = db_get_pending_claims_for_stage($conn, $approverStage, $approverDepart
                                     foreach ($claims as $claim): ?>
                                 <tr data-department="<?php echo h($claim['department']); ?>"
                                     data-claim-id="<?php echo (int)$claim['claimId']; ?>">
+                                    <td style="text-align:center;">
+                                        <input type="checkbox" class="row-check" value="<?php echo (int)$claim['claimId']; ?>"
+                                               onclick="updateSelection()" style="cursor:pointer;">
+                                    </td>
                                     <td><?php echo $index; ?></td>
                                     <td style="font-weight:500;"><?php echo h($claim['full_name']); ?></td>
                                     <td><?php echo h($claim['department']); ?></td>
@@ -97,7 +121,7 @@ $claims = db_get_pending_claims_for_stage($conn, $approverStage, $approverDepart
                                 <?php $index++; endforeach; ?>
                                 <?php else: ?>
                                 <tr>
-                                    <td colspan="6" style="text-align:center;color:var(--txt-muted);padding:40px 20px;">
+                                    <td colspan="7" style="text-align:center;color:var(--txt-muted);padding:40px 20px;">
                                         <i class="ti ti-inbox" style="font-size:2.2rem;display:block;margin-bottom:10px;opacity:.4;"></i>
                                         No pending claims at this stage.
                                     </td>
@@ -186,8 +210,72 @@ function filterTable() {
     const filter = document.getElementById('departmentFilter').value;
     document.querySelectorAll('tbody tr[data-claim-id]').forEach(function(row) {
         const dept = row.getAttribute('data-department');
-        row.style.display = (!filter || dept === filter) ? '' : 'none';
+        const show = (!filter || dept === filter);
+        row.style.display = show ? '' : 'none';
+        if (!show) { var cb = row.querySelector('.row-check'); if (cb) cb.checked = false; }
     });
+    var sa = document.getElementById('selectAll'); if (sa) sa.checked = false;
+    updateSelection();
+}
+
+// ── Bulk selection ──────────────────────────────────────────────────────────────
+function visibleChecks() {
+    return Array.prototype.filter.call(
+        document.querySelectorAll('.row-check'),
+        function(cb) { return cb.closest('tr').style.display !== 'none'; });
+}
+
+function toggleAll(master) {
+    visibleChecks().forEach(function(cb) { cb.checked = master.checked; });
+    updateSelection();
+}
+
+function getSelectedIds() {
+    return visibleChecks().filter(function(cb) { return cb.checked; })
+                          .map(function(cb) { return cb.value; });
+}
+
+function updateSelection() {
+    var n   = getSelectedIds().length;
+    var bar = document.getElementById('bulkBar');
+    if (bar) bar.style.display = n > 0 ? 'flex' : 'none';
+    var lbl = document.getElementById('bulkCount');
+    if (lbl) lbl.textContent = n + ' selected';
+}
+
+function bulkApprove() {
+    var ids = getSelectedIds();
+    if (!ids.length) return;
+    Swal.fire(Object.assign({
+        title: 'Approve ' + ids.length + ' claim(s)?',
+        text:  'Each will advance to the next approval stage.',
+        icon:  'question', showCancelButton: true,
+        confirmButtonText: 'Yes, Approve', confirmButtonColor: '#22c55e',
+        cancelButtonColor: 'rgba(255,255,255,0.1)',
+    }, swalOpts)).then(function(result) {
+        if (!result.isConfirmed) return;
+        var fd = new FormData();
+        fd.append('csrf_token', CSRF);
+        ids.forEach(function(id) { fd.append('claimIds[]', id); });
+        fetch('bulkApproveClaims.inc.php', { method: 'POST', body: fd })
+            .then(function(r) { return r.json(); })
+            .then(function(res) {
+                if (res.success) swalSuccess(res.message, function() { location.reload(); });
+                else swalErr('Not Approved', res.message || 'Could not approve the selected claims.');
+            })
+            .catch(function() { swalErr('Network Error', 'Could not reach the server.'); });
+    });
+}
+
+var _bulkFlagMode = false;
+function openBulkFlag() {
+    if (!getSelectedIds().length) return;
+    _bulkFlagMode = true;
+    document.getElementById('flagClaimId').value = '';
+    document.getElementById('flagReason').value  = '';
+    document.getElementById('flagBackdrop').classList.add('open');
+    document.body.style.overflow = 'hidden';
+    setTimeout(function() { document.getElementById('flagReason').focus(); }, 80);
 }
 
 // ── Row helpers ───────────────────────────────────────────────────────────────
@@ -229,6 +317,7 @@ document.getElementById('detailsBackdrop').addEventListener('click', function(e)
 
 // ── Flag Modal ────────────────────────────────────────────────────────────────
 function openFlagModal(claimId) {
+    _bulkFlagMode = false;
     document.getElementById('flagClaimId').value = claimId;
     document.getElementById('flagReason').value  = '';
     document.getElementById('flagBackdrop').classList.add('open');
@@ -246,7 +335,6 @@ document.getElementById('flagBackdrop').addEventListener('click', function(e) {
 });
 
 function submitFlag() {
-    const claimId = document.getElementById('flagClaimId').value;
     const reason  = document.getElementById('flagReason').value.trim();
 
     if (!reason) {
@@ -260,16 +348,24 @@ function submitFlag() {
     btn.innerHTML = '<i class="ti ti-loader" style="animation:spin .8s linear infinite;"></i> Flagging…';
 
     const fd = new FormData();
-    fd.append('claimId',    claimId);
     fd.append('flagReason', reason);
     fd.append('csrf_token', CSRF);
+
+    var endpoint;
+    if (_bulkFlagMode) {
+        getSelectedIds().forEach(function(id) { fd.append('claimIds[]', id); });
+        endpoint = 'bulkFlagClaims.inc.php';
+    } else {
+        fd.append('claimId', document.getElementById('flagClaimId').value);
+        endpoint = 'flagClaim.inc.php';
+    }
 
     function resetBtn() {
         btn.disabled  = false;
         btn.innerHTML = '<i class="ti ti-flag"></i> Submit Flag';
     }
 
-    fetch('flagClaim.inc.php', { method: 'POST', body: fd })
+    fetch(endpoint, { method: 'POST', body: fd })
         .then(function(r) { return r.json(); })
         .then(function(res) {
             closeFlagModal();

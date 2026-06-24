@@ -110,6 +110,7 @@ if ($ok) {
 
 if ($ok) {
     mysqli_commit($conn);
+    log_audit($conn, 'user.register', 'user', $user_id, 'approver self-registration, stage ' . $stage);
     $_SESSION['message'] = 'Registration successful! You will be notified when your account is activated.';
     header('Location: ./index.php');
 } else {
