@@ -57,7 +57,7 @@ fputcsv($out, array(
     'Claim ID', 'Claimant', 'Department', 'Rank', 'Rate (GHS)',
     'Programme', 'Course', 'Total Periods', 'Grand Total (GHS)',
     'Bank Name', 'Branch', 'Account Number', 'Account Name',
-));
+), ',', '"', '');
 
 while ($row = mysqli_fetch_assoc($result)) {
     fputcsv($out, array_map('csv_safe', array(
@@ -74,7 +74,7 @@ while ($row = mysqli_fetch_assoc($result)) {
         $row['bank_branch'],
         $row['account_number'],
         $row['account_name'],
-    )));
+    )), ',', '"', '');
 }
 
 fclose($out);
