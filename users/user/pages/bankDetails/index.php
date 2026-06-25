@@ -4,7 +4,7 @@ include_once '../../assets/partials/_head.php';
 
 $userId = current_user_id();
 
-$stmt = mysqli_prepare($conn, 'SELECT * FROM user_bank_details WHERE userId = ? LIMIT 1');
+$stmt = mysqli_prepare($conn, 'SELECT * FROM user_bank_details WHERE userId = ? ORDER BY user_bank_details_id DESC LIMIT 1');
 if ($stmt) {
     mysqli_stmt_bind_param($stmt, 'i', $userId);
     mysqli_stmt_execute($stmt);
