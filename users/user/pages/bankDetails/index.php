@@ -13,6 +13,34 @@ if ($stmt) {
 } else {
     $bank = null;
 }
+
+$curBank   = $bank['bank_name']   ?? '';
+$curBranch = $bank['bank_branch'] ?? '';
+
+// Distinct banks for the dropdown.
+$banks = [];
+$bres = mysqli_query($conn,
+    "SELECT DISTINCT bank_name FROM banks_branches
+     WHERE bank_name IS NOT NULL AND bank_name <> '' ORDER BY bank_name");
+while ($bres && $row = mysqli_fetch_row($bres)) { $banks[] = $row[0]; }
+// Preserve any legacy free-text value not present in the master list.
+if ($curBank !== '' && !in_array($curBank, $banks, true)) array_unshift($banks, $curBank);
+
+// Branches for the currently-saved bank (so the page loads pre-populated).
+$branches = [];
+if ($curBank !== '') {
+    $bs = mysqli_prepare($conn,
+        "SELECT DISTINCT bank_branch FROM banks_branches
+         WHERE bank_name = ? AND bank_branch IS NOT NULL AND bank_branch <> '' ORDER BY bank_branch");
+    if ($bs) {
+        mysqli_stmt_bind_param($bs, 's', $curBank);
+        mysqli_stmt_execute($bs);
+        $rs = mysqli_stmt_get_result($bs);
+        while ($row = mysqli_fetch_row($rs)) { $branches[] = $row[0]; }
+        mysqli_stmt_close($bs);
+    }
+    if ($curBranch !== '' && !in_array($curBranch, $branches, true)) array_unshift($branches, $curBranch);
+}
 ?>
 <body>
 <div class="container-scroller">
@@ -56,17 +84,27 @@ if ($stmt) {
                                     <label class="rmu-label" for="bank_name">
                                         Bank Name <span class="required">*</span>
                                     </label>
-                                    <input type="text" class="rmu-input" id="bank_name" name="bank_name"
-                                           placeholder="e.g. GCB Bank"
-                                           value="<?php echo h($bank['bank_name'] ?? ''); ?>"
-                                           maxlength="120" required>
+                                    <select class="rmu-select" id="bank_name" name="bank_name" required
+                                            onchange="onBankChange()">
+                                        <option value="">— Select Bank —</option>
+                                        <?php foreach ($banks as $b): ?>
+                                        <option value="<?php echo h($b); ?>" <?php echo $b === $curBank ? 'selected' : ''; ?>>
+                                            <?php echo h($b); ?>
+                                        </option>
+                                        <?php endforeach; ?>
+                                    </select>
                                 </div>
                                 <div class="rmu-form-group">
                                     <label class="rmu-label" for="bank_branch">Branch</label>
-                                    <input type="text" class="rmu-input" id="bank_branch" name="bank_branch"
-                                           placeholder="e.g. Tema Main"
-                                           value="<?php echo h($bank['bank_branch'] ?? ''); ?>"
-                                           maxlength="120">
+                                    <select class="rmu-select" id="bank_branch" name="bank_branch"
+                                            <?php echo $curBank === '' ? 'disabled' : ''; ?>>
+                                        <option value="">— <?php echo $curBank === '' ? 'Select a bank first' : 'Select Branch'; ?> —</option>
+                                        <?php foreach ($branches as $br): ?>
+                                        <option value="<?php echo h($br); ?>" <?php echo $br === $curBranch ? 'selected' : ''; ?>>
+                                            <?php echo h($br); ?>
+                                        </option>
+                                        <?php endforeach; ?>
+                                    </select>
                                 </div>
                                 <div class="rmu-form-group">
                                     <label class="rmu-label" for="account_number">
@@ -111,6 +149,38 @@ if ($stmt) {
 
 <script>
 const CSRF = '<?php echo h(csrf_token()); ?>';
+
+// Load branches for the selected bank (branches depend on the chosen bank).
+function onBankChange() {
+    const bank = document.getElementById('bank_name').value;
+    const sel  = document.getElementById('bank_branch');
+    sel.innerHTML = '<option value="">Loading…</option>';
+    sel.disabled  = true;
+    if (!bank) {
+        sel.innerHTML = '<option value="">— Select a bank first —</option>';
+        return;
+    }
+    fetch('fetchBranches.inc.php?bank_name=' + encodeURIComponent(bank))
+        .then(r => r.json())
+        .then(list => {
+            if (!Array.isArray(list) || !list.length) {
+                sel.innerHTML = '<option value="">— No branches found —</option>';
+                sel.disabled  = true;
+                return;
+            }
+            sel.innerHTML = '<option value="">— Select Branch —</option>';
+            list.forEach(b => {
+                const o = document.createElement('option');
+                o.value = o.textContent = b;
+                sel.appendChild(o);
+            });
+            sel.disabled = false;
+        })
+        .catch(() => {
+            sel.innerHTML = '<option value="">Error loading branches</option>';
+            sel.disabled  = false;
+        });
+}
 
 function saveBankDetails() {
     const bank_name      = document.getElementById('bank_name').value.trim();
