@@ -14,13 +14,68 @@
  * Return all non-archived courses for a department as an array.
  */
 function db_get_courses_by_department($conn, $department) {
-    $stmt = mysqli_prepare($conn, 'SELECT name FROM course WHERE department = ? AND archived = 0 ORDER BY name');
+    // DISTINCT guards against duplicate course names within a department.
+    $stmt = mysqli_prepare($conn,
+        'SELECT DISTINCT name FROM course
+         WHERE department = ? AND (archived = 0 OR archived IS NULL)
+         ORDER BY name');
     mysqli_stmt_bind_param($stmt, 's', $department);
     mysqli_stmt_execute($stmt);
     $result = mysqli_stmt_get_result($stmt);
     $courses = mysqli_fetch_all($result, MYSQLI_ASSOC);
     mysqli_stmt_close($stmt);
     return $courses;
+}
+
+/*
+ * Return non-archived programmes for a department (matched by department name
+ * via programme.fk_department -> department.deptId). DISTINCT by name.
+ */
+function db_get_programmes_by_department($conn, $department) {
+    $stmt = mysqli_prepare($conn,
+        'SELECT DISTINCT p.name
+         FROM programme p
+         JOIN department d ON p.fk_department = d.deptId
+         WHERE d.dept_name = ? AND (p.archived = 0 OR p.archived IS NULL)
+         ORDER BY p.name');
+    if (!$stmt) return array();
+    mysqli_stmt_bind_param($stmt, 's', $department);
+    mysqli_stmt_execute($stmt);
+    $rows = mysqli_fetch_all(mysqli_stmt_get_result($stmt), MYSQLI_ASSOC);
+    mysqli_stmt_close($stmt);
+    return $rows;
+}
+
+
+// ── Classes ───────────────────────────────────────────────────────────────────
+
+/*
+ * Normalise a class code: trim, collapse spaces, uppercase the letters.
+ * e.g. " bit27 " -> "BIT27".
+ */
+function normalize_class_code($raw) {
+    $code = strtoupper(trim((string) $raw));
+    return preg_replace('/\s+/', ' ', $code);
+}
+
+/* Return every known class code (for the file-claim dropdown). */
+function db_get_all_classes($conn) {
+    $res = @mysqli_query($conn, 'SELECT class_code FROM classes ORDER BY class_code');
+    if (!$res) return array();
+    $out = array();
+    while ($row = mysqli_fetch_row($res)) { $out[] = $row[0]; }
+    return $out;
+}
+
+/* Insert a class code if it does not already exist (case-normalised by caller). */
+function db_upsert_class($conn, $code) {
+    $code = normalize_class_code($code);
+    if ($code === '') return;
+    $stmt = mysqli_prepare($conn, 'INSERT IGNORE INTO classes (class_code) VALUES (?)');
+    if (!$stmt) return;
+    mysqli_stmt_bind_param($stmt, 's', $code);
+    @mysqli_stmt_execute($stmt);
+    mysqli_stmt_close($stmt);
 }
 
 
@@ -86,13 +141,13 @@ function db_has_overlapping_session($conn, $userId, $date, $start, $end, $exclud
 /*
  * Insert a new claim_details row and return the generated claimId, or false on failure.
  */
-function db_insert_claim($conn, $userId, $faculty, $department, $programme, $course, $rate) {
+function db_insert_claim($conn, $userId, $faculty, $department, $programme, $course, $rate, $class = null) {
     $stmt = mysqli_prepare($conn,
-        'INSERT INTO claim_details (userId, faculty, department, programme, course, rate)
-         VALUES (?, ?, ?, ?, ?, ?)'
+        'INSERT INTO claim_details (userId, faculty, department, programme, course, rate, class)
+         VALUES (?, ?, ?, ?, ?, ?, ?)'
     );
     if (!$stmt) return false;
-    mysqli_stmt_bind_param($stmt, 'issssd', $userId, $faculty, $department, $programme, $course, $rate);
+    mysqli_stmt_bind_param($stmt, 'issssds', $userId, $faculty, $department, $programme, $course, $rate, $class);
     $ok = mysqli_stmt_execute($stmt);
     $id = $ok ? mysqli_insert_id($conn) : false;
     mysqli_stmt_close($stmt);

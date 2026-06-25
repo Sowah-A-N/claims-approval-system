@@ -38,7 +38,7 @@ $rate = isset($rate_row['rate']) ? (float) $rate_row['rate'] : 0.0;
 // ── 1. Verify ownership ───────────────────────────────────────────────────────
 
 $chk = mysqli_prepare($conn,
-    'SELECT claimTempId, department, programme, course
+    'SELECT claimTempId, department, programme, course, class
      FROM saved_claims
      WHERE claimTempId = ? AND userId = ?'
 );
@@ -83,17 +83,18 @@ mysqli_begin_transaction($conn);
 
 // 3a. Insert the claim_details header row.
 $ins_claim = mysqli_prepare($conn,
-    'INSERT INTO claim_details (userId, faculty, department, programme, course, rate)
-     VALUES (?, ?, ?, ?, ?, ?)'
+    'INSERT INTO claim_details (userId, faculty, department, programme, course, rate, class)
+     VALUES (?, ?, ?, ?, ?, ?, ?)'
 );
 if (!$ins_claim) {
     mysqli_rollback($conn);
     json_response(['ok' => false, 'message' => 'Submission failed. Please try again.'], 500);
 }
-mysqli_stmt_bind_param($ins_claim, 'issssd',
+$draft_class = isset($draft['class']) ? $draft['class'] : null;
+mysqli_stmt_bind_param($ins_claim, 'issssds',
     $userId, $faculty,
     $draft['department'], $draft['programme'], $draft['course'],
-    $rate
+    $rate, $draft_class
 );
 if (!mysqli_stmt_execute($ins_claim)) {
     mysqli_stmt_close($ins_claim);
@@ -193,6 +194,8 @@ if ($del_draft) {
 }
 
 mysqli_commit($conn);
+
+if (!empty($draft_class)) db_upsert_class($conn, $draft_class);
 
 log_audit($conn, 'claim.submit', 'claim', $newClaimId, 'from draft #' . $claimTempId);
 

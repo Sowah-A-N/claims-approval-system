@@ -15,6 +15,7 @@ $claim_temp_id = isset($_POST['claimTempId']) ? (int)$_POST['claimTempId'] : 0;
 $department = validated_str(isset($_POST['department']) ? $_POST['department'] : '');
 $programme  = validated_str(isset($_POST['programme'])  ? $_POST['programme']  : '');
 $course     = validated_str(isset($_POST['course'])     ? $_POST['course']     : '');
+$class      = normalize_class_code(isset($_POST['class']) ? $_POST['class'] : '');
 // Fetch rate from DB — never trust client-submitted value
 $rate_stmt = mysqli_prepare($conn, 'SELECT rate FROM user_details WHERE userId = ?');
 if (!$rate_stmt) {
@@ -27,7 +28,7 @@ mysqli_stmt_close($rate_stmt);
 $rate = isset($rate_row['rate']) ? (float) $rate_row['rate'] : 0.0;
 $time_slots = isset($_POST['timeSlots']) && is_array($_POST['timeSlots']) ? $_POST['timeSlots'] : array();
 
-if ($department === '' || $programme === '' || $course === '' || empty($time_slots)) {
+if ($department === '' || $programme === '' || $course === '' || $class === '' || empty($time_slots)) {
     json_response(array('status' => 'error', 'message' => 'Missing required fields.'), 400);
 }
 
@@ -45,7 +46,7 @@ if ($total_dates_submitted > 365) {
 mysqli_begin_transaction($conn);
 $ok = true;
 
-$claim_id = db_insert_claim($conn, $user_id, $faculty, $department, $programme, $course, $rate);
+$claim_id = db_insert_claim($conn, $user_id, $faculty, $department, $programme, $course, $rate, $class);
 if (!$claim_id) {
     $ok = false;
 }
@@ -120,6 +121,7 @@ if ($ok && $claim_temp_id > 0) {
 
 if ($ok) {
     mysqli_commit($conn);
+    db_upsert_class($conn, $class);
     log_audit($conn, 'claim.submit', 'claim', $claim_id,
         $total_slots . ' slot(s), ' . $total_dates . ' date(s)');
     json_response(array('status' => 'success', 'message' => $total_slots . ' slot(s) and ' . $total_dates . ' date(s) submitted.'));

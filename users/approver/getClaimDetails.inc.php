@@ -42,6 +42,13 @@ if ($claim === null) {
         </div>
         <div>
             <div style="font-size:.72rem;color:var(--txt-muted);text-transform:uppercase;
+                        letter-spacing:.06em;margin-bottom:4px;">Class</div>
+            <div style="font-weight:500;color:var(--txt-primary);">
+                <?php echo !empty($claim['class']) ? h($claim['class']) : '<span style="color:var(--txt-muted);">—</span>'; ?>
+            </div>
+        </div>
+        <div>
+            <div style="font-size:.72rem;color:var(--txt-muted);text-transform:uppercase;
                         letter-spacing:.06em;margin-bottom:4px;">Rate per Period</div>
             <div style="font-weight:500;color:var(--txt-primary);">
                 GH&#8373; <?php echo h(number_format((float)$claim['rate'], 2)); ?>
@@ -75,7 +82,7 @@ if ($claim === null) {
                     $amount = (float)$r['rate'] * (int)$r['periods'];
                 ?>
                 <tr>
-                    <td><?php echo h(date('d M Y', strtotime($r['date']))); ?></td>
+                    <td style="white-space:nowrap;"><?php echo h(date('D d/m/Y', strtotime($r['date']))); ?></td>
                     <td><?php echo h(date('g:iA', strtotime($r['start_time']))); ?></td>
                     <td><?php echo h(date('g:iA', strtotime($r['end_time']))); ?></td>
                     <td><?php echo h($r['periods']); ?></td>

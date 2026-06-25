@@ -13,6 +13,7 @@ $claimTempId = (int)($_POST['claimTempId'] ?? 0);
 $department  = validated_str($_POST['department'] ?? '');
 $programme   = validated_str($_POST['programme']  ?? '');
 $course      = validated_str($_POST['course']     ?? '');
+$class       = normalize_class_code($_POST['class'] ?? '');
 $timeSlots   = isset($_POST['timeSlots']) && is_array($_POST['timeSlots']) ? $_POST['timeSlots'] : [];
 
 if (!$department || !$programme || !$course) {
@@ -47,8 +48,8 @@ if ($claimTempId > 0) {
     }
 
     $stmt = mysqli_prepare($conn,
-        'UPDATE saved_claims SET department=?, programme=?, course=?, date_saved=NOW() WHERE claimTempId=? AND userId=?');
-    mysqli_stmt_bind_param($stmt, 'sssii', $department, $programme, $course, $claimTempId, $userId);
+        'UPDATE saved_claims SET department=?, programme=?, course=?, class=?, date_saved=NOW() WHERE claimTempId=? AND userId=?');
+    mysqli_stmt_bind_param($stmt, 'ssssii', $department, $programme, $course, $class, $claimTempId, $userId);
     $ok = mysqli_stmt_execute($stmt);
     mysqli_stmt_close($stmt);
 
@@ -60,8 +61,8 @@ if ($claimTempId > 0) {
     }
 } else {
     $stmt = mysqli_prepare($conn,
-        'INSERT INTO saved_claims (userId, department, programme, course) VALUES (?,?,?,?)');
-    mysqli_stmt_bind_param($stmt, 'isss', $userId, $department, $programme, $course);
+        'INSERT INTO saved_claims (userId, department, programme, course, class) VALUES (?,?,?,?,?)');
+    mysqli_stmt_bind_param($stmt, 'issss', $userId, $department, $programme, $course, $class);
     $ok = mysqli_stmt_execute($stmt);
     if ($ok) $claimTempId = mysqli_insert_id($conn);
     mysqli_stmt_close($stmt);
@@ -91,6 +92,7 @@ if ($ok) {
 
 if ($ok) {
     mysqli_commit($conn);
+    if ($class !== '') db_upsert_class($conn, $class);
     json_response(['claimTempId' => $claimTempId, 'message' => 'Draft saved successfully.']);
 } else {
     mysqli_rollback($conn);

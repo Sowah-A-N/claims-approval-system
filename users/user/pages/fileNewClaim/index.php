@@ -7,7 +7,7 @@ $userId      = current_user_id();
 $currentRate = isset($_SESSION['rate']) ? (float)$_SESSION['rate'] : 0;
 
 $departmentResult = mysqli_query($conn, 'SELECT dept_name FROM department ORDER BY dept_name ASC');
-$programmeResult  = mysqli_query($conn, 'SELECT name FROM programme ORDER BY name ASC');
+$classList        = db_get_all_classes($conn);   // existing class codes for the dropdown
 
 // Fetch fuel settings in one query
 $fsq = mysqli_query($conn,
@@ -55,6 +55,7 @@ $draftJson = json_encode($draft ? [
     'department'  => $draft['department'],
     'programme'   => $draft['programme'],
     'course'      => $draft['course'],
+    'class'       => $draft['class'] ?? '',
 ] : null);
 if ($draftJson === false) $draftJson = 'null';
 
@@ -86,7 +87,7 @@ if ($draftSlotsJson === false) $draftSlotsJson = '[]';
                         <span class="rmu-card__title">Claim Details</span>
                     </div>
                     <div class="rmu-card__body">
-                        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px;">
+                        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:20px;">
                             <div class="rmu-form-group" style="margin-bottom:0;">
                                 <label class="rmu-label" for="department">Department <span class="required">*</span></label>
                                 <select class="rmu-select" id="department">
@@ -98,11 +99,8 @@ if ($draftSlotsJson === false) $draftSlotsJson = '[]';
                             </div>
                             <div class="rmu-form-group" style="margin-bottom:0;">
                                 <label class="rmu-label" for="programme">Programme <span class="required">*</span></label>
-                                <select class="rmu-select" id="programme">
-                                    <option value="">— Select Programme —</option>
-                                    <?php while ($r = mysqli_fetch_assoc($programmeResult)): ?>
-                                    <option value="<?php echo h($r['name']); ?>"><?php echo h($r['name']); ?></option>
-                                    <?php endwhile; ?>
+                                <select class="rmu-select" id="programme" disabled>
+                                    <option value="">— Select Department First —</option>
                                 </select>
                             </div>
                             <div class="rmu-form-group" style="margin-bottom:0;">
@@ -110,6 +108,18 @@ if ($draftSlotsJson === false) $draftSlotsJson = '[]';
                                 <select class="rmu-select" id="course" disabled>
                                     <option value="">— Select Department First —</option>
                                 </select>
+                            </div>
+                            <div class="rmu-form-group" style="margin-bottom:0;">
+                                <label class="rmu-label" for="class">Class <span class="required">*</span></label>
+                                <input type="text" class="rmu-input" id="class" name="class"
+                                       list="classList" maxlength="20" autocomplete="off"
+                                       placeholder="e.g. BIT27" oninput="onClassInput(this)">
+                                <datalist id="classList">
+                                    <?php foreach ($classList as $c): ?>
+                                    <option value="<?php echo h($c); ?>"></option>
+                                    <?php endforeach; ?>
+                                </datalist>
+                                <div class="rmu-form-hint">Pick an existing class or type a new one (e.g. BIT27).</div>
                             </div>
                         </div>
                         <div style="margin-top:16px;display:flex;align-items:center;gap:10px;">
@@ -602,7 +612,48 @@ function loadCourses(department, callback) {
         });
 }
 
+// Programmes depend on the selected department (programme.fk_department).
+function loadProgrammes(department, callback) {
+    const sel = document.getElementById('programme');
+    sel.innerHTML = '<option value="">Loading…</option>';
+    sel.disabled  = true;
+    if (!department) {
+        sel.innerHTML = '<option value="">— Select Department First —</option>';
+        return;
+    }
+    fetch(`getProgrammes.php?department=${encodeURIComponent(department)}`)
+        .then(r => r.json())
+        .then(progs => {
+            if (!progs.length) {
+                sel.innerHTML = '<option value="">— No programmes for this department —</option>';
+                sel.disabled = true;
+            } else {
+                sel.innerHTML = '<option value="">— Select Programme —</option>';
+                progs.forEach(p => {
+                    const o = document.createElement('option');
+                    o.value = o.textContent = p.name;
+                    sel.appendChild(o);
+                });
+                sel.disabled = false;
+            }
+            if (callback) callback();
+        })
+        .catch(() => {
+            sel.innerHTML = '<option value="">Error loading programmes</option>';
+            sel.disabled  = false;
+        });
+}
+
+// Force the class code to upper-case as the user types (bit27 -> BIT27).
+function onClassInput(el) {
+    const pos = el.selectionStart;
+    el.value = el.value.toUpperCase();
+    try { el.setSelectionRange(pos, pos); } catch (e) {}
+    if (typeof markDirty === 'function') markDirty();
+}
+
 document.getElementById('department').addEventListener('change', function () {
+    loadProgrammes(this.value);
     loadCourses(this.value);
 });
 
@@ -612,9 +663,14 @@ function buildPayload() {
     const dept   = document.getElementById('department').value.trim();
     const prog   = document.getElementById('programme').value.trim();
     const course = document.getElementById('course').value.trim();
+    const cls    = document.getElementById('class').value.trim().toUpperCase();
 
     if (!dept || !prog || !course) {
         swal('error', 'Validation Error', 'Please select Department, Programme, and Course.');
+        return null;
+    }
+    if (!cls) {
+        swal('error', 'Validation Error', 'Please enter the Class (e.g. BIT27).');
         return null;
     }
 
@@ -629,6 +685,7 @@ function buildPayload() {
     fd.append('department', dept);
     fd.append('programme',  prog);
     fd.append('course',     course);
+    fd.append('class',      cls);
     // rate is looked up server-side from the database; do not send it.
 
     for (let i = 0; i < slotCards.length; i++) {
@@ -706,8 +763,13 @@ function openPreview(mode) {
     const dept   = document.getElementById('department').value.trim();
     const prog   = document.getElementById('programme').value.trim();
     const course = document.getElementById('course').value.trim();
+    const cls    = document.getElementById('class').value.trim().toUpperCase();
     if (!dept || !prog || !course) {
         swal('error', 'Validation Error', 'Please select Department, Programme, and Course.');
+        return;
+    }
+    if (!cls) {
+        swal('error', 'Validation Error', 'Please enter the Class (e.g. BIT27).');
         return;
     }
     const cards = Array.from(document.querySelectorAll('.rmu-slot-card'));
@@ -746,20 +808,30 @@ function openPreview(mode) {
     setTimeout(() => btn.focus(), 60);
 }
 
+// Format 'YYYY-MM-DD' as 'Mon 13/07/2026' (day name + dd/mm/yyyy).
+function fmtDayDMY(ds) {
+    const d = new Date(ds + 'T00:00:00');
+    if (isNaN(d.getTime())) return ds;
+    const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    return days[d.getDay()] + ' ' + _pad2(d.getDate()) + '/' + _pad2(d.getMonth() + 1) + '/' + d.getFullYear();
+}
+
 function renderPreview() {
-    const cards  = Array.from(document.querySelectorAll('.rmu-slot-card'));
-    const dept   = document.getElementById('department').value;
-    const prog   = document.getElementById('programme').value;
-    const course = document.getElementById('course').value;
+    const cards     = Array.from(document.querySelectorAll('.rmu-slot-card'));
+    const dept      = document.getElementById('department').value;
+    const prog      = document.getElementById('programme').value;
+    const course    = document.getElementById('course').value;
+    const cls       = document.getElementById('class').value.trim().toUpperCase();
+    const showFuel  = !!FUEL_ENABLED;
 
     document.getElementById('previewMeta').innerHTML =
-        '<strong style="color:var(--txt-primary);">' + _esc(course) + '</strong> &middot; ' +
-        _esc(prog) + ' &middot; ' + _esc(dept) +
+        '<strong style="color:var(--txt-primary);">' + _esc(cls) + '</strong> &middot; ' +
+        _esc(course) + ' &middot; ' + _esc(prog) + ' &middot; ' + _esc(dept) +
         ' &middot; Rate GH&#8373; ' + fmt(RATE) + ' / period';
 
-    let grand = 0, totalDates = 0, anyEmpty = false;
+    let grand = 0, totalDates = 0, anyEmpty = false, rows = '';
 
-    const html = cards.map((card, i) => {
+    cards.forEach((card, i) => {
         const start      = card.querySelector('.slot-start').value || '—';
         const end        = card.querySelector('.slot-end').value || '—';
         const periods    = parseInt(card.querySelector('.slot-periods').value) || 0;
@@ -769,27 +841,36 @@ function renderPreview() {
         const dates      = Array.from(card.querySelectorAll('.slot-date')).map(d => d.value).filter(Boolean);
 
         totalDates += dates.length;
-        if (!dates.length) anyEmpty = true;
-        grand += perSession * dates.length;
+        if (!dates.length) {
+            anyEmpty = true;
+            rows += '<tr><td>' + (i + 1) + '</td>' +
+                '<td colspan="' + (showFuel ? 5 : 4) + '" style="color:var(--clr-danger);font-size:.8rem;">' +
+                'No dates — add some, or cancel and remove this session.</td><td></td></tr>';
+            return;
+        }
+        dates.forEach(d => {
+            grand += perSession;
+            rows += '<tr>' +
+                '<td>' + (i + 1) + '</td>' +
+                '<td style="white-space:nowrap;">' + _esc(fmtDayDMY(d)) + '</td>' +
+                '<td style="white-space:nowrap;">' + _esc(start) + '–' + _esc(end) + '</td>' +
+                '<td>' + periods + '</td>' +
+                (showFuel ? ('<td>' + (hasFuel ? '<span class="rmu-badge rmu-badge--primary">Yes</span>' : '<span style="color:var(--txt-muted);">—</span>') + '</td>') : '') +
+                '<td>' + fmt(perSession) + '</td>' +
+                '<td style="text-align:center;"><button type="button" class="rmu-chip__x" ' +
+                  'aria-label="Remove date ' + _esc(d) + '" title="Remove date" ' +
+                  'onclick="removePreviewDate(' + i + ',&quot;' + _esc(d) + '&quot;)">&times;</button></td>' +
+            '</tr>';
+        });
+    });
 
-        const chips = dates.length
-            ? dates.map(d =>
-                '<span class="rmu-chip">' + _esc(d) +
-                '<button type="button" class="rmu-chip__x" aria-label="Remove date ' + _esc(d) + '"' +
-                ' onclick="removePreviewDate(' + i + ',&quot;' + _esc(d) + '&quot;)">&times;</button></span>'
-              ).join('')
-            : '<span style="color:var(--clr-danger);font-size:.8rem;">No dates — add some, or cancel and remove this session.</span>';
+    document.getElementById('previewSessions').innerHTML =
+        '<div class="rmu-table-wrap"><table class="rmu-table" style="margin:0;"><thead><tr>' +
+        '<th>#</th><th>Date</th><th>Time</th><th>Periods</th>' +
+        (showFuel ? '<th>Fuel</th>' : '') +
+        '<th>Amount (GH&#8373;)</th><th></th>' +
+        '</tr></thead><tbody>' + rows + '</tbody></table></div>';
 
-        return '<div class="rmu-preview-session">' +
-            '<div style="display:flex;justify-content:space-between;gap:10px;font-weight:600;margin-bottom:6px;">' +
-              '<span>Session ' + (i + 1) + ' &middot; ' + _esc(start) + '–' + _esc(end) +
-                (periods ? (' &middot; ' + periods + ' period(s)') : '') +
-                (hasFuel ? ' &middot; <span style="color:var(--clr-primary);">+ fuel</span>' : '') + '</span>' +
-              '<span style="color:var(--txt-secondary);font-weight:500;white-space:nowrap;">' + dates.length + ' date(s)</span>' +
-            '</div><div style="display:flex;flex-wrap:wrap;gap:6px;">' + chips + '</div></div>';
-    }).join('');
-
-    document.getElementById('previewSessions').innerHTML = html;
     document.getElementById('previewTotal').textContent = fmt(grand);
 
     const btn = document.getElementById('previewConfirmBtn');
@@ -971,7 +1052,12 @@ document.addEventListener('DOMContentLoaded', function () {
     if (!DRAFT) return;
 
     document.getElementById('department').value = DRAFT.department;
-    document.getElementById('programme').value  = DRAFT.programme;
+    if (DRAFT.class) document.getElementById('class').value = DRAFT.class;
+
+    // Programmes load by department; set the saved value once options arrive.
+    loadProgrammes(DRAFT.department, function () {
+        document.getElementById('programme').value = DRAFT.programme;
+    });
 
     loadCourses(DRAFT.department, function () {
         document.getElementById('course').value = DRAFT.course;
