@@ -13,7 +13,7 @@
 
   /* Backgrounds */
   --bg-base:          linear-gradient(135deg, #f3f7fc 0%, #eaf1fb 50%, #f5f8fd 100%);
-  --bg-glass:         #ffffff;          /* primary surface */
+  --bg-glass:         rgba(255,255,255,0.72);  /* frosted surface (cards/modals) */
   --bg-glass-hover:   #f1f5fb;          /* surface hover */
   --bg-glass-strong:  #ffffff;
   --bg-overlay:       rgba(255, 255, 255, 0.85);
@@ -918,16 +918,20 @@ a:hover { color: var(--clr-secondary); }
 .rmu-modal-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,0.65);
-  backdrop-filter: blur(4px);
+  background: rgba(15, 23, 42, 0.40);
+  backdrop-filter: blur(6px) saturate(120%);
+  -webkit-backdrop-filter: blur(6px) saturate(120%);
   z-index: 1050;
   display: none;
 }
 .rmu-modal-backdrop.open { display: flex; align-items: center; justify-content: center; }
 
+/* Glassmorphic translucent modal — frosts the blurred page behind it. */
 .rmu-modal {
-  background: var(--surface);
-  border: var(--border-glass-md);
+  background: rgba(255, 255, 255, 0.82);
+  backdrop-filter: blur(22px) saturate(150%);
+  -webkit-backdrop-filter: blur(22px) saturate(150%);
+  border: 1px solid rgba(255, 255, 255, 0.85);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-glass);
   width: 100%;
