@@ -829,7 +829,7 @@ function renderPreview() {
         _esc(course) + ' &middot; ' + _esc(prog) + ' &middot; ' + _esc(dept) +
         ' &middot; Rate GH&#8373; ' + fmt(RATE) + ' / period';
 
-    let grand = 0, totalDates = 0, anyEmpty = false, rows = '';
+    let grand = 0, totalDates = 0, anyEmpty = false, rows = '', rowNum = 0;
 
     cards.forEach((card, i) => {
         const start      = card.querySelector('.slot-start').value || '—';
@@ -843,7 +843,7 @@ function renderPreview() {
         totalDates += dates.length;
         if (!dates.length) {
             anyEmpty = true;
-            rows += '<tr><td>' + (i + 1) + '</td>' +
+            rows += '<tr><td>—</td>' +
                 '<td colspan="' + (showFuel ? 5 : 4) + '" style="color:var(--clr-danger);font-size:.8rem;">' +
                 'No dates — add some, or cancel and remove this session.</td><td></td></tr>';
             return;
@@ -851,7 +851,7 @@ function renderPreview() {
         dates.forEach(d => {
             grand += perSession;
             rows += '<tr>' +
-                '<td>' + (i + 1) + '</td>' +
+                '<td>' + (++rowNum) + '</td>' +
                 '<td style="white-space:nowrap;">' + _esc(fmtDayDMY(d)) + '</td>' +
                 '<td style="white-space:nowrap;">' + _esc(start) + '–' + _esc(end) + '</td>' +
                 '<td>' + periods + '</td>' +
@@ -866,7 +866,7 @@ function renderPreview() {
 
     document.getElementById('previewSessions').innerHTML =
         '<div class="rmu-table-wrap"><table class="rmu-table" style="margin:0;"><thead><tr>' +
-        '<th>#</th><th>Date</th><th>Time</th><th>Periods</th>' +
+        '<th>#</th><th>Date <span style="font-weight:400;text-transform:none;color:var(--txt-muted);">(dd/mm/yyyy)</span></th><th>Time</th><th>Periods</th>' +
         (showFuel ? '<th>Fuel</th>' : '') +
         '<th>Amount (GH&#8373;)</th><th></th>' +
         '</tr></thead><tbody>' + rows + '</tbody></table></div>';
