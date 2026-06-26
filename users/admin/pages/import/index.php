@@ -24,7 +24,7 @@ $pageTitle = 'Bulk Import';
 
       <div class="rmu-page-header">
         <div class="rmu-page-header__title">Bulk Import</div>
-        <div class="rmu-page-header__sub">Import users and bank branches from CSV files</div>
+        <div class="rmu-page-header__sub">Import users, bank branches and courses from CSV files</div>
       </div>
 
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:24px;">
@@ -70,6 +70,29 @@ $pageTitle = 'Bulk Import';
               </button>
             </form>
             <div id="banksResult" style="margin-top:16px;"></div>
+          </div>
+        </div>
+
+        <!-- Courses import -->
+        <div class="rmu-card">
+          <div class="rmu-card__header">
+            <span class="rmu-card__title"><i class="ti ti-book"></i> Import Courses</span>
+          </div>
+          <div class="rmu-card__body">
+            <p style="font-size:.82rem;color:var(--txt-muted);margin-bottom:14px;">
+              CSV columns: <code>code, name, department</code> (required),
+              <code>credit_hours, contact_hours</code> (optional). <code>code</code> is the
+              unique key, so re-importing updates the course. <code>department</code> must
+              match an existing department name.
+            </p>
+            <form id="coursesForm">
+              <input type="file" name="csv" accept=".csv,text/csv" class="rmu-input" required
+                     style="margin-bottom:12px;">
+              <button type="submit" class="rmu-btn rmu-btn--primary">
+                <i class="ti ti-upload"></i> Upload &amp; Import
+              </button>
+            </form>
+            <div id="coursesResult" style="margin-top:16px;"></div>
           </div>
         </div>
 
@@ -149,6 +172,36 @@ document.getElementById('banksForm').addEventListener('submit', function(e) {
     })
     .catch(function() {
       setBusy(document.getElementById('banksForm'), false);
+      box.innerHTML = '<div class="rmu-alert rmu-alert--warning">Network error. Please try again.</div>';
+    });
+});
+
+document.getElementById('coursesForm').addEventListener('submit', function(e) {
+  e.preventDefault();
+  var box = document.getElementById('coursesResult');
+  var fd  = new FormData(this);
+  fd.append('csrf_token', CSRF);
+  setBusy(this, true);
+  box.innerHTML = '<span style="color:var(--txt-muted);">Importing…</span>';
+
+  fetch('importCourses.inc.php', { method: 'POST', body: fd })
+    .then(function(r) { return r.json(); })
+    .then(function(res) {
+      setBusy(document.getElementById('coursesForm'), false);
+      var html = '<div class="rmu-alert rmu-alert--' + (res.success ? 'success' : 'warning') + '">'
+               + esc(res.message || 'Done.') + '</div>';
+      if (res.skippedRows && res.skippedRows.length) {
+        html += '<details style="margin-top:10px;"><summary style="cursor:pointer;">'
+              + res.skippedRows.length + ' skipped</summary><ul style="margin:8px 0 0 18px;font-size:.8rem;">';
+        res.skippedRows.forEach(function(s) {
+          html += '<li>Row ' + esc(s.row) + ' ' + esc(s.code) + ' — ' + esc(s.reason) + '</li>';
+        });
+        html += '</ul></details>';
+      }
+      box.innerHTML = html;
+    })
+    .catch(function() {
+      setBusy(document.getElementById('coursesForm'), false);
       box.innerHTML = '<div class="rmu-alert rmu-alert--warning">Network error. Please try again.</div>';
     });
 });

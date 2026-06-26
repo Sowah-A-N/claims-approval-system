@@ -40,6 +40,11 @@ $base_url = (isset($_SERVER['HTTP_HOST']) && strpos($_SERVER['HTTP_HOST'], 'loca
       <span>Claims</span>
     </a>
 
+    <a class="rmu-sidebar__link" href="<?php echo $base_url; ?>users/admin/pages/courses">
+      <i class="ti ti-book"></i>
+      <span>Courses</span>
+    </a>
+
     <a class="rmu-sidebar__link" href="<?php echo $base_url; ?>users/admin/pages/logs">
       <i class="ti ti-history"></i>
       <span>Logs</span>

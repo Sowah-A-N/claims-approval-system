@@ -28,7 +28,7 @@ if (!$fh) {
     json_response(array('success' => false, 'message' => 'Could not read the uploaded file.'), 500);
 }
 
-$header = fgetcsv($fh);
+$header = fgetcsv($fh, 0, ',', '"', '');
 if (!$header) {
     fclose($fh);
     json_response(array('success' => false, 'message' => 'The CSV is empty.'), 400);
@@ -56,7 +56,7 @@ $skipped  = 0;
 $line     = 1;
 $MAX      = 5000;
 
-while (($row = fgetcsv($fh)) !== false) {
+while (($row = fgetcsv($fh, 0, ',', '"', '')) !== false) {
     $line++;
     if ($line - 1 > $MAX) break;
     if (count(array_filter($row, function ($v) { return trim($v) !== ''; })) === 0) continue;

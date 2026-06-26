@@ -34,7 +34,7 @@ if (!$fh) {
 }
 
 // Map header names → column index.
-$header = fgetcsv($fh);
+$header = fgetcsv($fh, 0, ',', '"', '');
 if (!$header) {
     fclose($fh);
     json_response(array('success' => false, 'message' => 'The CSV is empty.'), 400);
@@ -62,7 +62,7 @@ $MAX     = 500;
 
 $dup_stmt = mysqli_prepare($conn, 'SELECT 1 FROM login_details WHERE email = ? LIMIT 1');
 
-while (($row = fgetcsv($fh)) !== false) {
+while (($row = fgetcsv($fh, 0, ',', '"', '')) !== false) {
     $line++;
     if ($line - 1 > $MAX) {
         $skipped[] = array('row' => $line, 'email' => '', 'reason' => 'Row limit (' . $MAX . ') reached.');
