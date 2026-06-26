@@ -256,12 +256,6 @@ $pageTitle = "Reports";
                                 <tr>
                                     <th>#</th>
                                     <th>
-                                        <a href="<?php echo h(sort_link('claimId', $f_sort, $f_order)); ?>"
-                                           style="color:inherit;text-decoration:none;display:flex;align-items:center;gap:4px;">
-                                            ID <?php echo sort_icon('claimId', $f_sort, $f_order); ?>
-                                        </a>
-                                    </th>
-                                    <th>
                                         <a href="<?php echo h(sort_link('full_name', $f_sort, $f_order)); ?>"
                                            style="color:inherit;text-decoration:none;display:flex;align-items:center;gap:4px;">
                                             Claimant <?php echo sort_icon('full_name', $f_sort, $f_order); ?>
@@ -302,7 +296,6 @@ $pageTitle = "Reports";
                                 ?>
                                 <tr>
                                     <td><?php echo $i++; ?></td>
-                                    <td style="font-family:monospace;">#<?php echo (int)$row['claimId']; ?></td>
                                     <td style="font-weight:500;"><?php echo h($row['full_name']); ?></td>
                                     <td><?php echo h($row['department']); ?></td>
                                     <td><?php echo h($row['course']); ?></td>
@@ -313,7 +306,7 @@ $pageTitle = "Reports";
                                 <?php endforeach; ?>
                                 <?php else: ?>
                                 <tr>
-                                    <td colspan="8" style="text-align:center;color:var(--txt-muted);padding:40px 20px;">
+                                    <td colspan="7" style="text-align:center;color:var(--txt-muted);padding:40px 20px;">
                                         <i class="ti ti-search-off" style="font-size:2rem;display:block;margin-bottom:10px;opacity:.4;"></i>
                                         No claims match the selected filters.
                                     </td>
