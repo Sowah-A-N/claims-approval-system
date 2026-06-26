@@ -597,13 +597,18 @@ function loadCourses(department, callback) {
     fetch(`getCourses.php?department=${encodeURIComponent(department)}`)
         .then(r => r.json())
         .then(courses => {
-            sel.innerHTML = '<option value="">— Select Course —</option>';
-            courses.forEach(c => {
-                const o = document.createElement('option');
-                o.value = o.textContent = c.name;
-                sel.appendChild(o);
-            });
-            sel.disabled = courses.length === 0;
+            if (!Array.isArray(courses) || courses.length === 0) {
+                sel.innerHTML = '<option value="">— No courses for this department —</option>';
+                sel.disabled = true;
+            } else {
+                sel.innerHTML = '<option value="">— Select Course —</option>';
+                courses.forEach(c => {
+                    const o = document.createElement('option');
+                    o.value = o.textContent = c.name;
+                    sel.appendChild(o);
+                });
+                sel.disabled = false;
+            }
             if (callback) callback();
         })
         .catch(() => {

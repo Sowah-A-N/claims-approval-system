@@ -15,9 +15,11 @@
  */
 function db_get_courses_by_department($conn, $department) {
     // DISTINCT guards against duplicate course names within a department.
+    // TRIM both sides so a trailing space in department.dept_name vs
+    // course.department (a real data discrepancy) doesn't hide every course.
     $stmt = mysqli_prepare($conn,
         'SELECT DISTINCT name FROM course
-         WHERE department = ? AND (archived = 0 OR archived IS NULL)
+         WHERE TRIM(department) = TRIM(?) AND (archived = 0 OR archived IS NULL)
          ORDER BY name');
     mysqli_stmt_bind_param($stmt, 's', $department);
     mysqli_stmt_execute($stmt);
