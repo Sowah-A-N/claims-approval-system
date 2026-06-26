@@ -41,6 +41,11 @@ $pageTitle = 'Bulk Import';
               <strong>disabled</strong> as claimants, with the rate auto-filled from rank.
               A temporary password is generated for each.
             </p>
+            <div style="margin-bottom:12px;">
+              <a class="rmu-btn rmu-btn--secondary rmu-btn--sm" href="downloadTemplate.inc.php?type=users">
+                <i class="ti ti-file-download"></i> Download template
+              </a>
+            </div>
             <form id="usersForm">
               <input type="file" name="csv" accept=".csv,text/csv" class="rmu-input" required
                      style="margin-bottom:12px;">
@@ -62,6 +67,11 @@ $pageTitle = 'Bulk Import';
               CSV columns: <code>bank_name, bank_branch, branch_code</code>.
               <code>branch_code</code> is the unique key, so re-importing is safe.
             </p>
+            <div style="margin-bottom:12px;">
+              <a class="rmu-btn rmu-btn--secondary rmu-btn--sm" href="downloadTemplate.inc.php?type=banks">
+                <i class="ti ti-file-download"></i> Download template
+              </a>
+            </div>
             <form id="banksForm">
               <input type="file" name="csv" accept=".csv,text/csv" class="rmu-input" required
                      style="margin-bottom:12px;">
@@ -85,6 +95,11 @@ $pageTitle = 'Bulk Import';
               unique key, so re-importing updates the course. <code>department</code> must
               match an existing department name.
             </p>
+            <div style="margin-bottom:12px;">
+              <a class="rmu-btn rmu-btn--secondary rmu-btn--sm" href="downloadTemplate.inc.php?type=courses">
+                <i class="ti ti-file-download"></i> Download template
+              </a>
+            </div>
             <form id="coursesForm">
               <input type="file" name="csv" accept=".csv,text/csv" class="rmu-input" required
                      style="margin-bottom:12px;">

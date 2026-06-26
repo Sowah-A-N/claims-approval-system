@@ -117,6 +117,18 @@ function sort_icon($col, $cur_sort, $cur_order) {
         : '<i class="ti ti-sort-descending" style="font-size:.8rem;color:var(--accent);"></i>';
 }
 
+// Current filters + sort as a query string for the export links.
+$qs = http_build_query(array_filter(array(
+    'department' => $f_dept,
+    'programme'  => $f_programme,
+    'course'     => $f_course,
+    'status'     => $f_status,
+    'start_date' => $f_start_date,
+    'end_date'   => $f_end_date,
+    'sort'       => $f_sort,
+    'order'      => strtolower($f_order),
+), function ($v) { return $v !== ''; }));
+
 $pageTitle = "Reports";
 ?>
 <!DOCTYPE html>
@@ -131,9 +143,19 @@ $pageTitle = "Reports";
 
         <div style="padding:28px 32px;">
 
-            <div class="rmu-page-header">
-                <div class="rmu-page-header__title">Claims Reports</div>
-                <div class="rmu-page-header__sub">Filter, sort and export claim records</div>
+            <div class="rmu-page-header" style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap;">
+                <div>
+                    <div class="rmu-page-header__title">Claims Reports</div>
+                    <div class="rmu-page-header__sub">Filter, sort and export claim records</div>
+                </div>
+                <div style="display:flex;gap:8px;">
+                    <a class="rmu-btn rmu-btn--secondary" href="exportReport.inc.php?format=csv<?php echo $qs ? '&' . h($qs) : ''; ?>">
+                        <i class="ti ti-file-spreadsheet"></i> CSV
+                    </a>
+                    <a class="rmu-btn rmu-btn--secondary" href="exportReport.inc.php?format=pdf<?php echo $qs ? '&' . h($qs) : ''; ?>" target="_blank">
+                        <i class="ti ti-printer"></i> PDF
+                    </a>
+                </div>
             </div>
 
             <!-- Filters -->

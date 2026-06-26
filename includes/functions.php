@@ -85,6 +85,36 @@ function csv_safe($val) {
 }
 
 /*
+ * Translate a machine audit action (e.g. 'claim.approve') into a plain-English
+ * label for display ('Claim approved'). Unknown actions are prettified.
+ */
+function audit_action_label($action) {
+    static $map = array(
+        'auth.login'            => 'Signed in',
+        'user.register'         => 'Registered',
+        'user.activate'         => 'Account activated',
+        'user.disable'          => 'Account disabled',
+        'user.change_stage'     => 'Approval stage changed',
+        'user.update'           => 'User details updated',
+        'claim.submit'          => 'Claim submitted',
+        'claim.approve'         => 'Claim approved',
+        'claim.flag'            => 'Claim flagged',
+        'claim.paid'            => 'Payment recorded',
+        'claim.batch_download'  => 'Claim forms downloaded',
+        'finance.export_paid'   => 'Paid claims exported',
+        'rate.update'           => 'Rank rate updated',
+        'bank.import'           => 'Bank branches imported',
+        'course.import'         => 'Courses imported',
+        'course.create'         => 'Course added',
+        'course.update'         => 'Course updated',
+        'course.archive'        => 'Course archived',
+        'course.unarchive'      => 'Course restored',
+    );
+    if (isset($map[$action])) return $map[$action];
+    return ucfirst(trim(str_replace(array('.', '_'), ' ', (string) $action)));
+}
+
+/*
  * Append an entry to the audit_log table.
  *
  * Actor identity and IP are taken from the current session/request — callers

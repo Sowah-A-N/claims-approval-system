@@ -103,6 +103,15 @@ function page_link($p) {
     return '?' . http_build_query($q);
 }
 
+// Current filters as a query string for the export links.
+$qs = http_build_query(array_filter(array(
+    'action'      => $f_action,
+    'actor_role'  => $f_actor_role,
+    'entity_type' => $f_entity_type,
+    'start_date'  => $f_start_date,
+    'end_date'    => $f_end_date,
+), function ($v) { return $v !== ''; }));
+
 $pageTitle = "Logs";
 ?>
 <!DOCTYPE html>
@@ -117,9 +126,21 @@ $pageTitle = "Logs";
 
         <div style="padding:28px 32px;">
 
-            <div class="rmu-page-header">
-                <div class="rmu-page-header__title">System Logs</div>
-                <div class="rmu-page-header__sub">Immutable audit trail of system activity</div>
+            <div class="rmu-page-header" style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap;">
+                <div>
+                    <div class="rmu-page-header__title">System Logs</div>
+                    <div class="rmu-page-header__sub">Immutable audit trail of system activity</div>
+                </div>
+                <?php if ($table_exists): ?>
+                <div style="display:flex;gap:8px;">
+                    <a class="rmu-btn rmu-btn--secondary" href="exportLogs.inc.php?format=csv<?php echo $qs ? '&' . h($qs) : ''; ?>">
+                        <i class="ti ti-file-spreadsheet"></i> CSV
+                    </a>
+                    <a class="rmu-btn rmu-btn--secondary" href="exportLogs.inc.php?format=pdf<?php echo $qs ? '&' . h($qs) : ''; ?>" target="_blank">
+                        <i class="ti ti-printer"></i> PDF
+                    </a>
+                </div>
+                <?php endif; ?>
             </div>
 
             <?php if (!$table_exists): ?>
@@ -151,7 +172,7 @@ $pageTitle = "Logs";
                                     <?php foreach ($action_opts as $a): ?>
                                     <option value="<?php echo h($a); ?>"
                                         <?php echo ($f_action === $a) ? 'selected' : ''; ?>>
-                                        <?php echo h($a); ?>
+                                        <?php echo h(audit_action_label($a)); ?>
                                     </option>
                                     <?php endforeach; ?>
                                 </select>
@@ -243,11 +264,7 @@ $pageTitle = "Logs";
                                         </span>
                                         <?php else: echo '—'; endif; ?>
                                     </td>
-                                    <td>
-                                        <span style="font-family:monospace;font-size:.8rem;color:var(--accent);">
-                                            <?php echo h($log['action']); ?>
-                                        </span>
-                                    </td>
+                                    <td><?php echo h(audit_action_label($log['action'])); ?></td>
                                     <td><?php echo $log['entity_type'] ? h($log['entity_type']) : '—'; ?></td>
                                     <td><?php echo $log['entity_id']   ? (int)$log['entity_id'] : '—'; ?></td>
                                     <td style="font-family:monospace;font-size:.78rem;">

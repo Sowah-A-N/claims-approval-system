@@ -123,7 +123,6 @@ $pageTitle = 'Claims Overview';
               <thead>
                 <tr>
                   <th>#</th>
-                  <th>Claim ID</th>
                   <th>Claimant</th>
                   <th>Department</th>
                   <th>Programme</th>
@@ -134,14 +133,13 @@ $pageTitle = 'Claims Overview';
               </thead>
               <tbody>
                 <?php if (empty($claims)): ?>
-                <tr><td colspan="8" style="text-align:center;color:var(--txt-muted);padding:20px;">No claims found.</td></tr>
+                <tr><td colspan="7" style="text-align:center;color:var(--txt-muted);padding:20px;">No claims found.</td></tr>
                 <?php else: $i = 1; foreach ($claims as $cl): ?>
                 <tr data-dept="<?php echo h(strtolower($cl['department'] ?? '')); ?>"
                     data-prog="<?php echo h(strtolower($cl['programme'] ?? '')); ?>"
                     data-course="<?php echo h(strtolower($cl['course'] ?? '')); ?>"
                     data-status="<?php echo h(strtolower($cl['status'] ?? '')); ?>">
                   <td><?php echo $i++; ?></td>
-                  <td><?php echo (int)$cl['claimId']; ?></td>
                   <td><?php echo h($cl['full_name']); ?></td>
                   <td><?php echo h($cl['department']); ?></td>
                   <td><?php echo h($cl['programme']); ?></td>
