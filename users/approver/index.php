@@ -96,7 +96,7 @@ $claims = db_get_pending_claims_for_stage($conn, $approverStage, $approverDepart
                                     <td style="font-weight:500;"><?php echo h($claim['full_name']); ?></td>
                                     <td><?php echo h($claim['department']); ?></td>
                                     <td><?php echo h($claim['course']); ?></td>
-                                    <td><?php echo date('d M Y', strtotime($claim['time_submitted'])); ?></td>
+                                    <td><?php echo date('d/m/Y', strtotime($claim['time_submitted'])); ?></td>
                                     <td style="white-space:nowrap;text-align:center;">
                                         <button class="rmu-btn rmu-btn--secondary"
                                                 style="padding:5px 10px;margin-right:4px;"

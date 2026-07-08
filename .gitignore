@@ -21,3 +21,7 @@ Thumbs.db
 /uploads/*.tmp
 *.log
 node_modules/
+
+# stray root artefacts (pptx skill / debug)
+/*.pptx
+debug_*.rels

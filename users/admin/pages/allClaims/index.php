@@ -144,7 +144,7 @@ $pageTitle = 'Claims Overview';
                   <td><?php echo h($cl['department']); ?></td>
                   <td><?php echo h($cl['programme']); ?></td>
                   <td><?php echo h($cl['course']); ?></td>
-                  <td><?php echo h(date('d M Y', strtotime($cl['time_submitted']))); ?></td>
+                  <td><?php echo h(date('d/m/Y', strtotime($cl['time_submitted']))); ?></td>
                   <td>
                     <?php
                     $s = $cl['status'];

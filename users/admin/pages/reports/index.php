@@ -299,7 +299,7 @@ $pageTitle = "Reports";
                                     <td style="font-weight:500;"><?php echo h($row['full_name']); ?></td>
                                     <td><?php echo h($row['department']); ?></td>
                                     <td><?php echo h($row['course']); ?></td>
-                                    <td><?php echo h(date('d M Y', strtotime($row['time_submitted']))); ?></td>
+                                    <td><?php echo h(date('d/m/Y', strtotime($row['time_submitted']))); ?></td>
                                     <td><?php echo $row['current_stage'] !== null ? (int)$row['current_stage'] : '—'; ?></td>
                                     <td><?php echo $badge; ?></td>
                                 </tr>

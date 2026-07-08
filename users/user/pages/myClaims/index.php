@@ -221,7 +221,7 @@ function cell($v) {
                                         <td><?php echo cell($row['programme']); ?></td>
                                         <td><?php echo cell($row['course']); ?></td>
                                         <td><?php echo !empty($row['class']) ? '<span class="rmu-badge rmu-badge--neutral">' . h($row['class']) . '</span>' : '<span class="mc-dash">—</span>'; ?></td>
-                                        <td style="white-space:nowrap;"><?php echo date('d M Y', strtotime($row['time_submitted'])); ?></td>
+                                        <td style="white-space:nowrap;"><?php echo date('d/m/Y', strtotime($row['time_submitted'])); ?></td>
                                         <td>
                                             <div class="mc-stage" title="Stage <?php echo $cs; ?> of <?php echo $maxStage; ?>">
                                                 <div class="mc-stage__bar"><span style="width:<?php echo $pct; ?>%;"></span></div>
@@ -267,7 +267,7 @@ function cell($v) {
                                         <td><?php echo cell($row['programme']); ?></td>
                                         <td><?php echo cell($row['course']); ?></td>
                                         <td><?php echo !empty($row['class']) ? '<span class="rmu-badge rmu-badge--neutral">' . h($row['class']) . '</span>' : '<span class="mc-dash">—</span>'; ?></td>
-                                        <td style="white-space:nowrap;"><?php echo date('d M Y', strtotime($row['date_saved'])); ?></td>
+                                        <td style="white-space:nowrap;"><?php echo date('d/m/Y', strtotime($row['date_saved'])); ?></td>
                                         <td>
                                             <?php if ($hasData): ?>
                                                 <span class="rmu-badge rmu-badge--primary"><?php echo $sc . ' session' . ($sc !== 1 ? 's' : ''); ?></span>
@@ -317,7 +317,7 @@ function cell($v) {
                                         <td><?php echo cell($row['course']); ?></td>
                                         <td><?php echo !empty($row['class']) ? '<span class="rmu-badge rmu-badge--neutral">' . h($row['class']) . '</span>' : '<span class="mc-dash">—</span>'; ?></td>
                                         <td><span class="rmu-badge rmu-badge--success"><?php echo h($row['status']); ?></span></td>
-                                        <td style="white-space:nowrap;"><?php echo date('d M Y', strtotime($row['time_submitted'])); ?></td>
+                                        <td style="white-space:nowrap;"><?php echo date('d/m/Y', strtotime($row['time_submitted'])); ?></td>
                                         <td style="white-space:nowrap;">
                                             <button class="rmu-btn rmu-btn--secondary rmu-btn--sm" onclick="viewClaimDetails(<?php echo (int)$row['claimId']; ?>)" title="View details" aria-label="View claim details"><i class="ti ti-eye"></i></button>
                                             <button class="rmu-btn rmu-btn--secondary rmu-btn--sm" onclick="downloadClaimDetails(<?php echo (int)$row['claimId']; ?>)" title="Download form" aria-label="Download claim form"><i class="ti ti-download"></i></button>

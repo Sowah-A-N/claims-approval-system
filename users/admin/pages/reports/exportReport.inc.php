@@ -86,7 +86,7 @@ if ($format === 'csv') {
 ?><!DOCTYPE html>
 <html lang="en"><head>
 <meta charset="utf-8">
-<title>Claims Report — <?php echo date('d M Y'); ?></title>
+<title>Claims Report — <?php echo date('d/m/Y'); ?></title>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { font-family: Arial, Helvetica, sans-serif; font-size: 10pt; color: #111; padding: 24px 28px; }
@@ -104,7 +104,7 @@ tr:nth-child(even) td { background: #f3f6fc; }
 <body>
 <div class="no-print"><button class="btn" onclick="window.print()">&#128438; Print / Save as PDF</button></div>
 <h1>RMU Claims — Claims Report</h1>
-<div class="sub">Generated <?php echo date('d M Y, H:i'); ?> &middot; <?php echo count($rows); ?> record<?php echo count($rows) !== 1 ? 's' : ''; ?></div>
+<div class="sub">Generated <?php echo date('d/m/Y, H:i'); ?> &middot; <?php echo count($rows); ?> record<?php echo count($rows) !== 1 ? 's' : ''; ?></div>
 <table>
   <thead><tr>
     <th>Claimant</th><th>Department</th><th>Programme</th><th>Course</th>
@@ -119,7 +119,7 @@ tr:nth-child(even) td { background: #f3f6fc; }
       <td><?php echo h($r['department']); ?></td>
       <td><?php echo h($r['programme']); ?></td>
       <td><?php echo h($r['course']); ?></td>
-      <td style="white-space:nowrap;"><?php echo h(date('d M Y', strtotime($r['time_submitted']))); ?></td>
+      <td style="white-space:nowrap;"><?php echo h(date('d/m/Y', strtotime($r['time_submitted']))); ?></td>
       <td><?php echo $r['current_stage'] !== null ? (int) $r['current_stage'] : '—'; ?></td>
       <td><?php echo h(rpt_status($r)); ?></td>
     </tr>

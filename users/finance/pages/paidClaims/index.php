@@ -152,7 +152,7 @@ $csv_qs = http_build_query(array_filter($filters, function ($v) { return $v !== 
                   <?php endif; ?>
                 </td>
                 <td><?php echo h(trim((string) $r['paid_by_name'])); ?></td>
-                <td style="white-space:nowrap;"><?php echo $r['time_paid'] ? h(date('d M Y, H:i', strtotime($r['time_paid']))) : '—'; ?></td>
+                <td style="white-space:nowrap;"><?php echo $r['time_paid'] ? h(date('d/m/Y, H:i', strtotime($r['time_paid']))) : '—'; ?></td>
               </tr>
               <?php endforeach; endif; ?>
             </tbody>

@@ -153,7 +153,7 @@ th { background: #ebebeb; font-weight: bold; text-align: left; }
     ?>
     <tr>
       <td><?php echo $i + 1; ?></td>
-      <td><?php echo h(date('d M Y', strtotime($row['claim_date']))); ?></td>
+      <td><?php echo h(date('d/m/Y', strtotime($row['claim_date']))); ?></td>
       <td><?php echo h($row['start_time']); ?></td>
       <td><?php echo h($row['end_time']); ?></td>
       <td><?php echo (int) $row['periods']; ?></td>
@@ -167,7 +167,7 @@ th { background: #ebebeb; font-weight: bold; text-align: left; }
   </tbody>
 </table>
 
-<div class="footer-note">Claim #<?php echo $claim_id; ?> &mdash; Generated on <?php echo date('d M Y, H:i'); ?> (<?php echo date('T'); ?>)</div>
+<div class="footer-note">Claim #<?php echo $claim_id; ?> &mdash; Generated on <?php echo date('d/m/Y, H:i'); ?> (<?php echo date('T'); ?>)</div>
 
 <script>window.onload = function() { window.print(); };</script>
 </body>

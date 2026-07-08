@@ -84,7 +84,7 @@ if ($format === 'csv') {
 ?><!DOCTYPE html>
 <html lang="en"><head>
 <meta charset="utf-8">
-<title>Audit Log — <?php echo date('d M Y'); ?></title>
+<title>Audit Log — <?php echo date('d/m/Y'); ?></title>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { font-family: Arial, Helvetica, sans-serif; font-size: 10pt; color: #111; padding: 24px 28px; }
@@ -102,7 +102,7 @@ tr:nth-child(even) td { background: #f3f6fc; }
 <body>
 <div class="no-print"><button class="btn" onclick="window.print()">&#128438; Print / Save as PDF</button></div>
 <h1>RMU Claims — Audit Log</h1>
-<div class="sub">Generated <?php echo date('d M Y, H:i'); ?> &middot; <?php echo count($rows); ?> entr<?php echo count($rows) !== 1 ? 'ies' : 'y'; ?></div>
+<div class="sub">Generated <?php echo date('d/m/Y, H:i'); ?> &middot; <?php echo count($rows); ?> entr<?php echo count($rows) !== 1 ? 'ies' : 'y'; ?></div>
 <table>
   <thead><tr>
     <th>ID</th><th>Timestamp</th><th>Actor</th><th>Role</th><th>Action</th>
@@ -114,7 +114,7 @@ tr:nth-child(even) td { background: #f3f6fc; }
   <?php else: foreach ($rows as $r): ?>
     <tr>
       <td><?php echo (int) $r['audit_id']; ?></td>
-      <td style="white-space:nowrap;"><?php echo h(date('d M Y H:i:s', strtotime($r['created_at']))); ?></td>
+      <td style="white-space:nowrap;"><?php echo h(date('d/m/Y H:i:s', strtotime($r['created_at']))); ?></td>
       <td><?php echo h(log_actor($r)); ?></td>
       <td><?php echo h($r['actor_role']); ?></td>
       <td><?php echo h(audit_action_label($r['action'])); ?></td>

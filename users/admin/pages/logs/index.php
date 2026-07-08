@@ -254,7 +254,7 @@ $pageTitle = "Logs";
                                 <tr>
                                     <td style="font-family:monospace;font-size:.8rem;"><?php echo (int)$log['audit_id']; ?></td>
                                     <td style="white-space:nowrap;font-size:.83rem;">
-                                        <?php echo h(date('d M Y H:i:s', strtotime($log['created_at']))); ?>
+                                        <?php echo h(date('d/m/Y H:i:s', strtotime($log['created_at']))); ?>
                                     </td>
                                     <td><?php echo h($actor); ?></td>
                                     <td>
