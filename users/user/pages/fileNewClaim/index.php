@@ -21,6 +21,10 @@ $fuelValue   = $fuelEnabled ? (float)($fs['fuelAmount'] ?? 0) : 0;
 $holidaysJson = json_encode(db_get_holiday_dates($conn));
 if ($holidaysJson === false) $holidaysJson = '[]';
 
+// Claims may only be filed for previous months, never the current (or a future)
+// month. The latest permissible teaching date is the last day of last month.
+$maxClaimDate = date('Y-m-d', strtotime('-1 day', strtotime(date('Y-m-01'))));
+
 // Draft loading — populate if ?claimTempId= is set
 $draft       = null;
 $draftSlots  = [];
@@ -253,6 +257,7 @@ const DRAFT        = <?php echo $draftJson; ?>;
 const DRAFT_SLOTS  = <?php echo $draftSlotsJson; ?>;
 const CSRF         = '<?php echo h(csrf_token()); ?>';
 const HOLIDAYS     = new Set(<?php echo $holidaysJson; ?>);
+const MAX_CLAIM_DATE = '<?php echo $maxClaimDate; ?>'; // last day of previous month (#3)
 
 let slotCounter          = 0;
 let currentClaimTempId   = DRAFT ? DRAFT.claimTempId : 0;
@@ -358,11 +363,11 @@ function addSlot(prefill) {
                 <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;">
                     <div class="rmu-form-group" style="margin-bottom:0;">
                         <label class="rmu-label" style="font-size:.72rem;">From</label>
-                        <input type="date" class="rmu-input recur-from" style="width:150px;">
+                        <input type="date" class="rmu-input recur-from" max="<?php echo $maxClaimDate; ?>" style="width:150px;">
                     </div>
                     <div class="rmu-form-group" style="margin-bottom:0;">
                         <label class="rmu-label" style="font-size:.72rem;">To</label>
-                        <input type="date" class="rmu-input recur-to" style="width:150px;">
+                        <input type="date" class="rmu-input recur-to" max="<?php echo $maxClaimDate; ?>" style="width:150px;">
                     </div>
                     <div class="recur-days" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;font-size:.8rem;">
                         <label style="display:flex;gap:3px;align-items:center;cursor:pointer;"><input type="checkbox" class="recur-day" value="1">Mon</label>
@@ -444,7 +449,7 @@ function addDateToCard(card, val) {
         'background:var(--surface-2);border:1px solid var(--divider);' +
         'border-radius:6px;padding:3px 6px 3px 10px;';
     pill.innerHTML = `
-        <input type="date" class="slot-date" value="${val || ''}"
+        <input type="date" class="slot-date" value="${val || ''}" max="${MAX_CLAIM_DATE}"
                style="background:transparent;border:none;color:var(--txt-primary);
                       font-size:.85rem;outline:none;width:130px;cursor:pointer;"
                onchange="recalculate()">
@@ -501,11 +506,12 @@ function generateRecurring(btn) {
              .filter(Boolean));
 
     const daySet = new Set(days);
-    let added = 0, skippedHoliday = 0, skippedDup = 0, capped = false;
+    let added = 0, skippedHoliday = 0, skippedDup = 0, skippedFuture = 0, capped = false;
 
     for (let d = new Date(from); d <= to; d.setDate(d.getDate() + 1)) {
         if (!daySet.has(d.getDay())) continue;
         const ds = _fmtDate(d);
+        if (ds > MAX_CLAIM_DATE) { skippedFuture++;  continue; }
         if (HOLIDAYS.has(ds))   { skippedHoliday++; continue; }
         if (existing.has(ds))   { skippedDup++;     continue; }
         if (existing.size + added >= 365) { capped = true; break; }
@@ -518,6 +524,7 @@ function generateRecurring(btn) {
     let msg = added + ' date(s) added.';
     if (skippedHoliday) msg += ' ' + skippedHoliday + ' holiday(s) skipped.';
     if (skippedDup)     msg += ' ' + skippedDup + ' duplicate(s) skipped.';
+    if (skippedFuture)  msg += ' ' + skippedFuture + ' current/future-month date(s) skipped.';
     if (capped)         msg += ' Stopped at the 365-date limit.';
 
     if (typeof Swal !== 'undefined') {
@@ -714,6 +721,15 @@ function buildPayload() {
         }
         if (!dates.length) {
             swal('error', 'Validation Error', `Session ${i + 1}: add at least one teaching date.`);
+            return null;
+        }
+        const maxDMY = MAX_CLAIM_DATE.split('-').reverse().join('/');
+        const future = dates.filter(d => d > MAX_CLAIM_DATE);
+        if (future.length) {
+            swal('error', 'Invalid Date',
+                 `Session ${i + 1}: claims may only be filed for previous months. ` +
+                 `The current month is not yet claimable — the latest permitted date is ${maxDMY}. ` +
+                 `Please remove ${future.length} date(s).`);
             return null;
         }
 

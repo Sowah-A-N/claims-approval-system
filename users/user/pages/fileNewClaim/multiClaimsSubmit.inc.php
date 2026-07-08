@@ -43,6 +43,10 @@ if ($total_dates_submitted > 365) {
     json_response(array('status' => 'error', 'message' => 'Too many dates in a single claim (maximum 365).'), 400);
 }
 
+// Claims may only be filed for previous months (#3): the latest permitted
+// teaching date is the last day of the previous month.
+$max_claim_date = date('Y-m-d', strtotime('-1 day', strtotime(date('Y-m-01'))));
+
 mysqli_begin_transaction($conn);
 $ok = true;
 
@@ -85,6 +89,16 @@ if ($ok) {
         foreach ($dates as $raw_date) {
             $date = validated_str($raw_date);
             if ($date === '') continue;
+
+            // Enforce previous-months-only (#3). Reject any date in the current
+            // or a future month regardless of what the client sent.
+            if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $date) || $date > $max_claim_date) {
+                mysqli_rollback($conn);
+                json_response(array('status' => 'error',
+                    'message' => 'Claims may only be filed for previous months. The date '
+                               . $date . ' is not permitted (latest allowed: '
+                               . date('d/m/Y', strtotime($max_claim_date)) . ').'), 422);
+            }
 
             // Reject sessions that overlap one the claimant has already submitted
             // (or an earlier session in this same submission) — prevents double-claiming.

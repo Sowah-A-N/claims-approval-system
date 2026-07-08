@@ -131,6 +131,8 @@ if (!$ins_data) {
     mysqli_rollback($conn);
     json_response(['ok' => false, 'message' => 'Submission failed. Please try again.'], 500);
 }
+// Previous-months-only cut-off (#3): last day of the previous month.
+$max_claim_date = date('Y-m-d', strtotime('-1 day', strtotime(date('Y-m-01'))));
 foreach ($rows as $dr) {
     // Recompute periods (1 period = 50 min) and subTotal server-side from the
     // stored session times and the authoritative DB rate. The draft's stored
@@ -152,6 +154,17 @@ foreach ($rows as $dr) {
         json_response(['ok' => false, 'message' => 'This draft has a session with no valid duration. Please edit it and try again.'], 400);
     }
     $sub_total = (float) $periods * $rate;
+
+    // Enforce previous-months-only (#3): a draft may not be promoted to a real
+    // claim if any teaching date falls in the current or a future month.
+    if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', (string) $dr['date']) || $dr['date'] > $max_claim_date) {
+        mysqli_stmt_close($ins_data);
+        mysqli_rollback($conn);
+        json_response(['ok' => false,
+            'message' => 'Claims may only be filed for previous months. The date '
+                       . $dr['date'] . ' is not permitted (latest allowed: '
+                       . date('d/m/Y', strtotime($max_claim_date)) . '). Please edit the draft.'], 422);
+    }
 
     // Reject sessions that overlap one the claimant has already submitted (#9).
     if (db_has_overlapping_session($conn, $userId, $dr['date'], $dr['start_time'], $dr['end_time'], $newClaimId)) {
