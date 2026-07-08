@@ -114,16 +114,21 @@ if ($draftSlotsJson === false) $draftSlotsJson = '[]';
                                 </select>
                             </div>
                             <div class="rmu-form-group" style="margin-bottom:0;">
-                                <label class="rmu-label" for="class">Class <span class="required">*</span></label>
-                                <input type="text" class="rmu-input" id="class" name="class"
+                                <label class="rmu-label" for="classInput">Class(es) <span class="required">*</span></label>
+                                <div id="classChips" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px;"></div>
+                                <input type="text" class="rmu-input" id="classInput"
                                        list="classList" maxlength="20" autocomplete="off"
-                                       placeholder="e.g. BIT27" oninput="onClassInput(this)">
+                                       placeholder="Type a class, press Enter (e.g. BIT27)"
+                                       onkeydown="onClassKey(event)" onchange="commitClassInput()"
+                                       onblur="commitClassInput()" oninput="this.value=this.value.toUpperCase()">
                                 <datalist id="classList">
                                     <?php foreach ($classList as $c): ?>
                                     <option value="<?php echo h($c); ?>"></option>
                                     <?php endforeach; ?>
                                 </datalist>
-                                <div class="rmu-form-hint">Pick an existing class or type a new one (e.g. BIT27).</div>
+                                <!-- Hidden field holds the comma-joined class list actually submitted (#5). -->
+                                <input type="hidden" id="class" name="class">
+                                <div class="rmu-form-hint">Add one or more classes &mdash; press Enter or comma after each; click &times; to remove.</div>
                             </div>
                         </div>
                         <div style="margin-top:16px;display:flex;align-items:center;gap:10px;">
@@ -656,12 +661,48 @@ function loadProgrammes(department, callback) {
         });
 }
 
-// Force the class code to upper-case as the user types (bit27 -> BIT27).
-function onClassInput(el) {
-    const pos = el.selectionStart;
-    el.value = el.value.toUpperCase();
-    try { el.setSelectionRange(pos, pos); } catch (e) {}
+// ── Multi-class chip selector (#5) ─────────────────────────────────────────────
+// A claim can cover several classes. Committed codes live in CLASSES[]; the
+// hidden #class field mirrors them as a comma-joined string for submission.
+const CLASSES     = [];
+const MAX_CLASSES = 20;
+
+function renderClassChips() {
+    const box = document.getElementById('classChips');
+    box.innerHTML = CLASSES.map((c, i) =>
+        '<span class="rmu-chip">' + _esc(c) +
+        '<button type="button" class="rmu-chip__x" aria-label="Remove class ' + _esc(c) +
+        '" title="Remove" onclick="removeClass(' + i + ')">&times;</button></span>').join('');
+    document.getElementById('class').value = CLASSES.join(', ');
     if (typeof markDirty === 'function') markDirty();
+}
+
+function addClassCode(raw) {
+    let code = String(raw || '').trim().toUpperCase().replace(/\s+/g, ' ');
+    if (code === '') return false;
+    if (code.length > 20) code = code.slice(0, 20);
+    if (CLASSES.indexOf(code) !== -1) return false;      // already added
+    if (CLASSES.length >= MAX_CLASSES) {
+        swal('info', 'Limit reached', 'A claim may include at most ' + MAX_CLASSES + ' classes.');
+        return false;
+    }
+    CLASSES.push(code);
+    renderClassChips();
+    return true;
+}
+
+function removeClass(i) { CLASSES.splice(i, 1); renderClassChips(); }
+
+// Turn whatever is currently typed (possibly comma-separated) into chips.
+function commitClassInput() {
+    const inp = document.getElementById('classInput');
+    if (!inp) return;
+    inp.value.split(',').forEach(addClassCode);
+    inp.value = '';
+}
+
+function onClassKey(e) {
+    if (e.key === 'Enter' || e.key === ',') { e.preventDefault(); commitClassInput(); }
 }
 
 document.getElementById('department').addEventListener('change', function () {
@@ -672,6 +713,7 @@ document.getElementById('department').addEventListener('change', function () {
 // ── Form payload builder ──────────────────────────────────────────────────────
 
 function buildPayload() {
+    commitClassInput();                                  // capture any un-added typed class
     const dept   = document.getElementById('department').value.trim();
     const prog   = document.getElementById('programme').value.trim();
     const course = document.getElementById('course').value.trim();
@@ -682,7 +724,7 @@ function buildPayload() {
         return null;
     }
     if (!cls) {
-        swal('error', 'Validation Error', 'Please enter the Class (e.g. BIT27).');
+        swal('error', 'Validation Error', 'Please add at least one Class (e.g. BIT27).');
         return null;
     }
 
@@ -781,6 +823,7 @@ function _esc(s) {
 }
 
 function openPreview(mode) {
+    commitClassInput();                                  // capture any un-added typed class
     const dept   = document.getElementById('department').value.trim();
     const prog   = document.getElementById('programme').value.trim();
     const course = document.getElementById('course').value.trim();
@@ -790,7 +833,7 @@ function openPreview(mode) {
         return;
     }
     if (!cls) {
-        swal('error', 'Validation Error', 'Please enter the Class (e.g. BIT27).');
+        swal('error', 'Validation Error', 'Please add at least one Class (e.g. BIT27).');
         return;
     }
     const cards = Array.from(document.querySelectorAll('.rmu-slot-card'));
@@ -1073,7 +1116,7 @@ document.addEventListener('DOMContentLoaded', function () {
     if (!DRAFT) return;
 
     document.getElementById('department').value = DRAFT.department;
-    if (DRAFT.class) document.getElementById('class').value = DRAFT.class;
+    if (DRAFT.class) String(DRAFT.class).split(',').forEach(addClassCode);
 
     // Programmes load by department; set the saved value once options arrive.
     loadProgrammes(DRAFT.department, function () {

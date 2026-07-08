@@ -20,3 +20,6 @@ if ($claim === null) {
 echo '<p id="claimId"   name="claimId"><strong>Claim ID</strong>: '   . h($claim['claimTempId']) . '</p>';
 echo '<p id="programme" name="programme"><strong>Programme</strong>: ' . h($claim['programme'])  . '</p>';
 echo '<p id="course"    name="course"><strong>Course</strong>: '       . h($claim['course'])      . '</p>';
+if (!empty($claim['class'])) {
+    echo '<p id="class" name="class"><strong>Class(es)</strong>: ' . h($claim['class']) . '</p>';
+}

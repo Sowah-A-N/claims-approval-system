@@ -39,6 +39,7 @@ $tp->setValue('rank',            $first_row['rank']);
 $tp->setValue('rate',            $first_row['rate']);
 $tp->setValue('programme',       $first_row['programme']);
 $tp->setValue('course',          $first_row['course']);
+$tp->setValue('class',           isset($first_row['class']) ? $first_row['class'] : '');
 $tp->setValue('bank_name',       $first_row['bank_name']);
 $tp->setValue('bank_branch',     $first_row['bank_branch']);
 $tp->setValue('account_number',  $first_row['account_number']);

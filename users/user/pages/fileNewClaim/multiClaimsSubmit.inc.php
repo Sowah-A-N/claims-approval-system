@@ -15,7 +15,7 @@ $claim_temp_id = isset($_POST['claimTempId']) ? (int)$_POST['claimTempId'] : 0;
 $department = validated_str(isset($_POST['department']) ? $_POST['department'] : '');
 $programme  = validated_str(isset($_POST['programme'])  ? $_POST['programme']  : '');
 $course     = validated_str(isset($_POST['course'])     ? $_POST['course']     : '');
-$class      = normalize_class_code(isset($_POST['class']) ? $_POST['class'] : '');
+$class      = normalize_class_list(isset($_POST['class']) ? $_POST['class'] : ''); // one or more codes (#5)
 // Fetch rate from DB — never trust client-submitted value
 $rate_stmt = mysqli_prepare($conn, 'SELECT rate FROM user_details WHERE userId = ?');
 if (!$rate_stmt) {
@@ -135,7 +135,9 @@ if ($ok && $claim_temp_id > 0) {
 
 if ($ok) {
     mysqli_commit($conn);
-    db_upsert_class($conn, $class);
+    foreach (class_list_to_array($class) as $one_class) {  // remember each code (#5)
+        db_upsert_class($conn, $one_class);
+    }
     log_audit($conn, 'claim.submit', 'claim', $claim_id,
         $total_slots . ' slot(s), ' . $total_dates . ' date(s)');
     json_response(array('status' => 'success', 'message' => $total_slots . ' slot(s) and ' . $total_dates . ' date(s) submitted.'));

@@ -23,6 +23,7 @@ $stmt = mysqli_prepare($conn,
             ud.rate,
             cd.programme,
             cd.course,
+            cd.class,
             cdata.date     AS claim_date,
             cdata.start_time,
             cdata.end_time,
@@ -124,6 +125,7 @@ th { background: #ebebeb; font-weight: bold; text-align: left; }
 <div class="info-grid">
   <div class="info-row"><span class="info-label">Programme:</span><span><?php echo h($first['programme']); ?></span></div>
   <div class="info-row"><span class="info-label">Course:</span><span><?php echo h($first['course']); ?></span></div>
+  <div class="info-row"><span class="info-label">Class(es):</span><span><?php echo !empty($first['class']) ? h($first['class']) : '—'; ?></span></div>
   <div class="info-row"><span class="info-label">Rate per Period:</span><span>GHS <?php echo number_format((float) $first['rate'], 2); ?></span></div>
 </div>
 

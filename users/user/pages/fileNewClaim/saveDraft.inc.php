@@ -13,7 +13,7 @@ $claimTempId = (int)($_POST['claimTempId'] ?? 0);
 $department  = validated_str($_POST['department'] ?? '');
 $programme   = validated_str($_POST['programme']  ?? '');
 $course      = validated_str($_POST['course']     ?? '');
-$class       = normalize_class_code($_POST['class'] ?? '');
+$class       = normalize_class_list($_POST['class'] ?? '');  // one or more codes (#5)
 $timeSlots   = isset($_POST['timeSlots']) && is_array($_POST['timeSlots']) ? $_POST['timeSlots'] : [];
 
 if (!$department || !$programme || !$course) {
@@ -92,7 +92,9 @@ if ($ok) {
 
 if ($ok) {
     mysqli_commit($conn);
-    if ($class !== '') db_upsert_class($conn, $class);
+    foreach (class_list_to_array($class) as $one_class) {  // remember each code (#5)
+        db_upsert_class($conn, $one_class);
+    }
     json_response(['claimTempId' => $claimTempId, 'message' => 'Draft saved successfully.']);
 } else {
     mysqli_rollback($conn);

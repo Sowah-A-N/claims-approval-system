@@ -60,6 +60,32 @@ function normalize_class_code($raw) {
     return preg_replace('/\s+/', ' ', $code);
 }
 
+/*
+ * Normalise a comma-separated list of class codes (#5): split on commas,
+ * normalise each, drop blanks, de-duplicate (order preserved), and re-join
+ * as "BIT27, BIT28". Returns '' when no valid code is present.
+ */
+function normalize_class_list($raw) {
+    $out = array();
+    foreach (explode(',', (string) $raw) as $part) {
+        $code = normalize_class_code($part);
+        if ($code !== '' && !in_array($code, $out, true)) {
+            $out[] = $code;
+        }
+    }
+    return implode(', ', $out);
+}
+
+/* Split a stored/normalised class list back into individual codes. */
+function class_list_to_array($list) {
+    $out = array();
+    foreach (explode(',', (string) $list) as $part) {
+        $code = trim($part);
+        if ($code !== '') $out[] = $code;
+    }
+    return $out;
+}
+
 /* Return every known class code (for the file-claim dropdown). */
 function db_get_all_classes($conn) {
     $res = @mysqli_query($conn, 'SELECT class_code FROM classes ORDER BY class_code');
@@ -281,6 +307,7 @@ function db_get_claim_download_data($conn, $claimId, $userId) {
                 ud.rate,
                 cd.programme,
                 cd.course,
+                cd.class,
                 cdata.date     AS claim_date,
                 cdata.start_time,
                 cdata.end_time,

@@ -27,7 +27,7 @@ if (!class_exists('ZipArchive')) {
 
 // All completed, unpaid claims with claimant + bank details.
 $claims_sql =
-    "SELECT cd.claimId, cd.programme, cd.course, ud.rate,
+    "SELECT cd.claimId, cd.programme, cd.course, cd.class, ud.rate,
             ud.first_name, ud.last_name, ud.other_names, ud.phone_number,
             ud.department AS user_department, ud.rank,
             bd.bank_name, bd.bank_branch, bd.account_number, bd.account_name
@@ -79,6 +79,7 @@ while ($c = mysqli_fetch_assoc($claims)) {
     $tp->setValue('rate',            $rate);
     $tp->setValue('programme',       $c['programme']);
     $tp->setValue('course',          $c['course']);
+    $tp->setValue('class',           isset($c['class']) ? $c['class'] : '');
     $tp->setValue('bank_name',       $c['bank_name']);
     $tp->setValue('bank_branch',     $c['bank_branch']);
     $tp->setValue('account_number',  $c['account_number']);
