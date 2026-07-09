@@ -2,6 +2,7 @@
 require_once __DIR__ . '/includes/auth.php';
 require_once __DIR__ . '/includes/db.php';
 require_once __DIR__ . '/includes/functions.php';
+require_once __DIR__ . '/includes/hr.queries.php';
 
 require_post();
 
@@ -69,7 +70,9 @@ if ($stage < 1 || $stage > $max_stage) {
 $password_hash  = password_hash($raw_password, PASSWORD_BCRYPT, array('cost' => 12));
 $role           = 'approver';
 $rate           = 0.0;
-$account_status = 'disabled';
+// Auto-activate when the email is on the HR employee register (#1).
+$is_hr_employee = db_email_in_hr_list($conn, $email);
+$account_status = $is_hr_employee ? 'active' : 'disabled';
 $date_created   = date('Y-m-d H:i:s');
 
 mysqli_begin_transaction($conn);
@@ -110,8 +113,11 @@ if ($ok) {
 
 if ($ok) {
     mysqli_commit($conn);
-    log_audit($conn, 'user.register', 'user', $user_id, 'approver self-registration, stage ' . $stage);
-    $_SESSION['message'] = 'Registration successful! You will be notified when your account is activated.';
+    log_audit($conn, 'user.register', 'user', $user_id,
+        'approver self-registration, stage ' . $stage . ($is_hr_employee ? ' (auto-activated via HR register)' : ''));
+    $_SESSION['message'] = $is_hr_employee
+        ? 'Registration successful! Your account was verified against the HR register and is active — you can sign in now.'
+        : 'Registration successful! You will be notified when your account is activated.';
     header('Location: ./index.php');
 } else {
     mysqli_rollback($conn);

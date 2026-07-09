@@ -57,6 +57,11 @@ $base_url = (isset($_SERVER['HTTP_HOST']) && strpos($_SERVER['HTTP_HOST'], 'loca
 
     <div class="rmu-sidebar__section">System</div>
 
+    <a class="rmu-sidebar__link" href="<?php echo $base_url; ?>users/hr">
+      <i class="ti ti-id-badge-2"></i>
+      <span>HR Register</span>
+    </a>
+
     <a class="rmu-sidebar__link" href="<?php echo $base_url; ?>users/admin/pages/rates">
       <i class="ti ti-coin"></i>
       <span>Rank Rates</span>

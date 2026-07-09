@@ -256,8 +256,18 @@ $pageTitle = 'All Users';
           <label class="rmu-label">Rank</label>
           <input type="text" class="rmu-input" id="edit-rank" maxlength="120">
         </div>
-        <div class="rmu-form-group" style="grid-column:1/-1;">
-          <label class="rmu-label">Rate (GHS per period)</label>
+        <div class="rmu-form-group">
+          <label class="rmu-label" for="edit-role">Role</label>
+          <select class="rmu-select" id="edit-role">
+            <option value="claimant">Claimant</option>
+            <option value="approver">Approver</option>
+            <option value="finance">Finance</option>
+            <option value="hr">HR</option>
+            <option value="admin">Admin</option>
+          </select>
+        </div>
+        <div class="rmu-form-group">
+          <label class="rmu-label" for="edit-rate">Rate (GHS per period)</label>
           <input type="number" class="rmu-input" id="edit-rate" min="0" step="0.01">
         </div>
       </div>
@@ -370,6 +380,7 @@ function editUser(userId) {
       document.getElementById('edit-rank').value   = u.rank       || '';
       document.getElementById('edit-rate').value   = (u.rate !== null && u.rate !== undefined)
         ? parseFloat(u.rate).toFixed(2) : '';
+      if (u.role) document.getElementById('edit-role').value = String(u.role).toLowerCase();
       document.getElementById('editModal').classList.add('open');
       document.body.style.overflow = 'hidden';
     })
@@ -391,6 +402,7 @@ function saveUser() {
   fd.append('department', document.getElementById('edit-dept').value.trim());
   fd.append('rank',       document.getElementById('edit-rank').value.trim());
   fd.append('rate',       document.getElementById('edit-rate').value.trim());
+  fd.append('role',       document.getElementById('edit-role').value);
 
   btn.disabled = true;
   btn.innerHTML = '<i class="ti ti-loader"></i> Saving…';

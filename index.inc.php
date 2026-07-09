@@ -135,6 +135,9 @@ switch ($role) {
     case 'finance':
         $redirect = './users/finance';
         break;
+    case 'hr':
+        $redirect = './users/hr';
+        break;
     default:
         $redirect = null;
         break;
