@@ -73,7 +73,7 @@ if ($format === 'csv') {
             $r['department'],
             $r['programme'],
             $r['course'],
-            $r['time_submitted'] ? date('Y-m-d', strtotime($r['time_submitted'])) : '',
+            $r['time_submitted'] ? date('d/m/Y', strtotime($r['time_submitted'])) : '',
             $r['current_stage'] !== null ? (int) $r['current_stage'] : '',
             rpt_status($r),
         )), ',', '"', '');

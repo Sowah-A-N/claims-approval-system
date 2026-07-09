@@ -157,7 +157,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
                 rows.forEach(function(r, idx) {
                     var d   = new Date(r.time_submitted);
-                    var fmt = d.toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric' });
+                    var fmt = d.toLocaleDateString('en-GB', { day:'2-digit', month:'2-digit', year:'numeric' }); // dd/mm/yyyy
 
                     var statusCls = 'rmu-badge--neutral';
                     if (r.status === 'Approved') statusCls = 'rmu-badge--success';
