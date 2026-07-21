@@ -7,7 +7,8 @@ require_once __DIR__ . '/../../../../includes/archive.php';
 checkUserRole(['admin', 'Admin']);
 $CSRF = csrf_token();
 
-archive_ensure_schema($conn);
+$archiveReady = archive_ensure_schema($conn);
+$archiveDbName = archive_db_name($conn);
 
 $sections = archive_sections();
 $sectionKeys = array_keys($sections);
@@ -51,6 +52,30 @@ function arch_cell($col, $val) {
           Archived records disappear from the app but stay recoverable here.
         </div>
       </div>
+
+      <?php if (!$archiveReady): ?>
+      <div class="rmu-card" role="alert" style="margin-bottom:20px;border-left:4px solid var(--clr-warning);">
+        <div class="rmu-card__body">
+          <div style="display:flex;gap:12px;align-items:flex-start;">
+            <i class="ti ti-alert-triangle" style="color:var(--clr-warning);font-size:1.3rem;margin-top:2px;"></i>
+            <div>
+              <div style="font-weight:700;margin-bottom:4px;">Archive storage isn’t available yet</div>
+              <div style="font-size:.85rem;color:var(--txt-secondary);margin-bottom:10px;">
+                The database user can’t access the archive database
+                <code><?php echo h($archiveDbName); ?></code>, so archiving is disabled.
+                Active records below still display normally. Ask your database administrator to run,
+                as a privileged user (adjust the app user/host if different):
+              </div>
+              <pre style="background:var(--surface-2);border:1px solid var(--divider);border-radius:8px;padding:12px 14px;font-size:.8rem;overflow-x:auto;margin:0;"><code>CREATE DATABASE IF NOT EXISTS `<?php echo h($archiveDbName); ?>`
+  DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+GRANT ALL PRIVILEGES ON `<?php echo h(str_replace('_', '\\_', $archiveDbName)); ?>`.*
+  TO 'doc-app'@'%';
+FLUSH PRIVILEGES;</code></pre>
+            </div>
+          </div>
+        </div>
+      </div>
+      <?php endif; ?>
 
       <!-- Section selector -->
       <div class="rmu-card" style="margin-bottom:20px;">

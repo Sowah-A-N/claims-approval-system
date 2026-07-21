@@ -60,3 +60,10 @@ CREATE TABLE IF NOT EXISTS `hr_employees` (
 CREATE DATABASE IF NOT EXISTS `doc-app_archive`
     DEFAULT CHARSET = utf8mb4
     COLLATE = utf8mb4_unicode_ci;
+
+-- The application's (non-root) MySQL user must be granted access to the archive
+-- database, or the Archive page reports "Access denied ... to database
+-- 'doc-app_archive'". Run as a privileged user, replacing 'doc-app'@'%' with
+-- your app user@host (the backslash escapes the underscore):
+-- GRANT ALL PRIVILEGES ON `doc-app\_archive`.* TO 'doc-app'@'%';
+-- FLUSH PRIVILEGES;

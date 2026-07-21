@@ -1438,3 +1438,11 @@ SET FOREIGN_KEY_CHECKS = 1;
 -- ── Archive database (records moved out of the primary DB live here) ────────
 -- Mirror tables are auto-provisioned at runtime by includes/archive.php.
 CREATE DATABASE IF NOT EXISTS `doc-app_archive` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- IMPORTANT: the application connects as a non-root user, which must be granted
+-- access to the archive database or the Archive page reports "Access denied ...
+-- to database 'doc-app_archive'". Run the following as a privileged user,
+-- replacing 'doc-app'@'%' with your application's MySQL user@host. The backslash
+-- escapes the underscore so the grant matches only this database.
+-- GRANT ALL PRIVILEGES ON `doc-app\_archive`.* TO 'doc-app'@'%';
+-- FLUSH PRIVILEGES;

@@ -37,7 +37,11 @@ if (count($ids) > 2000) {
     json_response(array('success' => false, 'message' => 'Too many records in one request (max 2000).'), 422);
 }
 
-archive_ensure_schema($conn);
+if (!archive_ensure_schema($conn)) {
+    json_response(array('success' => false,
+        'message' => 'Archive storage is unavailable. Ask your administrator to create the archive '
+                   . 'database and grant the app user access.'), 503);
+}
 
 $ok = 0; $fail = 0;
 foreach ($ids as $id) {
