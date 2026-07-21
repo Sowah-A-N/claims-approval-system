@@ -52,11 +52,13 @@ function db_get_programmes_by_department($conn, $department) {
 // ── Classes ───────────────────────────────────────────────────────────────────
 
 /*
- * Normalise a class code: trim, collapse spaces, uppercase the letters.
- * e.g. " bit27 " -> "BIT27".
+ * Normalise a class code: trim, collapse spaces, uppercase the letters. Slashes
+ * are preserved (and tightened) so a combined class stays one entry, e.g.
+ * " bit27 / bcs27 " -> "BIT27/BCS27", " bit27 " -> "BIT27".
  */
 function normalize_class_code($raw) {
     $code = strtoupper(trim((string) $raw));
+    $code = preg_replace('/\s*\/\s*/', '/', $code); // tighten spaces around slashes
     return preg_replace('/\s+/', ' ', $code);
 }
 

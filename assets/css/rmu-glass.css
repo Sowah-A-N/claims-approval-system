@@ -11,42 +11,51 @@
   /* Brand: Regional Maritime University — white + blue.
      Light theme; all surfaces are solid for WCAG AA legibility. */
 
+  /* Design tokens — Sea Blue / Navy system.
+     Interactive fills use an AA-safe sea blue (#1B7FA0 = 4.58:1 on white); the
+     brighter brand sea blue (#219EBC) is reserved for accents/indicators where
+     text contrast is not at stake (focus rings, active markers, gradients). */
+
   /* Backgrounds */
-  --bg-base:          linear-gradient(135deg, #f3f7fc 0%, #eaf1fb 50%, #f5f8fd 100%);
-  --bg-glass:         rgba(255,255,255,0.72);  /* frosted surface (cards/modals) */
-  --bg-glass-hover:   #f1f5fb;          /* surface hover */
+  --bg-base:          #f7fafc;          /* near-white page */
+  --bg-glass:         #ffffff;          /* solid cards/modals (clean, legible) */
+  --bg-glass-hover:   #f4fafc;          /* surface hover */
   --bg-glass-strong:  #ffffff;
-  --bg-overlay:       rgba(255, 255, 255, 0.85);
+  --bg-overlay:       rgba(2, 48, 71, 0.45);   /* navy scrim for modals */
 
   /* Semantic surface/divider tokens */
   --surface:          #ffffff;
-  --surface-2:        #f4f7fc;
-  --divider:          rgba(15, 23, 42, 0.08);
+  --surface-2:        #f4fafc;          /* Surface — very light blue */
+  --divider:          #e2e8f0;          /* Borders — light gray */
   --input-bg:         #ffffff;
   --input-bg-disabled:#f1f5f9;
-  --input-border:     rgba(15, 23, 42, 0.20);
-  --scroll-thumb:     rgba(15, 23, 42, 0.22);
-  --scroll-thumb-hov: rgba(15, 23, 42, 0.38);
-  --focus-ring:       rgba(29, 78, 216, 0.55);
+  --input-border:     #cbd5e1;
+  --scroll-thumb:     rgba(2, 48, 71, 0.22);
+  --scroll-thumb-hov: rgba(2, 48, 71, 0.38);
+  --focus-ring:       rgba(33, 158, 188, 0.55);
 
   /* Borders */
-  --border-glass:     1px solid rgba(15, 23, 42, 0.10);
-  --border-glass-md:  1px solid rgba(15, 23, 42, 0.16);
+  --border-glass:     1px solid #e2e8f0;
+  --border-glass-md:  1px solid #cbd5e1;
 
-  /* Colours (AA-contrast on white) */
-  --clr-primary:      #1d4ed8;          /* org blue */
-  --clr-primary-hover:#1e40af;
-  --clr-primary-glow: rgba(29, 130, 246, 0.30);
-  --clr-secondary:    #0284c7;
-  --clr-success:      #047857;
-  --clr-warning:      #b45309;
-  --clr-danger:       #b91c1c;
+  /* Colours */
+  --clr-primary:      #1b7fa0;          /* Sea Blue (AA-safe for white text) */
+  --clr-primary-hover:#156a85;
+  --clr-primary-glow: rgba(33, 158, 188, 0.30);
+  --clr-accent:       #219ebc;          /* brand Sea Blue — accents/indicators */
+  --clr-secondary:    #023047;          /* Navy */
+  --clr-success:      #047857;          /* Emerald, darkened for AA on white */
+  --clr-success-accent:#10b981;
+  --clr-warning:      #b45309;          /* Amber, darkened for AA on white */
+  --clr-warning-accent:#f59e0b;
+  --clr-danger:       #dc2626;          /* Red, AA on white with white text */
+  --clr-danger-accent:#ef4444;
   --clr-info:         #6d28d9;
 
   /* Text */
-  --txt-primary:      #0f2744;          /* navy ink */
-  --txt-secondary:    #475569;          /* ~7:1 on white */
-  --txt-muted:        #5b6b80;          /* ~4.8:1 on white */
+  --txt-primary:      #1e293b;          /* Dark Slate */
+  --txt-secondary:    #64748b;          /* Gray — 4.6:1 on white */
+  --txt-muted:        #5b6b80;          /* ~5:1 on white */
 
   /* Layout */
   --sidebar-w:        260px;
@@ -112,10 +121,8 @@ a:hover { color: var(--clr-secondary); }
   top: 0; left: 0;
   width: var(--sidebar-w);
   height: 100vh;
-  background: var(--surface);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border-right: var(--border-glass);
+  background: var(--clr-secondary);   /* Navy */
+  border-right: 1px solid rgba(255,255,255,0.08);
   display: flex;
   flex-direction: column;
   z-index: 1000;
@@ -128,7 +135,7 @@ a:hover { color: var(--clr-secondary); }
   align-items: center;
   gap: 12px;
   padding: 24px 20px 20px;
-  border-bottom: var(--border-glass);
+  border-bottom: 1px solid rgba(255,255,255,0.10);
 }
 
 .rmu-sidebar__brand-icon {
@@ -149,14 +156,14 @@ a:hover { color: var(--clr-secondary); }
 .rmu-sidebar__brand-name {
   font-size: 0.88rem;
   font-weight: 700;
-  color: var(--txt-primary);
+  color: #ffffff;
   letter-spacing: 0.02em;
   line-height: 1.2;
 }
 
 .rmu-sidebar__brand-sub {
   font-size: 0.7rem;
-  color: var(--txt-secondary);
+  color: rgba(255,255,255,0.60);
   font-weight: 400;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -173,7 +180,7 @@ a:hover { color: var(--clr-secondary); }
   font-weight: 600;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: var(--txt-muted);
+  color: rgba(255,255,255,0.50);
 }
 
 .rmu-sidebar__link {
@@ -181,25 +188,25 @@ a:hover { color: var(--clr-secondary); }
   align-items: center;
   gap: 12px;
   padding: 10px 20px;
-  color: var(--txt-secondary);
+  color: rgba(255,255,255,0.78);
   font-size: 0.85rem;
   font-weight: 500;
   border-left: 3px solid transparent;
-  transition: all .2s;
+  transition: background .2s, color .2s, border-color .2s;
   cursor: pointer;
 }
 
 .rmu-sidebar__link:hover {
-  color: var(--txt-primary);
-  background: var(--surface-2);
-  border-left-color: var(--clr-primary);
+  color: #ffffff;
+  background: rgba(255,255,255,0.07);
+  border-left-color: var(--clr-accent);
   text-decoration: none;
 }
 
 .rmu-sidebar__link.active {
-  color: var(--clr-primary);
-  background: rgba(59, 130, 246, 0.1);
-  border-left-color: var(--clr-primary);
+  color: #ffffff;
+  background: rgba(33, 158, 188, 0.20);   /* Sea Blue wash */
+  border-left-color: var(--clr-accent);
 }
 
 .rmu-sidebar__link i {
@@ -211,7 +218,7 @@ a:hover { color: var(--clr-secondary); }
 
 .rmu-sidebar__footer {
   padding: 16px 20px;
-  border-top: var(--border-glass);
+  border-top: 1px solid rgba(255,255,255,0.10);
 }
 
 /* ============================================================
@@ -279,7 +286,7 @@ a:hover { color: var(--clr-secondary); }
   font-weight: 700;
   color: #fff;
   cursor: pointer;
-  border: 2px solid rgba(59, 130, 246, 0.4);
+  border: 2px solid rgba(33, 158, 188, 0.45);
 }
 
 /* Dropdown */
@@ -547,14 +554,15 @@ a:hover { color: var(--clr-secondary); }
 .rmu-btn--primary {
   background: var(--clr-primary);
   color: #fff;
-  box-shadow: 0 4px 14px rgba(59,130,246,0.35);
+  box-shadow: 0 4px 14px rgba(27,127,160,0.30);
 }
 .rmu-btn--primary:hover {
-  background: #2563eb;
-  box-shadow: 0 6px 20px rgba(59,130,246,0.5);
+  background: var(--clr-primary-hover);
+  box-shadow: 0 6px 20px rgba(27,127,160,0.42);
   transform: translateY(-1px);
   color: #fff;
 }
+.rmu-btn--primary:active { transform: translateY(0); }
 
 .rmu-btn--secondary {
   background: var(--surface);
@@ -570,19 +578,19 @@ a:hover { color: var(--clr-secondary); }
   background: var(--clr-success);
   color: #fff;
 }
-.rmu-btn--success:hover { background: #059669; color: #fff; }
+.rmu-btn--success:hover { background: #036c4d; color: #fff; }
 
 .rmu-btn--danger {
   background: var(--clr-danger);
   color: #fff;
 }
-.rmu-btn--danger:hover { background: #dc2626; color: #fff; }
+.rmu-btn--danger:hover { background: #b91c1c; color: #fff; }
 
 .rmu-btn--warning {
   background: var(--clr-warning);
-  color: #1a1a1a;
+  color: #fff;
 }
-.rmu-btn--warning:hover { background: #d97706; }
+.rmu-btn--warning:hover { background: #96450a; color: #fff; }
 
 .rmu-btn--outline {
   background: transparent;
@@ -639,7 +647,7 @@ a:hover { color: var(--clr-secondary); }
 .rmu-textarea:focus {
   border-color: var(--clr-primary);
   background: var(--input-bg);
-  box-shadow: 0 0 0 3px rgba(29,78,216,0.18);
+  box-shadow: 0 0 0 3px rgba(33,158,188,0.22);
 }
 
 .rmu-input::placeholder { color: var(--txt-muted); }
@@ -685,12 +693,12 @@ a:hover { color: var(--clr-secondary); }
   letter-spacing: 0.05em;
 }
 
-.rmu-badge--primary  { background: rgba(29,78,216,0.12);   color: #1d4ed8; }
-.rmu-badge--success  { background: rgba(4,120,87,0.13);    color: #047857; }
-.rmu-badge--warning  { background: rgba(180,83,9,0.13);    color: #b45309; }
-.rmu-badge--danger   { background: rgba(185,28,28,0.12);   color: #b91c1c; }
+.rmu-badge--primary  { background: rgba(33,158,188,0.14);  color: #156a85; }
+.rmu-badge--success  { background: rgba(16,185,129,0.15);  color: #047857; }
+.rmu-badge--warning  { background: rgba(245,158,11,0.16);  color: #b45309; }
+.rmu-badge--danger   { background: rgba(239,68,68,0.13);   color: #b91c1c; }
 .rmu-badge--info     { background: rgba(109,40,217,0.12);  color: #6d28d9; }
-.rmu-badge--neutral  { background: rgba(15,23,42,0.06);    color: var(--txt-secondary); }
+.rmu-badge--neutral  { background: rgba(2,48,71,0.07);     color: var(--txt-secondary); }
 
 /* ============================================================
    ALERT

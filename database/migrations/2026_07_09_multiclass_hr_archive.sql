@@ -17,6 +17,10 @@
 ALTER TABLE `claim_details` MODIFY `class` VARCHAR(255) NULL;
 ALTER TABLE `saved_claims`  MODIFY `class` VARCHAR(255) NULL;
 
+-- A single class entry may itself be a combined/joint class such as
+-- "BIT27/BCS27/DIT25", so widen the individual class-code column too.
+ALTER TABLE `classes` MODIFY `class_code` VARCHAR(60) NOT NULL;
+
 
 -- ── #1 HR role + employee register ──────────────────────────────────────────
 -- New 'hr' role. Registrants whose email is on hr_employees are auto-activated.

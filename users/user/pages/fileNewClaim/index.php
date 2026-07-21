@@ -117,8 +117,8 @@ if ($draftSlotsJson === false) $draftSlotsJson = '[]';
                                 <label class="rmu-label" for="classInput">Class(es) <span class="required">*</span></label>
                                 <div id="classChips" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px;"></div>
                                 <input type="text" class="rmu-input" id="classInput"
-                                       list="classList" maxlength="20" autocomplete="off"
-                                       placeholder="Type a class, press Enter (e.g. BIT27)"
+                                       list="classList" maxlength="60" autocomplete="off"
+                                       placeholder="e.g. BIT27  or combined  BIT27/BCS27/DIT25"
                                        onkeydown="onClassKey(event)" onchange="commitClassInput()"
                                        onblur="commitClassInput()" oninput="this.value=this.value.toUpperCase()">
                                 <datalist id="classList">
@@ -128,7 +128,7 @@ if ($draftSlotsJson === false) $draftSlotsJson = '[]';
                                 </datalist>
                                 <!-- Hidden field holds the comma-joined class list actually submitted (#5). -->
                                 <input type="hidden" id="class" name="class">
-                                <div class="rmu-form-hint">Add one or more classes &mdash; press Enter or comma after each; click &times; to remove.</div>
+                                <div class="rmu-form-hint">Press Enter or comma after each class. For a joint session, enter one combined class with slashes &mdash; e.g. <strong>BIT27/BCS27/DIT25</strong>.</div>
                             </div>
                         </div>
                         <div style="margin-top:16px;display:flex;align-items:center;gap:10px;">
@@ -678,9 +678,11 @@ function renderClassChips() {
 }
 
 function addClassCode(raw) {
-    let code = String(raw || '').trim().toUpperCase().replace(/\s+/g, ' ');
+    // Keep slashes so a combined class like BIT27/BCS27/DIT25 stays one entry;
+    // only commas separate distinct classes (handled by commitClassInput).
+    let code = String(raw || '').trim().toUpperCase().replace(/\s*\/\s*/g, '/').replace(/\s+/g, ' ');
     if (code === '') return false;
-    if (code.length > 20) code = code.slice(0, 20);
+    if (code.length > 60) code = code.slice(0, 60);
     if (CLASSES.indexOf(code) !== -1) return false;      // already added
     if (CLASSES.length >= MAX_CLASSES) {
         swal('info', 'Limit reached', 'A claim may include at most ' + MAX_CLASSES + ' classes.');
