@@ -890,10 +890,20 @@ function renderPreview() {
     const cls       = document.getElementById('class').value.trim().toUpperCase();
     const showFuel  = !!FUEL_ENABLED;
 
+    const metaItem = function (label, value) {
+        return '<div style="display:flex;flex-direction:column;gap:2px;">' +
+            '<span style="font-size:.68rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--txt-muted);">' + label + '</span>' +
+            '<span style="font-size:.92rem;font-weight:600;color:var(--txt-primary);">' + (value || '&mdash;') + '</span></div>';
+    };
     document.getElementById('previewMeta').innerHTML =
-        '<strong style="color:var(--txt-primary);">' + _esc(cls) + '</strong> &middot; ' +
-        _esc(course) + ' &middot; ' + _esc(prog) + ' &middot; ' + _esc(dept) +
-        ' &middot; Rate GH&#8373; ' + fmt(RATE) + ' / period';
+        '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px 20px;' +
+        'padding:14px 16px;background:var(--surface-2);border:1px solid var(--divider);border-radius:10px;">' +
+        metaItem('Class(es)', _esc(cls)) +
+        metaItem('Programme', _esc(prog)) +
+        metaItem('Course',    _esc(course)) +
+        metaItem('Department', _esc(dept)) +
+        metaItem('Rate', 'GH&#8373; ' + fmt(RATE) + ' / period') +
+        '</div>';
 
     let grand = 0, totalDates = 0, anyEmpty = false, rows = '', rowNum = 0;
 

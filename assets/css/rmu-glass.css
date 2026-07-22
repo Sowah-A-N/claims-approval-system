@@ -558,6 +558,27 @@ a:hover { color: var(--clr-secondary); }
   transition: all .2s;
   white-space: nowrap;
 }
+.rmu-btn:disabled, .rmu-btn[aria-disabled="true"] {
+  opacity: .6; cursor: not-allowed; transform: none !important; box-shadow: none;
+}
+
+/* Loading state (#5): hide the label, overlay a spinner, block further clicks. */
+@keyframes rmu-spin { to { transform: rotate(360deg); } }
+.rmu-btn.is-loading { color: transparent !important; pointer-events: none; position: relative; }
+.rmu-btn.is-loading > * { visibility: hidden; }
+.rmu-btn.is-loading::after {
+  content: ""; position: absolute; top: 50%; left: 50%;
+  width: 1.05em; height: 1.05em; margin: -0.525em 0 0 -0.525em;
+  border: 2px solid rgba(255,255,255,0.55); border-top-color: #fff;
+  border-radius: 50%; animation: rmu-spin .6s linear infinite;
+}
+.rmu-btn--secondary.is-loading::after,
+.rmu-btn--outline.is-loading::after {
+  border-color: rgba(15,23,42,0.30); border-top-color: var(--txt-primary);
+}
+@media (prefers-reduced-motion: reduce) {
+  .rmu-btn.is-loading::after { animation-duration: 1.5s; }
+}
 
 .rmu-btn--primary {
   background: var(--clr-primary);

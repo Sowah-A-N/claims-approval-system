@@ -17,6 +17,7 @@ checkUserRole(['hr', 'HR']);
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.4.0/dist/tabler-icons.min.css" integrity="sha384-ldmpcx1x0Xzlz3FRdxRDXdddHL6gUAnUo8m6ERvU0MbQIl53rnzI7hCF+Fd8lRsX" crossorigin="anonymous" referrerpolicy="no-referrer">
   <?php $rmu_css = ($pageTitle === 'HR Dashboard') ? '../../assets/css/rmu-glass.css?v=4' : '../../../../assets/css/rmu-glass.css?v=4'; ?>
   <link rel="stylesheet" href="<?php echo $rmu_css; ?>">
+  <script src="<?php echo str_replace('css/rmu-glass.css', 'js/rmu-ui.js', $rmu_css); ?>" defer></script>
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.26.25/dist/sweetalert2.all.min.js" integrity="sha384-nLoOnA/BDh8A/jxqtckg4DumuCGOBYUnNJLZdQz/zfYNp3wcjGSoWTAzgko06G/2" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
   <script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js" integrity="sha384-1H217gwSVyLSIfaLxHbE7dRb3v4mYCKbpQvzx0cegeju1MVsGrX5xXxAvs/HgeFs" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 </head>
