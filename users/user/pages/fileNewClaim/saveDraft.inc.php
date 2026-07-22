@@ -68,6 +68,13 @@ if ($claimTempId > 0) {
     mysqli_stmt_close($stmt);
 }
 
+// Claims may only be filed for previous months. Enforce the same cut-off the
+// submit step uses so a draft can never contain a date it will later refuse to
+// submit (which previously left drafts stuck). Out-of-range dates are skipped
+// and reported rather than silently saved.
+$max_claim_date = date('Y-m-d', strtotime('-1 day', strtotime(date('Y-m-01'))));
+$skipped_future = 0;
+
 if ($ok) {
     foreach ($timeSlots as $slot) {
         $start  = validated_str($slot['startTime']     ?? '');
@@ -84,6 +91,10 @@ if ($ok) {
         foreach ($dates as $raw) {
             $date = validated_str($raw);
             if (!$date) continue;
+            if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $date) || $date > $max_claim_date) {
+                $skipped_future++;   // current/future month — not claimable
+                continue;
+            }
             $ok = db_insert_claim_data_row($conn, $claimTempId, $date, $start, $end, $periods, $sub, $fuel);
             if (!$ok) break 2;
         }
@@ -95,7 +106,13 @@ if ($ok) {
     foreach (class_list_to_array($class) as $one_class) {  // remember each code (#5)
         db_upsert_class($conn, $one_class);
     }
-    json_response(['claimTempId' => $claimTempId, 'message' => 'Draft saved successfully.']);
+    $msg = 'Draft saved successfully.';
+    if ($skipped_future > 0) {
+        $msg .= ' ' . $skipped_future . ' date(s) in the current/future month were not saved '
+              . '(claims are for previous months only; latest allowed '
+              . date('d/m/Y', strtotime($max_claim_date)) . ').';
+    }
+    json_response(['claimTempId' => $claimTempId, 'message' => $msg, 'skippedFuture' => $skipped_future]);
 } else {
     mysqli_rollback($conn);
     error_log('[saveDraft] failed: ' . mysqli_error($conn));
