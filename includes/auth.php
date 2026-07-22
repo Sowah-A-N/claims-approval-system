@@ -76,6 +76,14 @@ function require_role($roles) {
     require_auth();
     $role = isset($_SESSION['role']) ? $_SESSION['role'] : '';
     if (!in_array($role, $roles)) {
+        // A logged-in user viewing a page meant for another role is sent to
+        // their own dashboard. AJAX/endpoint calls (non-GET) still get a 403 so
+        // clients handle it as an error rather than following a redirect.
+        $method = isset($_SERVER['REQUEST_METHOD']) ? strtoupper($_SERVER['REQUEST_METHOD']) : 'GET';
+        if ($method === 'GET') {
+            header('Location: ' . role_home_path($role));
+            exit;
+        }
         http_response_code(403);
         $error_page = dirname(__DIR__) . '/error_pages/403.php';
         if (file_exists($error_page)) {
@@ -93,6 +101,25 @@ function current_user_id() {
 
 function current_user_role() {
     return isset($_SESSION['role']) ? (string) $_SESSION['role'] : '';
+}
+
+/*
+ * Absolute path to a role's dashboard, using the same base-path convention as
+ * the sidebars (localhost dev is served under /claims-approval-system/, other
+ * hosts at the site root). Unknown/empty roles fall back to the site root.
+ */
+function role_home_path($role) {
+    $base = (isset($_SERVER['HTTP_HOST']) && strpos($_SERVER['HTTP_HOST'], 'localhost') !== false)
+        ? '/claims-approval-system/' : '/';
+    switch (strtolower((string) $role)) {
+        case 'user':
+        case 'claimant': return $base . 'users/user/';
+        case 'approver': return $base . 'users/approver/';
+        case 'admin':    return $base . 'users/admin/';
+        case 'finance':  return $base . 'users/finance/';
+        case 'hr':       return $base . 'users/hr/';
+        default:         return $base;
+    }
 }
 
 
@@ -135,8 +162,12 @@ function isUserLoggedIn() {
 
 function checkUserRole($allowedRole) {
     $role = isset($_SESSION['role']) ? $_SESSION['role'] : '';
-    if (!is_logged_in() || !in_array($role, $allowedRole)) {
-        header('Location: /');
+    if (!is_logged_in()) {
+        header('Location: /');            // not signed in -> login
+        exit;
+    }
+    if (!in_array($role, $allowedRole)) {
+        header('Location: ' . role_home_path($role));  // wrong role -> own dashboard
         exit;
     }
 }
