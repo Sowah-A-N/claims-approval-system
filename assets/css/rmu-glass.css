@@ -1094,6 +1094,21 @@ img, svg, video, canvas { max-width: 100%; height: auto; }
 }
 @media (min-width: 1025px) { .rmu-sidebar-backdrop { display: none; } }
 
+/* Claim editor on small screens: the recurring-date generator's fixed-width
+   date inputs used to overflow the session card. Let them stack full-width and
+   keep all session inputs within the card. */
+@media (max-width: 560px) {
+  .recur-panel .rmu-form-group { flex: 1 1 100%; }
+  .recur-panel .recur-from,
+  .recur-panel .recur-to { width: 100% !important; }
+  /* Session time row: 4 columns don't fit a phone — go 2-up and let the
+     native time inputs shrink instead of forcing the card wider than screen. */
+  .slot-time-grid { grid-template-columns: 1fr 1fr !important; }
+  .rmu-slot-card .rmu-input,
+  .rmu-slot-card .rmu-select,
+  .slot-time-grid .rmu-input { max-width: 100%; min-width: 0; }
+}
+
 /* ============================================================
    ACCESSIBILITY (WCAG 2.2 AA)
    ============================================================ */

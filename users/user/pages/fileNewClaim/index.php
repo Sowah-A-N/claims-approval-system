@@ -325,7 +325,7 @@ function addSlot(prefill) {
         <div class="rmu-card__body">
 
             <!-- Time / periods / sub-total row -->
-            <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:16px;">
+            <div class="slot-time-grid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:16px;">
                 <div class="rmu-form-group" style="margin-bottom:0;">
                     <label class="rmu-label">Start Time <span class="required">*</span></label>
                     <input type="time" class="rmu-input slot-start" oninput="recalculate()">

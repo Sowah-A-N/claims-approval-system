@@ -18,7 +18,7 @@ if (isset($pageTitle) && $pageTitle === 'Reports') {
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.4.0/dist/tabler-icons.min.css" integrity="sha384-ldmpcx1x0Xzlz3FRdxRDXdddHL6gUAnUo8m6ERvU0MbQIl53rnzI7hCF+Fd8lRsX" crossorigin="anonymous" referrerpolicy="no-referrer">
-  <?php $rmu_css = ($pageTitle === 'Admin Dashboard') ? '../../assets/css/rmu-glass.css?v=4' : '../../../../assets/css/rmu-glass.css?v=4'; ?>
+  <?php $rmu_css = ($pageTitle === 'Admin Dashboard') ? '../../assets/css/rmu-glass.css?v=5' : '../../../../assets/css/rmu-glass.css?v=5'; ?>
   <link rel="stylesheet" href="<?php echo $rmu_css; ?>">
   <script src="<?php echo str_replace('css/rmu-glass.css', 'js/rmu-ui.js', $rmu_css); ?>" defer></script>
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.26.25/dist/sweetalert2.all.min.js" integrity="sha384-nLoOnA/BDh8A/jxqtckg4DumuCGOBYUnNJLZdQz/zfYNp3wcjGSoWTAzgko06G/2" crossorigin="anonymous" referrerpolicy="no-referrer"></script>

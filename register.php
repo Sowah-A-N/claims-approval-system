@@ -14,7 +14,7 @@ require_once __DIR__ . '/includes/auth.php';
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.4.0/dist/tabler-icons.min.css" integrity="sha384-ldmpcx1x0Xzlz3FRdxRDXdddHL6gUAnUo8m6ERvU0MbQIl53rnzI7hCF+Fd8lRsX" crossorigin="anonymous" referrerpolicy="no-referrer">
-  <link rel="stylesheet" href="./assets/css/rmu-glass.css?v=4">
+  <link rel="stylesheet" href="./assets/css/rmu-glass.css?v=5">
   <script src="./assets/js/rmu-ui.js?v=1" defer></script>
 </head>
 <body>
