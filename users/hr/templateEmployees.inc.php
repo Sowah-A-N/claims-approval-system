@@ -4,7 +4,7 @@ require_once __DIR__ . '/../../includes/auth.php';
 require_once __DIR__ . '/../../includes/db.php';
 require_once __DIR__ . '/../../includes/functions.php';
 
-require_role(array('hr', 'HR', 'admin', 'Admin'));
+require_role(array('hr', 'HR'));
 
 header('Content-Type: text/csv; charset=utf-8');
 header('Content-Disposition: attachment; filename="hr_employees_template.csv"');

@@ -4,7 +4,7 @@ require_once __DIR__ . '/../../../../includes/auth.php';
 require_once __DIR__ . '/../../../../includes/db.php';
 require_once __DIR__ . '/../../../../includes/functions.php';
 // Admins may also manage the HR register (oversight); HR users are the primary owners.
-checkUserRole(['hr', 'HR', 'admin', 'Admin']);
+checkUserRole(['hr', 'HR']);
 ?>
 <head>
   <meta charset="utf-8">

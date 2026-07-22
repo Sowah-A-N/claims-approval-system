@@ -9,8 +9,7 @@ foreach (explode(' ', trim($_hr_name)) as $p) {
     if (strlen($_hr_initials) >= 2) break;
 }
 if ($_hr_initials === '') $_hr_initials = 'H';
-$_hr_role_label = (isset($_SESSION['role']) && strtolower($_SESSION['role']) === 'admin')
-    ? 'Administrator' : 'HR Officer';
+$_hr_role_label = 'HR Officer';
 ?>
 <header class="rmu-header" id="rmu-header">
 

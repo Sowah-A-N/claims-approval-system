@@ -6,7 +6,7 @@ require_once __DIR__ . '/../../includes/functions.php';
 require_once __DIR__ . '/../../includes/hr.queries.php';
 
 require_post();
-require_role(array('hr', 'HR', 'admin', 'Admin'));
+require_role(array('hr', 'HR'));
 csrf_verify();
 
 if (!isset($_FILES['csv']) || $_FILES['csv']['error'] !== UPLOAD_ERR_OK) {
