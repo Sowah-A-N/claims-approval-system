@@ -47,4 +47,27 @@
     // Fail-safe: release if nothing (navigation / callback) has reset it.
     window.setTimeout(function () { setLoading(el, false); }, 12000);
   }, true);
+
+  // Mobile off-canvas sidebar backdrop (#1, #6): dim the page when the sidebar
+  // is open and let a tap outside (or Escape) close it. Works in every portal
+  // area since the sidebar toggles a single `.open` class.
+  document.addEventListener('DOMContentLoaded', function () {
+    var sidebar = document.getElementById('rmu-sidebar');
+    if (!sidebar) return;
+    var backdrop = document.createElement('div');
+    backdrop.className = 'rmu-sidebar-backdrop';
+    document.body.appendChild(backdrop);
+
+    var close = function () { sidebar.classList.remove('open'); };
+    backdrop.addEventListener('click', close);
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && sidebar.classList.contains('open')) close();
+    });
+
+    var sync = function () {
+      document.body.classList.toggle('rmu-sidebar-open', sidebar.classList.contains('open'));
+    };
+    new MutationObserver(sync).observe(sidebar, { attributes: true, attributeFilter: ['class'] });
+    sync();
+  });
 })();

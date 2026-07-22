@@ -1047,7 +1047,7 @@ a:hover { color: var(--clr-secondary); }
    ============================================================ */
 @media (max-width: 1024px) {
   .rmu-sidebar { transform: translateX(-100%); transition: transform .3s; }
-  .rmu-sidebar.open { transform: translateX(0); }
+  .rmu-sidebar.open { transform: translateX(0) !important; }
   .rmu-header { left: 0; }
   .rmu-main  { margin-left: 0; }
   /* Sidebar collapses off-canvas, so admin/approver wrappers reclaim the space */
@@ -1068,6 +1068,31 @@ a:hover { color: var(--clr-secondary); }
   .rmu-stats { grid-template-columns: 1fr; }
   .rmu-login-form-wrap { padding: 28px 20px; }
 }
+
+/* ── Mobile-first overflow guard (#1, #6) ──────────────────────────────────────
+   Stray wide content (tables, long ids, fixed widths) used to push the page
+   wider than the viewport, so phones rendered it shrunk-to-fit like a tiny
+   desktop. Contain the page width and keep wide content scrolling *inside* its
+   own container instead of widening the page. */
+html, body { max-width: 100%; overflow-x: hidden; }
+img, svg, video, canvas { max-width: 100%; height: auto; }
+.rmu-main, .body-wrapper, .page-wrapper, #main-wrapper,
+.container-fluid, .content-wrapper, .rmu-content, .rmu-card {
+  min-width: 0; max-width: 100%;
+}
+.rmu-table-wrap { max-width: 100%; -webkit-overflow-scrolling: touch; }
+
+/* Backdrop shown behind the off-canvas sidebar on small screens (toggled by
+   rmu-ui.js), so opening the menu dims the page and tapping outside closes it. */
+.rmu-sidebar-backdrop {
+  position: fixed; inset: 0; background: rgba(2,48,71,0.45);
+  z-index: 999; opacity: 0; visibility: hidden; transition: opacity .25s;
+}
+@media (max-width: 1024px) {
+  body.rmu-sidebar-open .rmu-sidebar-backdrop { opacity: 1; visibility: visible; }
+  body.rmu-sidebar-open { overflow: hidden; }
+}
+@media (min-width: 1025px) { .rmu-sidebar-backdrop { display: none; } }
 
 /* ============================================================
    ACCESSIBILITY (WCAG 2.2 AA)
