@@ -2,10 +2,10 @@
 /*
  * Shared renderer for the RMU claim form PDF.
  *
- * Produces the "Application for Payment of Lecturing Fees to Resource Person"
- * claim as a clean, modern, print-ready document. Used by both the claimant and
- * finance downloads (users/user/.../downloadClaimPDF.inc.php and
- * users/finance/downloadClaimPDF.inc.php) so the output is identical.
+ * Produces an EXACT replica of the scanned physical form
+ * "APPLICATION FOR PAYMENT OF LECTURING FEES TO RESOURCE PERSON"
+ * (Doc. No. ACA/F/10) so finance/QA can compare it 1:1 with the paper form.
+ * Used by both the claimant and finance downloads.
  *
  * $rows is the claim's teaching-session rows (as returned by
  * db_get_claim_download_data / the finance query) sharing one header. Expected
@@ -70,7 +70,10 @@ function claim_amount_in_words($amount) {
     return $words;
 }
 
-/* Render the full HTML document for the claim form and auto-open the print dialog. */
+/*
+ * Render the claim form as a faithful copy of the printed ACA/F/10 sheet and
+ * auto-open the print dialog.
+ */
 function render_rmu_claim_form(array $rows, array $opts = array()) {
     $first = $rows[0];
     $rate  = (float) $first['rate'];
@@ -84,18 +87,20 @@ function render_rmu_claim_form(array $rows, array $opts = array()) {
     $programme  = isset($first['programme']) ? (string) $first['programme'] : '';
     $course     = isset($first['course']) ? (string) $first['course'] : '';
     $classes    = isset($first['class']) ? (string) $first['class'] : '';
-    $claim_id   = isset($first['claimId']) ? (string) $first['claimId'] : '';
 
     // Web-root-relative base so the crest resolves regardless of the caller's depth.
     $base = (isset($_SERVER['HTTP_HOST']) && strpos($_SERVER['HTTP_HOST'], 'localhost') !== false)
         ? '/claims-approval-system/' : '/';
     $logo = $base . 'login/images/rmu.jpg';
 
+    // The paper form has ~13 body rows; pad short claims so it looks identical.
+    $min_rows   = 13;
+    $blank_rows = max(0, $min_rows - count($rows));
+
     $fmt_time = function ($t) {
         $ts = strtotime($t);
         return $ts ? date('g:i A', $ts) : (string) $t;
     };
-    $dash = '<span class="muted">&mdash;</span>';
     ?><!DOCTYPE html>
 <html lang="en">
 <head>
@@ -103,138 +108,54 @@ function render_rmu_claim_form(array $rows, array $opts = array()) {
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>RMU Claim Form &mdash; <?php echo h($full_name); ?></title>
 <style>
-  :root {
-    --ink:#0f2744; --brand:#1d4ed8; --brand-dark:#173a9e;
-    --muted:#5b6b82; --line:#d9e0ea; --line-strong:#b9c4d4;
-    --tint:#f1f5fc; --band:#0f2744; --paper:#ffffff;
-  }
-  * { box-sizing:border-box; margin:0; padding:0; }
-  html { -webkit-print-color-adjust:exact; print-color-adjust:exact; }
-  body {
-    font-family:-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
-    color:var(--ink); background:#eef1f6; line-height:1.5;
-    font-size:13px; padding:24px 16px;
-  }
-  .sr-only { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); }
-  .muted { color:var(--muted); }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  body { font-family: "Times New Roman", Times, serif; color: #000; background: #d9dde3; font-size: 12pt; }
+  .toolbar { max-width: 900px; margin: 14px auto 0; text-align: right; }
+  .btn { padding: 8px 16px; border: none; border-radius: 4px; font-size: 11pt; cursor: pointer; color: #fff; margin-left: 6px; }
+  .btn-print { background: #1d4ed8; }
+  .btn-close { background: #6b7280; }
 
-  /* Screen toolbar */
-  .toolbar {
-    max-width:900px; margin:0 auto 14px; display:flex; justify-content:flex-end; gap:10px;
-  }
-  .btn { padding:9px 18px; border:none; border-radius:8px; font-size:13px; font-weight:600;
-         cursor:pointer; color:#fff; display:inline-flex; align-items:center; gap:7px; }
-  .btn-print { background:var(--brand); }
-  .btn-print:hover { background:var(--brand-dark); }
-  .btn-close { background:#64748b; }
-  .btn:focus-visible { outline:3px solid #93b4ff; outline-offset:2px; }
-
-  /* The document page */
-  .page {
-    max-width:900px; margin:0 auto; background:var(--paper);
-    border-radius:12px; box-shadow:0 8px 30px rgba(15,39,68,.12);
-    overflow:hidden;
-  }
-  .page__inner { padding:34px 40px 30px; }
-
-  /* Header */
-  .doc-head { display:flex; align-items:center; justify-content:space-between; gap:20px; }
-  .brand { display:flex; align-items:center; gap:16px; min-width:0; }
-  .brand .crest { height:58px; width:auto; flex:none; }
-  .uni { font-size:20px; font-weight:700; letter-spacing:-.01em; line-height:1.15; }
-  .doc-sub { font-size:12px; color:var(--muted); margin-top:2px; }
-  .doc-meta { text-align:right; font-size:12px; color:var(--muted); flex:none; }
-  .doc-meta b { display:block; color:var(--ink); font-size:14px; font-weight:700; }
-  .doc-meta div + div { margin-top:6px; }
-  .accent { height:4px; background:linear-gradient(90deg,var(--brand),#4f7cf0); margin:18px 0 0; border-radius:3px; }
-
-  /* Application title */
-  .apptitle { margin-top:22px; }
-  .eyebrow { font-size:10.5px; font-weight:700; letter-spacing:.14em; text-transform:uppercase; color:var(--brand); }
-  .apptitle h1 { font-size:17px; font-weight:700; margin-top:4px; }
-  .lede { color:var(--muted); font-size:12.5px; margin-top:3px; }
-
-  /* Meta grid */
-  .meta-grid {
-    margin-top:18px; display:grid; grid-template-columns:repeat(2,minmax(0,1fr));
-    gap:10px 28px; padding:16px 18px; background:var(--tint); border-radius:10px;
-  }
-  .meta .k { display:block; font-size:10px; font-weight:700; letter-spacing:.08em;
-             text-transform:uppercase; color:var(--muted); }
-  .meta .v { display:block; font-size:13.5px; font-weight:600; margin-top:2px; }
-
-  /* Table */
-  .table-wrap { margin-top:20px; overflow-x:auto; border:1px solid var(--line); border-radius:10px; }
-  table.claim { width:100%; border-collapse:collapse; min-width:720px; font-size:12px; }
-  table.claim caption { text-align:left; }
-  table.claim thead th {
-    background:var(--band); color:#fff; font-weight:600; font-size:10.5px;
-    letter-spacing:.05em; text-transform:uppercase; text-align:left;
-    padding:11px 12px; white-space:nowrap;
-  }
-  table.claim thead th.num { text-align:right; }
-  table.claim thead th.ctr { text-align:center; }
-  table.claim tbody td { padding:10px 12px; border-top:1px solid var(--line); vertical-align:top; }
-  table.claim tbody tr:nth-child(even) td { background:#f7f9fd; }
-  td.num { text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap; }
-  td.ctr { text-align:center; white-space:nowrap; }
-  .course-name { font-weight:600; }
-  .prog { color:var(--muted); }
-  tfoot .grand td { border-top:2px solid var(--line-strong); padding:12px; font-weight:700; font-size:13px; background:var(--tint); }
-  tfoot .grand .label { text-align:right; letter-spacing:.04em; text-transform:uppercase; font-size:11px; color:var(--muted); }
-  tfoot .grand .amt { text-align:right; font-size:15px; }
-
-  /* Amount in words */
-  .words { margin-top:16px; padding:13px 16px; border:1px dashed var(--line-strong);
-           border-radius:10px; background:#fff; }
-  .words .k { font-size:10px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); }
-  .words .v { font-size:14px; font-weight:700; margin-top:3px; }
-
-  /* Sign-offs */
-  .signoffs { margin-top:26px; }
-  .sign-claimant { display:grid; grid-template-columns:2fr 1fr 1fr; gap:22px; margin-bottom:26px; }
-  .field .line { border-bottom:1.5px solid var(--ink); height:26px; }
-  .field .lab { font-size:10.5px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--muted); margin-top:6px; }
-  .field .pre { font-size:13.5px; font-weight:600; padding-bottom:2px; }
-
-  .approvals h2 { font-size:11px; font-weight:700; letter-spacing:.1em; text-transform:uppercase;
-                  color:var(--muted); margin-bottom:12px; }
-  .approvals-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:22px 26px; }
-  .appr { }
-  .appr .line { border-bottom:1.5px solid var(--ink); height:30px; }
-  .appr .lab { font-size:11px; margin-top:6px; }
-  .appr .lab b { display:block; color:var(--ink); }
-  .appr .lab span { color:var(--muted); font-size:10px; }
-
-  /* Document-control footer */
-  .doc-control {
-    margin-top:26px; border-top:1px solid var(--line); padding-top:12px;
-    display:flex; flex-wrap:wrap; gap:6px 22px; font-size:10px; color:var(--muted);
-  }
-  .doc-control b { color:var(--ink); font-weight:600; }
-
-  /* Responsive (on-screen) */
-  @media (max-width:640px) {
-    body { padding:12px 8px; }
-    .page__inner { padding:20px 16px; }
-    .doc-head { flex-direction:column; align-items:flex-start; }
-    .doc-meta { text-align:left; }
-    .uni { font-size:17px; }
-    .meta-grid { grid-template-columns:1fr; }
-    .sign-claimant { grid-template-columns:1fr; gap:16px; }
-    .approvals-grid { grid-template-columns:1fr; }
+  .sheet {
+    max-width: 900px; margin: 14px auto; background: #fff; padding: 34px 40px 26px;
+    box-shadow: 0 6px 24px rgba(0,0,0,.18);
   }
 
-  /* Print */
+  .head { position: relative; text-align: center; min-height: 66px; margin-bottom: 6px; }
+  .head .crest { position: absolute; right: 0; top: 0; height: 66px; width: auto; }
+  .head .uni { font-size: 15pt; font-weight: bold; text-decoration: underline; }
+  .head .doc { font-size: 13pt; font-weight: bold; text-decoration: underline; margin-top: 2px; }
+
+  .to  { margin: 14px 0 4px; }
+  .dear { margin-bottom: 8px; }
+  .apptitle { text-align: center; font-weight: bold; font-size: 12.5pt; margin: 6px 0 2px; }
+  .intro { text-align: center; margin-bottom: 10px; }
+
+  .fill { display: inline-block; border-bottom: 1px dotted #000; min-width: 120px; padding: 0 4px;
+          line-height: 1.25; vertical-align: baseline; }
+
+  table.claim { width: 100%; border-collapse: collapse; }
+  table.claim th, table.claim td { border: 1px solid #000; padding: 5px 6px; font-size: 10.5pt; }
+  table.claim th { text-align: center; font-weight: bold; line-height: 1.15; }
+  table.claim td { height: 26px; }
+  td.c { text-align: center; }
+  td.r { text-align: right; }
+  .clsline { font-size: 8.5pt; }
+  .grand td { font-weight: bold; }
+
+  .words { margin: 12px 0 4px; }
+  .sig   { margin-top: 14px; }
+  .approvals { margin-top: 16px; line-height: 2.2; }
+
+  table.docctrl { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 9.5pt; }
+  table.docctrl td { border: 1px solid #000; padding: 3px 7px; }
+
   @media print {
-    body { background:#fff; padding:0; font-size:11px; }
-    .toolbar { display:none; }
-    .page { max-width:none; box-shadow:none; border-radius:0; }
-    .page__inner { padding:0; }
-    .table-wrap { overflow:visible; }
-    table.claim { min-width:0; }
-    @page { size:A4; margin:12mm; }
-    .page, .table-wrap, .signoffs, tr, td, th { break-inside:avoid; }
+    body { background: #fff; }
+    .toolbar { display: none; }
+    .sheet { max-width: none; margin: 0; padding: 0; box-shadow: none; }
+    @page { size: A4; margin: 12mm; }
+    table.claim, table.docctrl, tr, td, th { break-inside: avoid; }
   }
 </style>
 </head>
@@ -245,127 +166,85 @@ function render_rmu_claim_form(array $rows, array $opts = array()) {
     <button class="btn btn-close" onclick="window.close()">Close</button>
   </div>
 
-  <div class="page">
-    <div class="page__inner">
+  <div class="sheet">
 
-      <header class="doc-head">
-        <div class="brand">
-          <img class="crest" src="<?php echo h($logo); ?>" alt="Regional Maritime University crest" onerror="this.style.display='none'">
-          <div>
-            <div class="uni">Regional Maritime University</div>
-            <div class="doc-sub">Claim Form &middot; Lecturing Fees</div>
-          </div>
-        </div>
-        <div class="doc-meta">
-          <?php if ($claim_id !== ''): ?><div><span>Claim No.</span><b>#<?php echo h($claim_id); ?></b></div><?php endif; ?>
-          <div><span>Issued</span><b><?php echo h(date('d/m/Y')); ?></b></div>
-        </div>
-      </header>
-
-      <div class="accent"></div>
-
-      <div class="apptitle">
-        <div class="eyebrow">Application for Payment</div>
-        <h1>Lecturing Fees to Resource Person</h1>
-        <p class="lede">To the Head of <?php echo $department !== '' ? h($department) : $dash; ?> &mdash; I hereby submit a list of payments due me as follows:</p>
-      </div>
-
-      <section class="meta-grid" aria-label="Claim details">
-        <div class="meta"><span class="k">Resource Person</span><span class="v"><?php echo h($full_name); ?></span></div>
-        <div class="meta"><span class="k">Department</span><span class="v"><?php echo $department !== '' ? h($department) : $dash; ?></span></div>
-        <div class="meta"><span class="k">Programme</span><span class="v"><?php echo $programme !== '' ? h($programme) : $dash; ?></span></div>
-        <div class="meta"><span class="k">Rate</span><span class="v">GH&cent; <?php echo number_format($rate, 2); ?> <span class="muted" style="font-weight:400;">/ period</span></span></div>
-      </section>
-
-      <div class="table-wrap">
-        <table class="claim">
-          <caption class="sr-only">Payments due, by teaching session</caption>
-          <thead>
-            <tr>
-              <th scope="col">Date</th>
-              <th scope="col">Programme</th>
-              <th scope="col">Course</th>
-              <th scope="col">Class</th>
-              <th scope="col" class="ctr">From</th>
-              <th scope="col" class="ctr">To</th>
-              <th scope="col" class="ctr">Hrs</th>
-              <th scope="col" class="num">Rate (GH&cent;)</th>
-              <th scope="col" class="num">Subtotal (GH&cent;)</th>
-            </tr>
-          </thead>
-          <tbody>
-            <?php foreach ($rows as $r):
-              $periods = (int) $r['periods'];
-              $sub     = $periods * $rate; ?>
-            <tr>
-              <td class="ctr"><?php echo h(date('d/m/Y', strtotime($r['claim_date']))); ?></td>
-              <td class="prog"><?php echo $programme !== '' ? h($programme) : $dash; ?></td>
-              <td class="course-name"><?php echo $course !== '' ? h($course) : $dash; ?></td>
-              <td><?php echo $classes !== '' ? h($classes) : $dash; ?></td>
-              <td class="ctr"><?php echo h($fmt_time($r['start_time'])); ?></td>
-              <td class="ctr"><?php echo h($fmt_time($r['end_time'])); ?></td>
-              <td class="ctr"><?php echo $periods; ?></td>
-              <td class="num"><?php echo number_format($rate, 2); ?></td>
-              <td class="num"><?php echo number_format($sub, 2); ?></td>
-            </tr>
-            <?php endforeach; ?>
-          </tbody>
-          <tfoot>
-            <tr class="grand">
-              <td colspan="8" class="label">Grand Total (GH&cent;)</td>
-              <td class="amt num"><?php echo number_format($grand_total, 2); ?></td>
-            </tr>
-          </tfoot>
-        </table>
-      </div>
-
-      <div class="words">
-        <span class="k">Amount in words</span>
-        <div class="v"><?php echo h(claim_amount_in_words($grand_total)); ?> only</div>
-      </div>
-
-      <section class="signoffs" aria-label="Signatures and approvals">
-        <div class="sign-claimant">
-          <div class="field">
-            <div class="pre"><?php echo h($full_name); ?></div>
-            <div class="line"></div>
-            <div class="lab">Name</div>
-          </div>
-          <div class="field">
-            <div class="pre">&nbsp;</div>
-            <div class="line"></div>
-            <div class="lab">Signature</div>
-          </div>
-          <div class="field">
-            <div class="pre"><?php echo h(date('d/m/Y')); ?></div>
-            <div class="line"></div>
-            <div class="lab">Date</div>
-          </div>
-        </div>
-
-        <div class="approvals">
-          <h2>Certification &amp; Approval</h2>
-          <div class="approvals-grid">
-            <div class="appr"><div class="line"></div><div class="lab"><b>1. Head of Department</b><span>Signature &amp; date</span></div></div>
-            <div class="appr"><div class="line"></div><div class="lab"><b>2. Dean of Faculty</b><span>Signature &amp; date</span></div></div>
-            <div class="appr"><div class="line"></div><div class="lab"><b>3. Provost</b><span>Signature &amp; date</span></div></div>
-            <div class="appr"><div class="line"></div><div class="lab"><b>4. Internal Auditor</b><span>Signature &amp; date</span></div></div>
-            <div class="appr"><div class="line"></div><div class="lab"><b>5. Approval by VC</b><span>Signature &amp; date</span></div></div>
-          </div>
-        </div>
-      </section>
-
-      <footer class="doc-control">
-        <span><b>Doc. No.</b> ACA/F/10</span>
-        <span><b>Revision</b> 3</span>
-        <span><b>Dated</b> 20/03/07</span>
-        <span><b>Issue</b> 1</span>
-        <span><b>Last update</b> 15/05/15</span>
-        <span><b>Author</b> HOD</span>
-        <span><b>Approved</b> PROVOST</span>
-      </footer>
-
+    <div class="head">
+      <img class="crest" src="<?php echo h($logo); ?>" alt="" onerror="this.style.display='none'">
+      <div class="uni">REGIONAL MARITIME UNIVERSITY</div>
+      <div class="doc">CLAIM FORM</div>
     </div>
+
+    <div class="to">To the Head of <span class="fill" style="min-width:360px;"><?php echo h($department); ?></span></div>
+    <div class="dear">Dear Sir,</div>
+
+    <div class="apptitle">APPLICATION FOR PAYMENT OF LECTURING FEES TO RESOURCE PERSON</div>
+    <div class="intro">I hereby submit a list of payments due me as follows:</div>
+
+    <table class="claim">
+      <thead>
+        <tr>
+          <th style="width:11%;">DATE</th>
+          <th style="width:17%;">PROGRAMME</th>
+          <th style="width:21%;">COURSE</th>
+          <th style="width:9%;">FROM</th>
+          <th style="width:9%;">TO</th>
+          <th style="width:7%;">HRS</th>
+          <th style="width:12%;">RATE<br>[GH&cent;]</th>
+          <th style="width:14%;">SUB TOTAL<br>[GH&cent;]</th>
+        </tr>
+      </thead>
+      <tbody>
+        <?php foreach ($rows as $r):
+          $periods = (int) $r['periods'];
+          $sub     = $periods * $rate; ?>
+        <tr>
+          <td class="c"><?php echo h(date('d/m/Y', strtotime($r['claim_date']))); ?></td>
+          <td><?php echo h($programme); ?></td>
+          <td><?php echo h($course); ?><?php echo $classes !== '' ? '<div class="clsline">(' . h($classes) . ')</div>' : ''; ?></td>
+          <td class="c"><?php echo h($fmt_time($r['start_time'])); ?></td>
+          <td class="c"><?php echo h($fmt_time($r['end_time'])); ?></td>
+          <td class="c"><?php echo $periods; ?></td>
+          <td class="r"><?php echo number_format($rate, 2); ?></td>
+          <td class="r"><?php echo number_format($sub, 2); ?></td>
+        </tr>
+        <?php endforeach; ?>
+        <?php for ($i = 0; $i < $blank_rows; $i++): ?>
+        <tr><td>&nbsp;</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+        <?php endfor; ?>
+        <tr class="grand">
+          <td colspan="7" class="r">GRAND TOTAL</td>
+          <td class="r"><?php echo number_format($grand_total, 2); ?></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="words">Amount in words:
+      <span class="fill" style="min-width:560px;"><?php echo h(claim_amount_in_words($grand_total)); ?> only</span>
+    </div>
+
+    <div class="sig">
+      Name: <span class="fill" style="min-width:280px;"><?php echo h($full_name); ?></span>
+      &nbsp; Signature: <span class="fill" style="min-width:150px;"></span>
+      &nbsp; Date: <span class="fill" style="min-width:120px;"></span>
+    </div>
+
+    <div class="approvals">
+      1. Certified correct by HOD: <span class="fill" style="min-width:150px;"></span>
+      &nbsp; 2. Dean of Faculty: <span class="fill" style="min-width:150px;"></span>
+      &nbsp; 3. PROVOST: <span class="fill" style="min-width:150px;"></span><br>
+      4. Internal Auditor: <span class="fill" style="min-width:170px;"></span>
+      &nbsp; 5. Approval by VC: <span class="fill" style="min-width:190px;"></span>
+    </div>
+
+    <table class="docctrl">
+      <tr>
+        <td>Doc. No.: ACA/F/10</td><td>Page No.:1/1</td><td>Issue No.: 1</td><td>Last Update:15/05/15</td>
+      </tr>
+      <tr>
+        <td>Revision No.: 3</td><td>Date:20/03/07</td><td>Author: HOD</td><td>Approved: PROVOST</td>
+      </tr>
+    </table>
+
   </div>
 
 <script>window.onload = function () { window.print(); };</script>
