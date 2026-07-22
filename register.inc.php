@@ -22,16 +22,13 @@ $phone_number   = validated_str(isset($_POST['phone_number'])   ? $_POST['phone_
 $gender         = validated_str(isset($_POST['gender'])         ? $_POST['gender']         : '');
 $email          = validated_str(isset($_POST['email'])          ? $_POST['email']          : '');
 $raw_password   =               isset($_POST['password'])       ? $_POST['password']       : '';
-$faculty        = validated_str(isset($_POST['faculty'])        ? $_POST['faculty']        : '');
-$department     = validated_str(isset($_POST['department'])     ? $_POST['department']     : '');
-$rank           = validated_str(isset($_POST['rank'])           ? $_POST['rank']           : '');
-// Rate is assigned by an administrator after the account is approved — it must
-// never be self-declared at registration. Any client-supplied 'rate' is ignored.
+// Streamlined registration collects identity + credentials only. Faculty,
+// department, rank and rate are set later by HR/an administrator, and bank
+// details are added by the claimant from their profile after activation.
+$faculty        = '';
+$department     = '';
+$rank           = '';
 $rate           = 0.0;
-$bank_name      = validated_str(isset($_POST['bank_name'])      ? $_POST['bank_name']      : '');
-$bank_branch    = validated_str(isset($_POST['bank_branch'])    ? $_POST['bank_branch']    : '');
-$account_name   = validated_str(isset($_POST['account_name'])   ? $_POST['account_name']   : '');
-$account_number = validated_str(isset($_POST['account_number']) ? $_POST['account_number'] : '');
 
 if ($first_name === '' || $last_name === '' || $email === '' || $raw_password === '') {
     $_SESSION['message'] = 'Please fill in all required fields.';
@@ -107,20 +104,8 @@ if ($ok) {
     }
 }
 
-// 3. Insert bank details.
-if ($ok) {
-    $s3 = mysqli_prepare($conn,
-        'INSERT INTO user_bank_details (userId, bank_name, bank_branch, account_name, account_number)
-         VALUES (?, ?, ?, ?, ?)'
-    );
-    if ($s3) {
-        mysqli_stmt_bind_param($s3, 'issss', $user_id, $bank_name, $bank_branch, $account_name, $account_number);
-        $ok = mysqli_stmt_execute($s3);
-        mysqli_stmt_close($s3);
-    } else {
-        $ok = false;
-    }
-}
+// Bank details are no longer collected at registration — the claimant adds them
+// from their profile after the account is activated.
 
 if ($ok) {
     mysqli_commit($conn);

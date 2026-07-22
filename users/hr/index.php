@@ -12,6 +12,16 @@ $total    = db_hr_count($conn);
 $linked   = db_hr_linked_accounts($conn);
 $pending  = max(0, $total - $linked);
 $employees = db_hr_list($conn);
+
+// Department and rank options come from the database so the Add Employee form
+// (and the import guide) always reflect the configured, valid values.
+$departments = array();
+$dres = mysqli_query($conn, 'SELECT dept_name FROM department ORDER BY dept_name');
+while ($dres && $row = mysqli_fetch_row($dres)) $departments[] = $row[0];
+
+$ranks = array();
+$rres = mysqli_query($conn, 'SELECT `rank` FROM lecturer_rank_rate ORDER BY `rank`');
+while ($rres && $row = mysqli_fetch_row($rres)) $ranks[] = $row[0];
 ?>
 <body>
 
@@ -152,11 +162,21 @@ $employees = db_hr_list($conn);
         </div>
         <div class="rmu-form-group">
           <label class="rmu-label" for="add-dept">Department</label>
-          <input type="text" class="rmu-input" id="add-dept" maxlength="75">
+          <select class="rmu-select" id="add-dept">
+            <option value="">— Select department —</option>
+            <?php foreach ($departments as $d): ?>
+            <option value="<?php echo h($d); ?>"><?php echo h($d); ?></option>
+            <?php endforeach; ?>
+          </select>
         </div>
         <div class="rmu-form-group">
           <label class="rmu-label" for="add-rank">Rank</label>
-          <input type="text" class="rmu-input" id="add-rank" maxlength="40">
+          <select class="rmu-select" id="add-rank">
+            <option value="">— Select rank —</option>
+            <?php foreach ($ranks as $r): ?>
+            <option value="<?php echo h($r); ?>"><?php echo h($r); ?></option>
+            <?php endforeach; ?>
+          </select>
         </div>
         <div class="rmu-form-group" style="grid-column:1/-1;">
           <label class="rmu-label" for="add-staff">Staff ID</label>
@@ -182,11 +202,35 @@ $employees = db_hr_list($conn);
       <button class="rmu-modal__close" type="button" onclick="closeImportModal()" aria-label="Close"><i class="ti ti-x"></i></button>
     </div>
     <div class="rmu-modal__body">
-      <p style="font-size:.85rem;color:var(--txt-muted);margin-bottom:12px;">
-        Columns: <code>first_name, last_name, other_names, email, phone_number, gender, department, rank, staff_id</code>.
-        Only first name, last name and email are required. Existing emails are updated, not duplicated.
-        Download the <a href="templateEmployees.inc.php">CSV template</a> to get the format right.
+      <p style="font-size:.85rem;color:var(--txt-secondary);margin-bottom:12px;">
+        Download the <a href="templateEmployees.inc.php">CSV template</a>, fill it in, and upload it here.
+        Existing emails are <strong>updated</strong>, not duplicated.
       </p>
+
+      <!-- Valid-values guide (accurate: pulled from the database) -->
+      <details open style="margin-bottom:14px;border:1px solid var(--divider);border-radius:8px;background:var(--surface-2);">
+        <summary style="cursor:pointer;padding:10px 14px;font-weight:600;font-size:.85rem;">
+          <i class="ti ti-info-circle"></i> Accepted columns &amp; valid values
+        </summary>
+        <div style="padding:4px 14px 14px;font-size:.8rem;color:var(--txt-secondary);">
+          <table class="rmu-table" style="font-size:.78rem;">
+            <thead><tr><th scope="col">Column</th><th scope="col">Required</th><th scope="col">Accepted values</th></tr></thead>
+            <tbody>
+              <tr><td><code>first_name</code></td><td>Yes</td><td>Any text</td></tr>
+              <tr><td><code>last_name</code></td><td>Yes</td><td>Any text</td></tr>
+              <tr><td><code>email</code></td><td>Yes</td><td>A valid email — this is what registration is matched against</td></tr>
+              <tr><td><code>other_names</code></td><td>No</td><td>Any text</td></tr>
+              <tr><td><code>phone_number</code></td><td>No</td><td>Digits, e.g. <code>0244000000</code></td></tr>
+              <tr><td><code>gender</code></td><td>No</td><td><code>Male</code>, <code>Female</code>, or <code>Other</code></td></tr>
+              <tr><td><code>department</code></td><td>No</td><td><?php echo $departments ? h(implode(', ', $departments)) : '<em>none configured yet</em>'; ?></td></tr>
+              <tr><td><code>rank</code></td><td>No</td><td><?php echo $ranks ? h(implode(', ', $ranks)) : '<em>none configured yet</em>'; ?></td></tr>
+              <tr><td><code>staff_id</code></td><td>No</td><td>Any text, e.g. <code>RMU-0001</code></td></tr>
+            </tbody>
+          </table>
+          <p style="margin-top:8px;">Column order doesn’t matter; the header row is matched by name (case-insensitive). Rows missing a name or a valid email are skipped and reported.</p>
+        </div>
+      </details>
+
       <div class="rmu-form-group">
         <label class="rmu-label" for="import-file">CSV file <span class="required">*</span></label>
         <input type="file" class="rmu-input" id="import-file" accept=".csv,text/csv" aria-label="CSV file">
