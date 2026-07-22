@@ -321,7 +321,7 @@ function cell($v) {
                                         <td style="white-space:nowrap;">
                                             <button class="rmu-btn rmu-btn--secondary rmu-btn--sm" onclick="viewClaimDetails(<?php echo (int)$row['claimId']; ?>)" title="View details" aria-label="View claim details"><i class="ti ti-eye"></i></button>
                                             <button class="rmu-btn rmu-btn--secondary rmu-btn--sm" onclick="downloadClaimDetails(<?php echo (int)$row['claimId']; ?>)" title="Download form" aria-label="Download claim form"><i class="ti ti-download"></i></button>
-                                            <button class="rmu-btn rmu-btn--primary rmu-btn--sm" onclick="cloneClaim(<?php echo (int)$row['claimId']; ?>)" title="Reuse as a new draft"><i class="ti ti-copy"></i> Clone</button>
+                                            <button class="rmu-btn rmu-btn--primary rmu-btn--sm" onclick="reuseClaim(<?php echo (int)$row['claimId']; ?>)" title="Start a new claim from this one"><i class="ti ti-copy"></i> Reuse</button>
                                         </td>
                                     </tr>
                                 <?php endwhile; else: ?>
@@ -649,30 +649,23 @@ function downloadClaimDetails(claimId) {
     window.open('downloadClaimPDF.inc.php?claimId=' + encodeURIComponent(claimId), '_blank');
 }
 
-function cloneClaim(claimId) {
+function reuseClaim(claimId) {
+    // Reuse carries the programme, course and class(es) forward. The user
+    // chooses whether to keep the original session times or start blank, then
+    // picks fresh dates in the claim editor.
     Swal.fire(Object.assign({
-        title: 'Clone this claim?',
-        text: 'A new editable draft will be created with the same course and sessions. The original claim is not affected.',
-        icon: 'question', showCancelButton: true, confirmButtonText: 'Yes, Clone',
-        confirmButtonColor: '#1d4ed8', cancelButtonColor: '#64748b',
+        title: 'Reuse this claim?',
+        html: 'Its programme, course and class(es) will be pre-filled. You\'ll pick <b>new dates</b> in the editor.<br><br>Keep the original session times, or start with blank times?',
+        icon: 'question',
+        showCancelButton: true, showDenyButton: true,
+        confirmButtonText: 'Keep times',
+        denyButtonText: 'Blank times',
+        cancelButtonText: 'Cancel',
+        confirmButtonColor: '#1d4ed8', denyButtonColor: '#64748b', cancelButtonColor: '#94a3b8',
     }, swalOpts)).then(function (result) {
-        if (!result.isConfirmed) return;
-        var fd = new FormData();
-        fd.append('claimId', claimId); fd.append('csrf_token', CSRF);
-        fetch('cloneClaim.inc.php', { method: 'POST', body: fd })
-            .then(function (r) { return r.json(); })
-            .then(function (res) {
-                if (res.success) {
-                    window.location.assign('../fileNewClaim/index.php?claimTempId=' + res.claimTempId);
-                } else {
-                    Swal.fire(Object.assign({ icon: 'error', title: 'Error',
-                        text: res.message || 'Could not clone the claim.' }, swalOpts));
-                }
-            })
-            .catch(function () {
-                Swal.fire(Object.assign({ icon: 'error', title: 'Network Error',
-                    text: 'Could not reach the server. Please try again.' }, swalOpts));
-            });
+        if (result.isDismissed) return;                 // Cancel / backdrop
+        var times = result.isConfirmed ? 'keep' : 'blank';
+        window.location.assign('../fileNewClaim/index.php?reuseFrom=' + encodeURIComponent(claimId) + '&times=' + times);
     });
 }
 </script>

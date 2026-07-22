@@ -1141,5 +1141,48 @@ document.addEventListener('DOMContentLoaded', function () {
         recalculate();
     });
 });
+
+// ── Reuse a previous claim (#7) ────────────────────────────────────────────────
+// ?reuseFrom=<claimId>&times=keep|blank pre-fills programme/course/class(es) and
+// (optionally) the original session times, but with NO dates — the claimant
+// picks fresh (previous-month) dates, then submits a brand-new claim.
+document.addEventListener('DOMContentLoaded', function () {
+    if (DRAFT) return;  // editing an existing draft takes precedence
+    const params    = new URLSearchParams(location.search);
+    const reuseFrom = params.get('reuseFrom');
+    if (!reuseFrom) return;
+    const keepTimes = params.get('times') !== 'blank';
+
+    fetch('../myClaims/reuseTemplate.inc.php?claimId=' + encodeURIComponent(reuseFrom), { credentials: 'include' })
+        .then(r => r.json())
+        .then(t => {
+            if (!t || !t.success) return;
+            document.getElementById('department').value = t.department;
+            if (t.class) String(t.class).split(',').forEach(addClassCode);
+
+            loadProgrammes(t.department, function () {
+                document.getElementById('programme').value = t.programme;
+            });
+            loadCourses(t.department, function () {
+                document.getElementById('course').value = t.course;
+                if (keepTimes && Array.isArray(t.slots) && t.slots.length) {
+                    t.slots.forEach(s => addSlot({ startTime: s.startTime, endTime: s.endTime, dates: [] }));
+                } else {
+                    addSlot({ dates: [] });  // one blank session to fill in
+                }
+                recalculate();
+            });
+
+            if (typeof Swal !== 'undefined') {
+                Swal.fire({
+                    icon: 'info', title: 'Reusing a previous claim',
+                    text: 'Programme, course and class(es)' + (keepTimes ? ' and session times' : '')
+                        + ' were carried over. Add the new teaching dates, then submit.',
+                    timer: 3600, showConfirmButton: false, background: '#ffffff', color: '#0f2744',
+                });
+            }
+        })
+        .catch(function () {});
+});
 </script>
 </body>
