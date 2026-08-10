@@ -9,6 +9,7 @@ use PhpOffice\PhpWord\TemplateProcessor;
 
 require_post();
 require_role(array('user', 'claimant'));
+csrf_verify();
 
 $claim_id = validated_int(isset($_POST['claimId']) ? $_POST['claimId'] : null, 'claimId');
 $user_id  = current_user_id();

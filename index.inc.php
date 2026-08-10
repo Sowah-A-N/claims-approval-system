@@ -5,6 +5,15 @@ require_once __DIR__ . '/includes/functions.php';
 
 require_post();
 
+// CSRF check — redirect-style (this is a form POST, not an AJAX endpoint).
+$submitted_token = isset($_POST['csrf_token']) ? $_POST['csrf_token'] : '';
+$expected_token  = isset($_SESSION['csrf_token']) ? $_SESSION['csrf_token'] : '';
+if ($expected_token === '' || !hash_equals($expected_token, $submitted_token)) {
+    $_SESSION['message'] = 'Your session expired. Please try signing in again.';
+    header('Location: ./index.php');
+    exit;
+}
+
 $client_ip = isset($_SERVER['REMOTE_ADDR']) ? $_SERVER['REMOTE_ADDR'] : '0.0.0.0';
 
 if (is_login_rate_limited($conn, $client_ip)) {

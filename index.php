@@ -1,4 +1,11 @@
-<?php session_start(); ?>
+<?php
+session_start();
+// Ensure a CSRF token exists for the login form (same session key the rest of
+// the app uses via csrf_token()).
+if (empty($_SESSION['csrf_token'])) {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+}
+?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -38,6 +45,7 @@
       <?php endif; ?>
 
       <form method="POST" action="index.inc.php" autocomplete="off">
+        <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['csrf_token'], ENT_QUOTES, 'UTF-8'); ?>">
         <div class="rmu-login-input-group">
           <i class="ti ti-mail rmu-login-input-group__icon"></i>
           <input
