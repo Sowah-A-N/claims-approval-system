@@ -23,7 +23,7 @@ if ($holidaysJson === false) $holidaysJson = '[]';
 
 // Claims may only be filed for previous months, never the current (or a future)
 // month. The latest permissible teaching date is the last day of last month.
-$maxClaimDate = date('Y-m-d', strtotime('-1 day', strtotime(date('Y-m-01'))));
+$maxClaimDate = claim_max_date();
 
 // Draft loading — populate if ?claimTempId= is set
 $draft       = null;

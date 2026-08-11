@@ -132,7 +132,7 @@ if (!$ins_data) {
     json_response(['ok' => false, 'message' => 'Submission failed. Please try again.'], 500);
 }
 // Previous-months-only cut-off (#3): last day of the previous month.
-$max_claim_date = date('Y-m-d', strtotime('-1 day', strtotime(date('Y-m-01'))));
+$max_claim_date = claim_max_date();
 foreach ($rows as $dr) {
     // Recompute periods (1 period = 50 min) and subTotal server-side from the
     // stored session times and the authoritative DB rate. The draft's stored

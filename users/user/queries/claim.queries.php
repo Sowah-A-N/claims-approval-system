@@ -8,6 +8,16 @@
  */
 
 
+/*
+ * Latest teaching date a claim may use: claims are for previous months only, so
+ * the cut-off is the last day of the previous month (#3). Single source of truth
+ * shared by the claim form, saveDraft, and both submit paths.
+ */
+function claim_max_date() {
+    return date('Y-m-d', strtotime('-1 day', strtotime(date('Y-m-01'))));
+}
+
+
 // ── Course lookup ─────────────────────────────────────────────────────────────
 
 /*

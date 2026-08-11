@@ -72,7 +72,7 @@ if ($claimTempId > 0) {
 // submit step uses so a draft can never contain a date it will later refuse to
 // submit (which previously left drafts stuck). Out-of-range dates are skipped
 // and reported rather than silently saved.
-$max_claim_date = date('Y-m-d', strtotime('-1 day', strtotime(date('Y-m-01'))));
+$max_claim_date = claim_max_date();
 $skipped_future = 0;
 
 if ($ok) {

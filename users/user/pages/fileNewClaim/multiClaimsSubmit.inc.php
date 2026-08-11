@@ -45,7 +45,7 @@ if ($total_dates_submitted > 365) {
 
 // Claims may only be filed for previous months (#3): the latest permitted
 // teaching date is the last day of the previous month.
-$max_claim_date = date('Y-m-d', strtotime('-1 day', strtotime(date('Y-m-01'))));
+$max_claim_date = claim_max_date();
 
 mysqli_begin_transaction($conn);
 $ok = true;
