@@ -13,6 +13,7 @@ require_once __DIR__ . '/../../includes/auth.php';
 require_once __DIR__ . '/../../includes/db.php';
 require_once __DIR__ . '/../../includes/functions.php';
 require_once __DIR__ . '/queries/approval.queries.php';
+require_once __DIR__ . '/../../includes/mailer.php';
 
 require_post();
 require_role(array('approver', 'Approver'));
@@ -50,6 +51,7 @@ foreach ($ids as $raw) {
     $error = '';
     if (db_flag_claim($conn, $claim_id, $session_stage, $reason, $error)) {
         log_audit($conn, 'claim.flag', 'claim', $claim_id, 'bulk; ' . $reason);
+        email_notify_claim_owner($conn, $claim_id, 'claim_flagged', array('reason' => $reason));
         $flagged[] = $claim_id;
     } else {
         $failed[] = $claim_id;

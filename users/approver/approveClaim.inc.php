@@ -3,6 +3,7 @@ require_once __DIR__ . '/../../includes/auth.php';
 require_once __DIR__ . '/../../includes/db.php';
 require_once __DIR__ . '/../../includes/functions.php';
 require_once __DIR__ . '/queries/approval.queries.php';
+require_once __DIR__ . '/../../includes/mailer.php';
 
 require_post();
 require_role(array('approver', 'Approver'));
@@ -37,6 +38,7 @@ $ok        = db_advance_claim_stage($conn, $claim_id, $current_stage, $error, $c
 if ($ok) {
     log_audit($conn, 'claim.approve', 'claim', $claim_id,
         'stage ' . $current_stage . ($completed ? ' (completed)' : ''));
+    email_notify_claim_owner($conn, $claim_id, 'claim_approved', array('stage' => $current_stage));
     $message = $completed
         ? 'Claim fully approved and forwarded to Finance.'
         : 'Claim approved and advanced to the next stage.';

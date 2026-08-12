@@ -3,6 +3,7 @@ require_once __DIR__ . '/../../includes/auth.php';
 require_once __DIR__ . '/../../includes/db.php';
 require_once __DIR__ . '/../../includes/functions.php';
 require_once __DIR__ . '/queries/approval.queries.php';
+require_once __DIR__ . '/../../includes/mailer.php';
 
 require_post();
 require_role(array('approver', 'Approver'));
@@ -39,6 +40,7 @@ $ok    = db_flag_claim($conn, $claim_id, $session_stage, $flag_reason, $error);
 
 if ($ok) {
     log_audit($conn, 'claim.flag', 'claim', $claim_id, $flag_reason);
+    email_notify_claim_owner($conn, $claim_id, 'claim_flagged', array('reason' => $flag_reason));
     json_response(array('success' => true, 'message' => 'Claim flagged successfully.'));
 } else {
     json_response(array('success' => false, 'message' => $error), 409);

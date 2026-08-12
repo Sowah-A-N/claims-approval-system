@@ -14,6 +14,7 @@ require_once __DIR__ . '/../../../../includes/auth.php';
 require_once __DIR__ . '/../../../../includes/db.php';
 require_once __DIR__ . '/../../../../includes/functions.php';
 require_once __DIR__ . '/../../queries/claim.queries.php';
+require_once __DIR__ . '/../../../../includes/mailer.php';
 
 require_post();
 require_role(['user', 'claimant']);
@@ -211,5 +212,7 @@ mysqli_commit($conn);
 if (!empty($draft_class)) db_upsert_class($conn, $draft_class);
 
 log_audit($conn, 'claim.submit', 'claim', $newClaimId, 'from draft #' . $claimTempId);
+
+email_notify_user($conn, $userId, 'claim_submitted', array('claim_id' => $newClaimId));
 
 json_response(['ok' => true, 'message' => 'Claim submitted successfully and sent for approval.']);

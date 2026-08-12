@@ -12,6 +12,7 @@ require_once __DIR__ . '/../../../../includes/auth.php';
 require_once __DIR__ . '/../../../../includes/db.php';
 require_once __DIR__ . '/../../../../includes/functions.php';
 require_once __DIR__ . '/../../queries/user.queries.php';
+require_once __DIR__ . '/../../../../includes/mailer.php';
 
 require_post();
 require_role(array('admin', 'Admin'));
@@ -41,6 +42,7 @@ foreach ($ids as $raw) {
 
     if ($ok) {
         log_audit($conn, $status === 'active' ? 'user.activate' : 'user.disable', 'user', $uid, 'bulk');
+        if ($status === 'active') email_notify_user($conn, $uid, 'account_activated');
         $changed++;
     }
 }

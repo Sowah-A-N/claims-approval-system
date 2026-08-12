@@ -11,6 +11,7 @@
 require_once __DIR__ . '/../../includes/auth.php';
 require_once __DIR__ . '/../../includes/db.php';
 require_once __DIR__ . '/../../includes/functions.php';
+require_once __DIR__ . '/../../includes/mailer.php';
 
 require_post();
 require_role(array('finance', 'Finance'));
@@ -39,6 +40,7 @@ mysqli_stmt_close($stmt);
 if ($affected > 0) {
     log_audit($conn, 'claim.paid', 'claim', $claim_id,
         $payment_ref !== null ? ('ref ' . $payment_ref) : null);
+    email_notify_claim_owner($conn, $claim_id, 'claim_paid');
     json_response(array('success' => true, 'message' => 'Claim marked as paid.'));
 } else {
     json_response(array('success' => false,

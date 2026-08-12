@@ -3,6 +3,7 @@ require_once __DIR__ . '/../../../../includes/auth.php';
 require_once __DIR__ . '/../../../../includes/db.php';
 require_once __DIR__ . '/../../../../includes/functions.php';
 require_once __DIR__ . '/../../queries/claim.queries.php';
+require_once __DIR__ . '/../../../../includes/mailer.php';
 
 require_post();
 require_role(array('user', 'claimant'));
@@ -140,6 +141,7 @@ if ($ok) {
     }
     log_audit($conn, 'claim.submit', 'claim', $claim_id,
         $total_slots . ' slot(s), ' . $total_dates . ' date(s)');
+    email_notify_user($conn, $user_id, 'claim_submitted', array('claim_id' => $claim_id));
     json_response(array('status' => 'success', 'message' => $total_slots . ' slot(s) and ' . $total_dates . ' date(s) submitted.'));
 } else {
     mysqli_rollback($conn);

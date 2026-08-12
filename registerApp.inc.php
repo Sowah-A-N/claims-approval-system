@@ -3,6 +3,7 @@ require_once __DIR__ . '/includes/auth.php';
 require_once __DIR__ . '/includes/db.php';
 require_once __DIR__ . '/includes/functions.php';
 require_once __DIR__ . '/includes/hr.queries.php';
+require_once __DIR__ . '/includes/mailer.php';
 
 require_post();
 
@@ -115,6 +116,8 @@ if ($ok) {
     mysqli_commit($conn);
     log_audit($conn, 'user.register', 'user', $user_id,
         'approver self-registration, stage ' . $stage . ($is_hr_employee ? ' (auto-activated via HR register)' : ''));
+    email_notify($conn, $is_hr_employee ? 'account_active' : 'registration_received',
+        $email, trim($first_name . ' ' . $last_name), array('name' => $first_name));
     $_SESSION['message'] = $is_hr_employee
         ? 'Registration successful! Your account was verified against the HR register and is active — you can sign in now.'
         : 'Registration successful! You will be notified when your account is activated.';
