@@ -344,8 +344,59 @@ $pageTitle = "Settings";
                 </div>
             </div>
 
+            <!-- Email (SMTP) test -->
+            <div class="rmu-card" style="margin-bottom:24px;">
+                <div class="rmu-card__header">
+                    <span class="rmu-card__title"><i class="ti ti-mail" style="margin-right:8px;"></i>Email (SMTP) Test</span>
+                </div>
+                <div class="rmu-card__body">
+                    <p style="color:var(--txt-secondary);font-size:.85rem;margin-bottom:14px;">
+                        Send a test message to confirm SMTP delivery. If SMTP isn&rsquo;t configured in
+                        <code>.env</code>, the message is queued and skipped (not delivered).
+                    </p>
+                    <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;">
+                        <div class="rmu-form-group" style="margin:0;flex:1 1 260px;">
+                            <label class="rmu-label" for="test-email-to">Send to</label>
+                            <input type="email" id="test-email-to" class="rmu-input"
+                                   placeholder="defaults to your account email">
+                        </div>
+                        <button type="button" class="rmu-btn rmu-btn--primary" id="test-email-btn" onclick="sendTestEmail()">
+                            <i class="ti ti-send"></i> Send test email
+                        </button>
+                    </div>
+                </div>
+            </div>
+
         </div>
     </div>
 </div>
+
+<script>
+function sendTestEmail() {
+    var btn = document.getElementById('test-email-btn');
+    var to  = document.getElementById('test-email-to').value.trim();
+    if (typeof rmuBtnLoading === 'function') rmuBtnLoading(btn, true);
+    var fd = new FormData();
+    fd.append('csrf_token', '<?php echo h(csrf_token()); ?>');
+    if (to) fd.append('to', to);
+    fetch('sendTestEmail.inc.php', { method: 'POST', body: fd, credentials: 'include' })
+        .then(function (r) { return r.json(); })
+        .then(function (res) {
+            if (typeof rmuBtnLoading === 'function') rmuBtnLoading(btn, false);
+            var icon = res.status === 'sent' ? 'success' : (res.status === 'skipped' ? 'info' : 'error');
+            if (typeof Swal !== 'undefined') {
+                Swal.fire({ icon: icon, title: res.title || 'Test email', text: res.message || '',
+                    background: '#ffffff', color: '#0f2744' });
+            } else { alert((res.title ? res.title + ': ' : '') + (res.message || '')); }
+        })
+        .catch(function () {
+            if (typeof rmuBtnLoading === 'function') rmuBtnLoading(btn, false);
+            if (typeof Swal !== 'undefined') {
+                Swal.fire({ icon: 'error', title: 'Network error', text: 'Please try again.',
+                    background: '#ffffff', color: '#0f2744' });
+            }
+        });
+}
+</script>
 </body>
 </html>
