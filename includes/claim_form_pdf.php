@@ -74,7 +74,40 @@ function claim_amount_in_words($amount) {
  * Render the claim form as a faithful copy of the printed ACA/F/10 sheet and
  * auto-open the print dialog.
  */
-function render_rmu_claim_form(array $rows, array $opts = array()) {
+/*
+ * Per-stage approvals for a claim (#5). Returns a map:
+ *   stage(int) => array('date' => 'Y-m-d H:i:s', 'approver' => name|null)
+ * `approver` is populated only for stages approved after approver_id capture was
+ * added (Option B); older approvals show the role + date only (Option A).
+ */
+function claim_stage_approvals($conn, $claimId) {
+    $out = array();
+    if (!$conn || !$claimId) return $out;
+    try {
+        $stmt = mysqli_prepare($conn,
+            "SELECT s.stage, s.time_approved,
+                    CASE WHEN ud.userId IS NULL THEN NULL
+                         ELSE TRIM(CONCAT(ud.first_name, ' ', ud.last_name)) END AS approver
+             FROM claim_approval_stages s
+             LEFT JOIN user_details ud ON ud.userId = s.approver_id
+             WHERE s.claimId = ? AND s.status = 'Approved'
+             ORDER BY s.stage, s.stageId");
+        if (!$stmt) return $out;
+        $claimId = (int) $claimId;
+        mysqli_stmt_bind_param($stmt, 'i', $claimId);
+        mysqli_stmt_execute($stmt);
+        $res = mysqli_stmt_get_result($stmt);
+        while ($row = mysqli_fetch_assoc($res)) {
+            $out[(int) $row['stage']] = array('date' => $row['time_approved'], 'approver' => $row['approver']);
+        }
+        mysqli_stmt_close($stmt);
+    } catch (Throwable $e) {
+        error_log('[claim_form_pdf] approvals lookup failed: ' . $e->getMessage());
+    }
+    return $out;
+}
+
+function render_rmu_claim_form(array $rows, $conn = null) {
     $first = $rows[0];
     $rate  = (float) $first['rate'];
 
@@ -87,6 +120,8 @@ function render_rmu_claim_form(array $rows, array $opts = array()) {
     $programme  = isset($first['programme']) ? (string) $first['programme'] : '';
     $course     = isset($first['course']) ? (string) $first['course'] : '';
     $classes    = isset($first['class']) ? (string) $first['class'] : '';
+    $claim_id   = isset($first['claimId']) ? (int) $first['claimId'] : 0;
+    $approvals  = claim_stage_approvals($conn, $claim_id);   // #5: per-stage approval stamps
 
     // Web-root-relative base so the crest resolves regardless of the caller's depth.
     $base = (isset($_SERVER['HTTP_HOST']) && strpos($_SERVER['HTTP_HOST'], 'localhost') !== false)
@@ -145,7 +180,16 @@ function render_rmu_claim_form(array $rows, array $opts = array()) {
 
   .words { margin: 12px 0 4px; }
   .sig   { margin-top: 14px; }
-  .approvals { margin-top: 16px; line-height: 2.2; }
+  .approvals { margin-top: 16px; }
+  .appr-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px 22px; }
+  .appr-num { font-size: 10.5pt; font-weight: bold; }
+  .appr-line { border-bottom: 1px dotted #000; height: 28px; margin-top: 4px; }
+  .appr-cap { font-size: 8pt; color: #333; }
+  .appr-stamp { border: 1px solid #000; border-radius: 4px; padding: 5px 8px; margin-top: 4px;
+                font-size: 8.5pt; line-height: 1.35; }
+  .appr-stamp .lead { font-weight: bold; letter-spacing: .03em; }
+  .appr-stamp .who  { font-weight: bold; }
+  .appr-stamp .meta { color: #333; font-size: 8pt; }
 
   table.docctrl { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 9.5pt; }
   table.docctrl td { border: 1px solid #000; padding: 3px 7px; }
@@ -229,11 +273,37 @@ function render_rmu_claim_form(array $rows, array $opts = array()) {
     </div>
 
     <div class="approvals">
-      1. Certified correct by HOD: <span class="fill" style="min-width:150px;"></span>
-      &nbsp; 2. Dean of Faculty: <span class="fill" style="min-width:150px;"></span>
-      &nbsp; 3. PROVOST: <span class="fill" style="min-width:150px;"></span><br>
-      4. Internal Auditor: <span class="fill" style="min-width:170px;"></span>
-      &nbsp; 5. Approval by VC: <span class="fill" style="min-width:190px;"></span>
+      <?php
+        // Each printed signatory maps to its workflow stage (roles table):
+        // HOD=1, Dean=2, Internal Auditor=3, VC=4, Provost=5.
+        $apprSlot = function ($num, $label, $stage) use ($approvals, $claim_id) {
+            $out = '<div><div class="appr-num">' . $num . '. ' . h($label) . '</div>';
+            if (isset($approvals[$stage])) {
+                $a    = $approvals[$stage];
+                $who  = !empty($a['approver'])
+                      ? h($a['approver']) . ' &mdash; ' . h($label)
+                      : h($label);
+                $date = !empty($a['date']) ? date('d/m/Y', strtotime($a['date'])) : '';
+                $out .= '<div class="appr-stamp">'
+                      . '<span class="lead">&#10003; DIGITALLY APPROVED</span><br>'
+                      . '<span class="who">' . $who . '</span><br>'
+                      . '<span class="meta">' . h($date)
+                      . ($claim_id ? ' &middot; Claim #' . $claim_id : '') . '</span></div>';
+            } else {
+                $out .= '<div class="appr-line"></div><div class="appr-cap">Signature &amp; date</div>';
+            }
+            return $out . '</div>';
+        };
+      ?>
+      <div class="appr-grid">
+        <?php
+          echo $apprSlot(1, 'Certified correct by HOD', 1);
+          echo $apprSlot(2, 'Dean of Faculty', 2);
+          echo $apprSlot(3, 'Provost', 5);
+          echo $apprSlot(4, 'Internal Auditor', 3);
+          echo $apprSlot(5, 'Approval by VC', 4);
+        ?>
+      </div>
     </div>
 
     <table class="docctrl">

@@ -23,4 +23,4 @@ if (empty($rows)) {
     exit('Claim not found or access denied.');
 }
 
-render_rmu_claim_form($rows);
+render_rmu_claim_form($rows, $conn);

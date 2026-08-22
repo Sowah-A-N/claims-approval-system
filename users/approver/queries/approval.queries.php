@@ -128,7 +128,7 @@ function db_get_max_approval_stage($conn) {
  * Sets $completed = true when the claim reaches completion.
  * Returns true on success, false with $error set on failure.
  */
-function db_advance_claim_stage($conn, $claimId, $expected_stage, &$error, &$completed = false) {
+function db_advance_claim_stage($conn, $claimId, $expected_stage, &$error, &$completed = false, $approverId = null) {
     $max_stage = db_get_max_approval_stage($conn);
     $completed = false;
 
@@ -151,13 +151,14 @@ function db_advance_claim_stage($conn, $claimId, $expected_stage, &$error, &$com
         return false;
     }
 
-    // Mark current stage Approved.
+    // Mark current stage Approved, recording which officer approved it (#5B).
     $approve = mysqli_prepare($conn,
         "UPDATE claim_approval_stages
-         SET status = 'Approved', time_approved = NOW()
+         SET status = 'Approved', time_approved = NOW(), approver_id = ?
          WHERE claimId = ? AND stage = ? AND status = 'Pending'"
     );
-    mysqli_stmt_bind_param($approve, 'ii', $claimId, $expected_stage);
+    $approverId = $approverId !== null ? (int) $approverId : null;
+    mysqli_stmt_bind_param($approve, 'iii', $approverId, $claimId, $expected_stage);
     mysqli_stmt_execute($approve);
     $affected = mysqli_stmt_affected_rows($approve);
     mysqli_stmt_close($approve);

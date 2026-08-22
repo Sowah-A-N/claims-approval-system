@@ -45,7 +45,7 @@ foreach ($ids as $raw) {
 
     $error     = '';
     $completed = false;
-    if (db_advance_claim_stage($conn, $claim_id, $current_stage, $error, $completed)) {
+    if (db_advance_claim_stage($conn, $claim_id, $current_stage, $error, $completed, current_user_id())) {
         log_audit($conn, 'claim.approve', 'claim', $claim_id,
             'bulk; stage ' . $current_stage . ($completed ? ' (completed)' : ''));
         email_notify_claim_owner($conn, $claim_id, 'claim_approved', array('stage' => $current_stage));

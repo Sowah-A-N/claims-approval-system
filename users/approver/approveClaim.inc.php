@@ -33,7 +33,7 @@ if ($current_stage !== $session_stage) {
 
 $error     = '';
 $completed = false;
-$ok        = db_advance_claim_stage($conn, $claim_id, $current_stage, $error, $completed);
+$ok        = db_advance_claim_stage($conn, $claim_id, $current_stage, $error, $completed, current_user_id());
 
 if ($ok) {
     log_audit($conn, 'claim.approve', 'claim', $claim_id,
