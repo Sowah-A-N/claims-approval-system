@@ -78,6 +78,19 @@ if (empty($rows)) {
     ], 400);
 }
 
+// Fraud guard (#1): block a duplicate course+class for a month already claimed.
+$draft_dates = array();
+foreach ($rows as $dr) $draft_dates[] = $dr['date'];
+$dup = db_claim_month_duplicate($conn, $userId, $draft['course'], isset($draft['class']) ? $draft['class'] : '', $draft_dates);
+if ($dup) {
+    json_response([
+        'ok'      => false,
+        'message' => 'You already have a claim for ' . $dup['class'] . ' in ' . $draft['course']
+                   . ' for ' . date('F Y', strtotime($dup['month'] . '-01'))
+                   . ' (claim #' . $dup['claimId'] . '). A course/class can only be claimed once per month.',
+    ], 409);
+}
+
 // ── 3. Promote draft → submitted claim (atomic) ───────────────────────────────
 
 mysqli_begin_transaction($conn);

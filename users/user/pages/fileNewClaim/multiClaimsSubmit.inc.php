@@ -48,6 +48,21 @@ if ($total_dates_submitted > 365) {
 // teaching date is the last day of the previous month.
 $max_claim_date = claim_max_date();
 
+// Fraud guard (#1): block a duplicate course+class for a month already claimed.
+$all_dates = array();
+foreach ($time_slots as $slot) {
+    if (isset($slot['dates']) && is_array($slot['dates'])) {
+        foreach ($slot['dates'] as $d) $all_dates[] = validated_str($d);
+    }
+}
+$dup = db_claim_month_duplicate($conn, $user_id, $course, $class, $all_dates);
+if ($dup) {
+    json_response(array('status' => 'error',
+        'message' => 'You already have a claim for ' . $dup['class'] . ' in ' . $course
+                   . ' for ' . date('F Y', strtotime($dup['month'] . '-01'))
+                   . ' (claim #' . $dup['claimId'] . '). A course/class can only be claimed once per month.'), 409);
+}
+
 mysqli_begin_transaction($conn);
 $ok = true;
 

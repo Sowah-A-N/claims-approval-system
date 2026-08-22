@@ -84,8 +84,13 @@ $CSRF = csrf_token();
                     <i class="ti ti-file-download"></i> PDF
                   </button>
                   <button class="rmu-btn rmu-btn--primary rmu-btn--sm"
-                          onclick="markPaid(<?php echo (int) $row['claimId']; ?>, this)">
+                          onclick="markPaid(<?php echo (int) $row['claimId']; ?>, this)"
+                          style="margin-right:6px;">
                     <i class="ti ti-credit-card"></i> Mark Paid
+                  </button>
+                  <button class="rmu-btn rmu-btn--warning rmu-btn--sm"
+                          onclick="openFlagModal(<?php echo (int) $row['claimId']; ?>)">
+                    <i class="ti ti-flag"></i> Flag
                   </button>
                 </td>
               </tr>
@@ -106,6 +111,33 @@ $CSRF = csrf_token();
 
   </div><!-- .rmu-content -->
 </div><!-- .rmu-main -->
+
+<!-- Flag claim modal -->
+<div class="rmu-modal-backdrop" id="flagBackdrop" role="dialog" aria-modal="true" aria-labelledby="flagTitle">
+  <div class="rmu-modal" style="max-width:460px;width:calc(100% - 48px);">
+    <div class="rmu-modal__header">
+      <span class="rmu-modal__title" id="flagTitle"><i class="ti ti-flag"></i> Flag Claim</span>
+      <button class="rmu-modal__close" onclick="closeFlagModal()" aria-label="Close"><i class="ti ti-x"></i></button>
+    </div>
+    <div class="rmu-modal__body">
+      <p style="font-size:.85rem;color:var(--txt-secondary);margin-bottom:14px;">
+        Flagging returns this claim to the claimant for correction and removes it from the payment queue.
+      </p>
+      <div class="rmu-form-group">
+        <label class="rmu-label" for="flagReason">Reason <span class="required">*</span></label>
+        <textarea class="rmu-input" id="flagReason" rows="3" maxlength="500"
+                  placeholder="Explain what needs correcting (internal regulation, mismatch, etc.)"></textarea>
+      </div>
+      <div id="flagError" class="rmu-alert rmu-alert--danger" style="display:none;"></div>
+      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:18px;">
+        <button type="button" class="rmu-btn rmu-btn--secondary" onclick="closeFlagModal()">Cancel</button>
+        <button type="button" class="rmu-btn rmu-btn--warning" id="flagConfirmBtn" onclick="confirmFlag()">
+          <i class="ti ti-flag"></i> Flag &amp; Return
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
 
 <!-- Mark-as-paid modal -->
 <div class="rmu-modal-backdrop" id="payBackdrop" role="dialog" aria-modal="true" aria-labelledby="payTitle">
@@ -156,6 +188,48 @@ function closePayModal() {
   document.getElementById('payBackdrop').classList.remove('open');
   document.body.style.overflow = '';
   if (_payTrigger && _payTrigger.focus) _payTrigger.focus();
+}
+
+// ── Flag a claim (finance, internal regulations) ──────────────────────────────
+var _flagClaimId = null;
+function openFlagModal(claimId) {
+  _flagClaimId = claimId;
+  document.getElementById('flagReason').value = '';
+  var err = document.getElementById('flagError'); err.style.display = 'none'; err.textContent = '';
+  document.getElementById('flagConfirmBtn').disabled = false;
+  document.getElementById('flagBackdrop').classList.add('open');
+  document.body.style.overflow = 'hidden';
+  setTimeout(function() { document.getElementById('flagReason').focus(); }, 60);
+}
+function closeFlagModal() {
+  document.getElementById('flagBackdrop').classList.remove('open');
+  document.body.style.overflow = '';
+}
+function confirmFlag() {
+  if (_flagClaimId === null) return;
+  var reason = document.getElementById('flagReason').value.trim();
+  var err = document.getElementById('flagError');
+  if (reason === '') { err.textContent = 'Please enter a reason.'; err.style.display = 'block'; return; }
+  var cb = document.getElementById('flagConfirmBtn'); cb.disabled = true; err.style.display = 'none';
+  var fd = new FormData();
+  fd.append('claimId', _flagClaimId);
+  fd.append('flagReason', reason);
+  fd.append('csrf_token', CSRF);
+  fetch('flagClaim.inc.php', { method: 'POST', body: fd })
+    .then(function(r) { return r.json(); })
+    .then(function(res) {
+      if (res.success) {
+        var row = document.querySelector('tr [onclick*="openFlagModal(' + _flagClaimId + ')"]');
+        closeFlagModal();
+        if (typeof Swal !== 'undefined') {
+          Swal.fire({ icon: 'success', title: 'Flagged', text: res.message, timer: 1600, showConfirmButton: false,
+            background: '#ffffff', color: '#0f2744' }).then(function() { location.reload(); });
+        } else { location.reload(); }
+      } else {
+        cb.disabled = false; err.textContent = res.message || 'Could not flag the claim.'; err.style.display = 'block';
+      }
+    })
+    .catch(function() { cb.disabled = false; err.textContent = 'Network error. Please try again.'; err.style.display = 'block'; });
 }
 
 function confirmPay() {

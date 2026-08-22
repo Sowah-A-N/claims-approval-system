@@ -42,7 +42,8 @@ $results = [
          ORDER BY sc.date_saved DESC",
         $userId),
     'completedClaims' => run_claim_query($conn,
-        "SELECT *, 'Forwarded to Finance' AS status FROM claim_details WHERE userId = ? AND completed = 1",
+        "SELECT *, CASE WHEN paid = 1 THEN 'Paid' ELSE 'Forwarded to Finance' END AS status
+         FROM claim_details WHERE userId = ? AND completed = 1",
         $userId),
 ];
 
@@ -316,7 +317,7 @@ function cell($v) {
                                         <td><?php echo cell($row['programme']); ?></td>
                                         <td><?php echo cell($row['course']); ?></td>
                                         <td><?php echo !empty($row['class']) ? '<span class="rmu-badge rmu-badge--neutral">' . h($row['class']) . '</span>' : '<span class="mc-dash">—</span>'; ?></td>
-                                        <td><span class="rmu-badge rmu-badge--success"><?php echo h($row['status']); ?></span></td>
+                                        <td><span class="rmu-badge <?php echo $row['status'] === 'Paid' ? 'rmu-badge--primary' : 'rmu-badge--success'; ?>"><?php echo h($row['status']); ?></span></td>
                                         <td style="white-space:nowrap;"><?php echo date('d/m/Y', strtotime($row['time_submitted'])); ?></td>
                                         <td style="white-space:nowrap;">
                                             <button class="rmu-btn rmu-btn--secondary rmu-btn--sm" onclick="viewClaimDetails(<?php echo (int)$row['claimId']; ?>)" title="View details" aria-label="View claim details"><i class="ti ti-eye"></i></button>

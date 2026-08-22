@@ -17,6 +17,63 @@ function claim_max_date() {
     return date('Y-m-d', strtotime('-1 day', strtotime(date('Y-m-01'))));
 }
 
+/*
+ * Fraud guard (#1): a claimant may not file the same course + class for a month
+ * they already have a live (non-flagged) claim covering. Returns an associative
+ * array [claimId, month, class] describing the first conflict, or null when the
+ * (course, class, month) combination is free.
+ *
+ * "Same class" means the two claims share at least one class code, so re-ordering
+ * or bundling class codes can't sidestep the check. Flagged (rejected) claims are
+ * ignored so a legitimately returned claim can be re-filed.
+ */
+function db_claim_month_duplicate($conn, $userId, $course, $classList, $dates, $excludeClaimId = null) {
+    $course = trim((string) $course);
+    if ($course === '') return null;
+
+    $newClasses = array();
+    foreach (class_list_to_array($classList) as $c) { $newClasses[strtoupper(trim($c))] = true; }
+    if (empty($newClasses)) return null;
+
+    // Distinct year-months touched by the new claim's dates.
+    $months = array();
+    foreach ((array) $dates as $d) {
+        $d = trim((string) $d);
+        if (preg_match('/^(\d{4}-\d{2})-\d{2}$/', $d, $m)) $months[$m[1]] = true;
+    }
+    if (empty($months)) return null;
+    $monthList = array_keys($months);
+
+    $ph    = implode(',', array_fill(0, count($monthList), '?'));
+    $types = 'is' . str_repeat('s', count($monthList));
+    $params = array_merge(array($userId, $course), $monthList);
+    $sql =
+        "SELECT cd.claimId, cd.class, DATE_FORMAT(cda.date, '%Y-%m') AS ym
+         FROM claim_details cd
+         JOIN claim_data cda ON cda.claimId = cd.claimId
+         WHERE cd.userId = ? AND cd.course = ? AND cd.flagged = 0
+           AND DATE_FORMAT(cda.date, '%Y-%m') IN ($ph)";
+    if ($excludeClaimId !== null) { $sql .= ' AND cd.claimId <> ?'; $types .= 'i'; $params[] = (int) $excludeClaimId; }
+    $sql .= ' GROUP BY cd.claimId, cd.class, ym';
+
+    $stmt = mysqli_prepare($conn, $sql);
+    if (!$stmt) return null;                 // fail-open: never block on a query error
+    mysqli_stmt_bind_param($stmt, $types, ...$params);
+    mysqli_stmt_execute($stmt);
+    $res = mysqli_stmt_get_result($stmt);
+    $conflict = null;
+    while ($row = mysqli_fetch_assoc($res)) {
+        foreach (class_list_to_array($row['class']) as $c) {
+            if (isset($newClasses[strtoupper(trim($c))])) {
+                $conflict = array('claimId' => (int) $row['claimId'], 'month' => $row['ym'], 'class' => strtoupper(trim($c)));
+                break 2;
+            }
+        }
+    }
+    mysqli_stmt_close($stmt);
+    return $conflict;
+}
+
 
 // ── Course lookup ─────────────────────────────────────────────────────────────
 
