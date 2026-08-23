@@ -55,6 +55,11 @@ $base_url = (isset($_SERVER['HTTP_HOST']) && strpos($_SERVER['HTTP_HOST'], 'loca
       <span>Reports</span>
     </a>
 
+    <a class="rmu-sidebar__link" href="<?php echo $base_url; ?>users/admin/pages/timing">
+      <i class="ti ti-clock-hour-4"></i>
+      <span>Approval Timing</span>
+    </a>
+
     <div class="rmu-sidebar__section">System</div>
 
     <a class="rmu-sidebar__link" href="<?php echo $base_url; ?>users/admin/pages/archive">
