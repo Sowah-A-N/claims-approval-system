@@ -72,6 +72,11 @@ $base_url = (isset($_SERVER['HTTP_HOST']) && strpos($_SERVER['HTTP_HOST'], 'loca
       <span>Rank Rates</span>
     </a>
 
+    <a class="rmu-sidebar__link" href="<?php echo $base_url; ?>users/admin/pages/holidays">
+      <i class="ti ti-calendar-event"></i>
+      <span>Holidays</span>
+    </a>
+
     <a class="rmu-sidebar__link" href="<?php echo $base_url; ?>users/admin/pages/settings">
       <i class="ti ti-settings"></i>
       <span>Settings</span>
