@@ -22,7 +22,7 @@ $sql =
             bd.account_number,
             bd.bank_name,
             bd.bank_branch,
-            COALESCE(SUM(cdata.periods), 0) * ud.rate AS amount
+            COALESCE(SUM(cdata.subTotal), 0) AS amount
      FROM claim_details cd
      JOIN user_details ud           ON cd.userId  = ud.userId
      LEFT JOIN claim_data cdata     ON cd.claimId = cdata.claimId

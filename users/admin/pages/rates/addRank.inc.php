@@ -47,5 +47,14 @@ if (!$ok) {
     json_response(array('success' => false, 'message' => 'Could not add the rank. Please try again.'), 500);
 }
 
+// Seed rate history for the new rank (effective today) for effective-dated pay.
+$rh = mysqli_prepare($conn,
+    'INSERT INTO rank_rate_history (`rank`, rate, effective_from) VALUES (?, ?, CURDATE())');
+if ($rh) {
+    mysqli_stmt_bind_param($rh, 'sd', $rank, $rate);
+    mysqli_stmt_execute($rh);
+    mysqli_stmt_close($rh);
+}
+
 log_audit($conn, 'rank.add', 'rank', null, $rank . ' = ' . number_format($rate, 2));
 json_response(array('success' => true, 'message' => 'Rank "' . $rank . '" added at GHS ' . number_format($rate, 2) . '.'));

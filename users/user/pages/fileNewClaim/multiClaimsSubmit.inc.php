@@ -17,16 +17,19 @@ $department = validated_str(isset($_POST['department']) ? $_POST['department'] :
 $programme  = validated_str(isset($_POST['programme'])  ? $_POST['programme']  : '');
 $course     = validated_str(isset($_POST['course'])     ? $_POST['course']     : '');
 $class      = normalize_class_list(isset($_POST['class']) ? $_POST['class'] : ''); // one or more codes (#5)
-// Fetch rate from DB — never trust client-submitted value
-$rate_stmt = mysqli_prepare($conn, 'SELECT rate FROM user_details WHERE userId = ?');
-if (!$rate_stmt) {
+// Rank drives the rate. Each session is paid at the rank rate effective on its
+// teaching date (effective-dated rates); never trust a client-supplied rate.
+$rank_stmt = mysqli_prepare($conn, 'SELECT `rank` FROM user_details WHERE userId = ?');
+if (!$rank_stmt) {
     json_response(array('status' => 'error', 'message' => 'Database error.'), 500);
 }
-mysqli_stmt_bind_param($rate_stmt, 'i', $user_id);
-mysqli_stmt_execute($rate_stmt);
-$rate_row = mysqli_fetch_assoc(mysqli_stmt_get_result($rate_stmt));
-mysqli_stmt_close($rate_stmt);
-$rate = isset($rate_row['rate']) ? (float) $rate_row['rate'] : 0.0;
+mysqli_stmt_bind_param($rank_stmt, 'i', $user_id);
+mysqli_stmt_execute($rank_stmt);
+$rank_row = mysqli_fetch_assoc(mysqli_stmt_get_result($rank_stmt));
+mysqli_stmt_close($rank_stmt);
+$claimant_rank = isset($rank_row['rank']) ? (string) $rank_row['rank'] : '';
+// Representative rate for the claim header (per-session rates are authoritative).
+$rate = db_rank_rate_on($conn, $claimant_rank, date('Y-m-d'));
 $time_slots = isset($_POST['timeSlots']) && is_array($_POST['timeSlots']) ? $_POST['timeSlots'] : array();
 
 if ($department === '' || $programme === '' || $course === '' || $class === '' || empty($time_slots)) {
@@ -99,9 +102,6 @@ if ($ok) {
         $periods    = $end_mins > $start_mins ? (int) ceil(($end_mins - $start_mins) / 50) : 0;
         if ($periods === 0) { $ok = false; break; }
 
-        // subTotal derived entirely server-side from DB rate and recomputed periods.
-        $sub_total = (float) $periods * $rate;
-
         foreach ($dates as $raw_date) {
             $date = validated_str($raw_date);
             if ($date === '') continue;
@@ -125,7 +125,11 @@ if ($ok) {
                                . ') overlaps a claim you have already submitted.'), 409);
             }
 
-            $ok = db_insert_claim_data_row($conn, $claim_id, $date, $start_time, $end_time, $periods, $sub_total, $fuel_component);
+            // Rate effective on THIS teaching date drives the amount.
+            $session_rate = db_rank_rate_on($conn, $claimant_rank, $date);
+            $sub_total    = (float) $periods * $session_rate;
+
+            $ok = db_insert_claim_data_row($conn, $claim_id, $date, $start_time, $end_time, $periods, $sub_total, $fuel_component, $session_rate);
             if (!$ok) break 2;
             $total_dates++;
         }

@@ -44,7 +44,7 @@ if (!$claims || mysqli_num_rows($claims) === 0) {
 
 // Prepared statement reused for each claim's teaching-session rows.
 $rows_stmt = mysqli_prepare($conn,
-    'SELECT date, start_time, end_time, periods FROM claim_data WHERE claimId = ? ORDER BY date');
+    'SELECT date, start_time, end_time, periods, rate, subTotal FROM claim_data WHERE claimId = ? ORDER BY date');
 if (!$rows_stmt) {
     http_response_code(500);
     exit('Database error.');
@@ -88,7 +88,9 @@ while ($c = mysqli_fetch_assoc($claims)) {
     $grand_total = 0;
     $tp->cloneBlock('claim_data_block', 0, true, false, $rows);
     foreach ($rows as $i => $r) {
-        $amount       = (float) $r['periods'] * $rate;
+        $amount       = (isset($r['subTotal']) && $r['subTotal'] !== null)
+                        ? (float) $r['subTotal']
+                        : (float) $r['periods'] * $rate;
         $grand_total += $amount;
         $n            = $i + 1;
         $tp->setValue('claim_date#' . $n, $r['date']);

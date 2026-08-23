@@ -24,17 +24,18 @@ $claimTempId = validated_int(isset($_POST['claimId']) ? $_POST['claimId'] : null
 $userId      = current_user_id();
 $faculty     = isset($_SESSION['faculty']) ? (string) $_SESSION['faculty'] : '';
 
-// Authoritative rate from the database — never trust client- or session-held
-// copies. Mirrors the server-side rate fetch in multiClaimsSubmit (#23/#24).
-$rate_stmt = mysqli_prepare($conn, 'SELECT rate FROM user_details WHERE userId = ?');
-if (!$rate_stmt) {
+// Rank drives the rate; each session is paid at the rank rate effective on its
+// teaching date (effective-dated rates). Never trust client/session copies.
+$rank_stmt = mysqli_prepare($conn, 'SELECT `rank` FROM user_details WHERE userId = ?');
+if (!$rank_stmt) {
     json_response(['ok' => false, 'message' => 'Database error.'], 500);
 }
-mysqli_stmt_bind_param($rate_stmt, 'i', $userId);
-mysqli_stmt_execute($rate_stmt);
-$rate_row = mysqli_fetch_assoc(mysqli_stmt_get_result($rate_stmt));
-mysqli_stmt_close($rate_stmt);
-$rate = isset($rate_row['rate']) ? (float) $rate_row['rate'] : 0.0;
+mysqli_stmt_bind_param($rank_stmt, 'i', $userId);
+mysqli_stmt_execute($rank_stmt);
+$rank_row = mysqli_fetch_assoc(mysqli_stmt_get_result($rank_stmt));
+mysqli_stmt_close($rank_stmt);
+$claimant_rank = isset($rank_row['rank']) ? (string) $rank_row['rank'] : '';
+$rate = db_rank_rate_on($conn, $claimant_rank, date('Y-m-d')); // representative header rate
 
 // ── 1. Verify ownership ───────────────────────────────────────────────────────
 
@@ -138,8 +139,8 @@ mysqli_stmt_close($ins_stage);
 
 // 3c. Copy each teaching-session row to the new claim.
 $ins_data = mysqli_prepare($conn,
-    'INSERT INTO claim_data (claimId, date, start_time, end_time, periods, subTotal, fuelComponent)
-     VALUES (?, ?, ?, ?, ?, ?, ?)'
+    'INSERT INTO claim_data (claimId, date, start_time, end_time, periods, rate, subTotal, fuelComponent)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
 );
 if (!$ins_data) {
     mysqli_rollback($conn);
@@ -167,7 +168,9 @@ foreach ($rows as $dr) {
         mysqli_rollback($conn);
         json_response(['ok' => false, 'message' => 'This draft has a session with no valid duration. Please edit it and try again.'], 400);
     }
-    $sub_total = (float) $periods * $rate;
+    // Rate effective on THIS teaching date (effective-dated rates).
+    $session_rate = db_rank_rate_on($conn, $claimant_rank, (string) $dr['date']);
+    $sub_total    = (float) $periods * $session_rate;
 
     // Enforce previous-months-only (#3): a draft may not be promoted to a real
     // claim if any teaching date falls in the current or a future month.
@@ -188,10 +191,10 @@ foreach ($rows as $dr) {
             'message' => 'A session on ' . $dr['date'] . ' overlaps a claim you have already submitted. Please edit the draft.'], 409);
     }
 
-    mysqli_stmt_bind_param($ins_data, 'isssidi',
+    mysqli_stmt_bind_param($ins_data, 'isssiddi',
         $newClaimId,
         $dr['date'], $dr['start_time'], $dr['end_time'],
-        $periods, $sub_total, $dr['fuelComponent']
+        $periods, $session_rate, $sub_total, $dr['fuelComponent']
     );
     if (!mysqli_stmt_execute($ins_data)) {
         mysqli_stmt_close($ins_data);

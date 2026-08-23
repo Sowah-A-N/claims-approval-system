@@ -18,6 +18,56 @@ function claim_max_date() {
 }
 
 /*
+ * Effective-dated rank rate: the per-period rate that was in force for $rank on
+ * $date (the row in rank_rate_history with the greatest effective_from <= $date).
+ * Falls back to the current lecturer_rank_rate, then 0. Never throws.
+ */
+function db_rank_rate_on($conn, $rank, $date) {
+    $rank = trim((string) $rank);
+    if ($rank === '') return 0.0;
+    $date = preg_match('/^\d{4}-\d{2}-\d{2}$/', (string) $date) ? $date : date('Y-m-d');
+    try {
+        $stmt = mysqli_prepare($conn,
+            'SELECT rate FROM rank_rate_history
+             WHERE `rank` = ? AND effective_from <= ?
+             ORDER BY effective_from DESC, id DESC LIMIT 1');
+        if ($stmt) {
+            mysqli_stmt_bind_param($stmt, 'ss', $rank, $date);
+            mysqli_stmt_execute($stmt);
+            $row = mysqli_fetch_row(mysqli_stmt_get_result($stmt));
+            mysqli_stmt_close($stmt);
+            if ($row) return (float) $row[0];
+        }
+        // Fallback: current rank rate.
+        $stmt = mysqli_prepare($conn, 'SELECT rate FROM lecturer_rank_rate WHERE `rank` = ? LIMIT 1');
+        if ($stmt) {
+            mysqli_stmt_bind_param($stmt, 's', $rank);
+            mysqli_stmt_execute($stmt);
+            $row = mysqli_fetch_row(mysqli_stmt_get_result($stmt));
+            mysqli_stmt_close($stmt);
+            if ($row) return (float) $row[0];
+        }
+    } catch (Throwable $e) {
+        error_log('[db_rank_rate_on] ' . $e->getMessage());
+    }
+    return 0.0;
+}
+
+/* Record a rank-rate change effective from a given date (for the history). */
+function db_rank_rate_add_history($conn, $rank, $rate, $effectiveFrom = null) {
+    $effectiveFrom = ($effectiveFrom && preg_match('/^\d{4}-\d{2}-\d{2}$/', $effectiveFrom))
+        ? $effectiveFrom : date('Y-m-d');
+    $stmt = mysqli_prepare($conn,
+        'INSERT INTO rank_rate_history (`rank`, rate, effective_from) VALUES (?, ?, ?)');
+    if (!$stmt) return false;
+    $rate = (float) $rate;
+    mysqli_stmt_bind_param($stmt, 'sds', $rank, $rate, $effectiveFrom);
+    $ok = mysqli_stmt_execute($stmt);
+    mysqli_stmt_close($stmt);
+    return $ok;
+}
+
+/*
  * Fraud guard (#1): a claimant may not file the same course + class for a month
  * they already have a live (non-flagged) claim covering. Returns an associative
  * array [claimId, month, class] describing the first conflict, or null when the
@@ -271,14 +321,15 @@ function db_insert_initial_stage($conn, $claimId) {
  * Insert a single claim_data row.
  * Returns true on success, false on failure.
  */
-function db_insert_claim_data_row($conn, $claimId, $date, $start_time, $end_time, $periods, $sub_total, $fuel_component) {
+function db_insert_claim_data_row($conn, $claimId, $date, $start_time, $end_time, $periods, $sub_total, $fuel_component, $rate = null) {
     $stmt = mysqli_prepare($conn,
-        'INSERT INTO claim_data (claimId, date, start_time, end_time, periods, subTotal, fuelComponent)
-         VALUES (?, ?, ?, ?, ?, ?, ?)'
+        'INSERT INTO claim_data (claimId, date, start_time, end_time, periods, rate, subTotal, fuelComponent)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
     );
     if (!$stmt) return false;
-    // i=claimId, s=date, s=start, s=end, i=periods, d=subTotal, i=fuelComponent
-    mysqli_stmt_bind_param($stmt, 'isssidi', $claimId, $date, $start_time, $end_time, $periods, $sub_total, $fuel_component);
+    $rate = $rate !== null ? (float) $rate : null;
+    // i,s,s,s,i,d(rate),d(subTotal),i(fuel)
+    mysqli_stmt_bind_param($stmt, 'isssiddi', $claimId, $date, $start_time, $end_time, $periods, $rate, $sub_total, $fuel_component);
     $ok = mysqli_stmt_execute($stmt);
     mysqli_stmt_close($stmt);
     return $ok;
@@ -381,6 +432,8 @@ function db_get_claim_download_data($conn, $claimId, $userId) {
                 cdata.start_time,
                 cdata.end_time,
                 cdata.periods,
+                cdata.rate     AS session_rate,
+                cdata.subTotal AS session_subtotal,
                 bd.bank_name,
                 bd.bank_branch,
                 bd.account_number,

@@ -21,7 +21,7 @@ $sql =
             cd.programme,
             cd.course,
             COALESCE(SUM(cdata.periods), 0)             AS total_periods,
-            COALESCE(SUM(cdata.periods), 0) * ud.rate   AS grand_total,
+            COALESCE(SUM(cdata.subTotal), 0) AS grand_total,
             bd.bank_name,
             bd.bank_branch,
             bd.account_number,

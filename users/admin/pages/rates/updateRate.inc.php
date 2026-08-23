@@ -53,6 +53,16 @@ mysqli_stmt_execute($r2);
 $propagated = mysqli_stmt_affected_rows($r2);
 mysqli_stmt_close($r2);
 
+// 3. Record the change in rate history, effective today. Future claims use the
+//    new rate by teaching date; past claims keep the rate that was in force then.
+$r3 = mysqli_prepare($conn,
+    'INSERT INTO rank_rate_history (`rank`, rate, effective_from) VALUES (?, ?, CURDATE())');
+if ($r3) {
+    mysqli_stmt_bind_param($r3, 'sd', $rank, $rate);
+    mysqli_stmt_execute($r3);
+    mysqli_stmt_close($r3);
+}
+
 mysqli_commit($conn);
 
 log_audit($conn, 'rate.update', 'rank', null,

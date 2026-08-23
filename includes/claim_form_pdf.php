@@ -111,8 +111,17 @@ function render_rmu_claim_form(array $rows, $conn = null) {
     $first = $rows[0];
     $rate  = (float) $first['rate'];
 
+    // Per-session rate/amount are authoritative (effective-dated). Fall back to
+    // the header rate for legacy rows that predate the per-session snapshot.
+    $row_rate = function ($r) use ($rate) {
+        return (isset($r['session_rate']) && $r['session_rate'] !== null) ? (float) $r['session_rate'] : $rate;
+    };
+    $row_sub = function ($r) use ($row_rate) {
+        if (isset($r['session_subtotal']) && $r['session_subtotal'] !== null) return (float) $r['session_subtotal'];
+        return (float) $r['periods'] * $row_rate($r);
+    };
     $grand_total = 0.0;
-    foreach ($rows as $r) $grand_total += (float) $r['periods'] * $rate;
+    foreach ($rows as $r) $grand_total += $row_sub($r);
 
     $full_name = trim($first['last_name'] . ', ' . $first['first_name']
                  . (!empty($first['other_names']) ? ' ' . $first['other_names'] : ''));
@@ -240,7 +249,8 @@ function render_rmu_claim_form(array $rows, $conn = null) {
       <tbody>
         <?php foreach ($rows as $r):
           $periods = (int) $r['periods'];
-          $sub     = $periods * $rate; ?>
+          $rrate   = $row_rate($r);
+          $sub     = $row_sub($r); ?>
         <tr>
           <td class="c"><?php echo h(date('d/m/Y', strtotime($r['claim_date']))); ?></td>
           <td><?php echo h($programme); ?></td>
@@ -248,7 +258,7 @@ function render_rmu_claim_form(array $rows, $conn = null) {
           <td class="c"><?php echo h($fmt_time($r['start_time'])); ?></td>
           <td class="c"><?php echo h($fmt_time($r['end_time'])); ?></td>
           <td class="c"><?php echo $periods; ?></td>
-          <td class="r"><?php echo number_format($rate, 2); ?></td>
+          <td class="r"><?php echo number_format($rrate, 2); ?></td>
           <td class="r"><?php echo number_format($sub, 2); ?></td>
         </tr>
         <?php endforeach; ?>

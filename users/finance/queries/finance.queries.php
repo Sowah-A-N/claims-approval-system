@@ -60,7 +60,7 @@ function db_get_paid_claims($conn, $filters = array()) {
                 CONCAT(ud.last_name, ', ', ud.first_name) AS full_name,
                 ud.department,
                 cd.course,
-                COALESCE(SUM(cdata.periods), 0) * ud.rate AS grand_total,
+                COALESCE(SUM(cdata.subTotal), 0) AS grand_total,
                 cd.payment_ref,
                 cd.time_paid,
                 CONCAT(pb.first_name, ' ', pb.last_name) AS paid_by_name
