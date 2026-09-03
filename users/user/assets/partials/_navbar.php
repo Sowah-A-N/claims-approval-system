@@ -29,6 +29,9 @@ if ($initials === '') $initials = 'U';
           <div style="font-size:.85rem;font-weight:600;color:var(--txt-primary);"><?php echo $full_name; ?></div>
           <div style="font-size:.75rem;color:var(--txt-muted);">Claimant</div>
         </div>
+        <a class="rmu-dropdown__item" href="<?php echo $base_url; ?>users/user/pages/userProfile/">
+          <i class="ti ti-user"></i> Profile &amp; Password
+        </a>
         <a class="rmu-dropdown__item" href="<?php echo $base_url; ?>users/user/pages/settings/">
           <i class="ti ti-settings"></i> Settings
         </a>

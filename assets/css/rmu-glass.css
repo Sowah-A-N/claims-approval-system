@@ -359,6 +359,13 @@ a:hover { color: var(--clr-secondary); }
 .content-wrapper {
   padding: 28px 32px;
 }
+/* The claimant pages put the sidebar-offset (.page-body-wrapper, margin-left:
+   var(--sidebar-w)) on the SAME element as .container-fluid (width:100%). That
+   made the content box 100% + sidebar-width wide → the page overflowed the
+   viewport by exactly the sidebar width on desktop, only fitting once the margin
+   resets on tablet/mobile. Let the offset element's width shrink to the space
+   beside the sidebar instead of forcing a full 100%. */
+.page-body-wrapper.container-fluid { width: auto; }
 /* Bootstrap template wrappers used by admin/approver pages */
 .body-wrapper {
   margin-left: var(--sidebar-w);
@@ -1077,6 +1084,7 @@ a:hover { color: var(--clr-secondary); }
 html, body { max-width: 100%; overflow-x: hidden; }
 img, svg, video, canvas { max-width: 100%; height: auto; }
 .rmu-main, .body-wrapper, .page-wrapper, #main-wrapper,
+.page-body-wrapper, .main-panel,
 .container-fluid, .content-wrapper, .rmu-content, .rmu-card {
   min-width: 0; max-width: 100%;
 }

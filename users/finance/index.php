@@ -266,8 +266,13 @@ function confirmPay() {
 document.getElementById('payBackdrop').addEventListener('click', function(e) {
   if (e.target === this) closePayModal();
 });
+document.getElementById('flagBackdrop').addEventListener('click', function(e) {
+  if (e.target === this) closeFlagModal();
+});
 document.addEventListener('keydown', function(e) {
-  if (e.key === 'Escape' && document.getElementById('payBackdrop').classList.contains('open')) closePayModal();
+  if (e.key !== 'Escape') return;
+  if (document.getElementById('payBackdrop').classList.contains('open'))  closePayModal();
+  if (document.getElementById('flagBackdrop').classList.contains('open')) closeFlagModal();
 });
 </script>
 

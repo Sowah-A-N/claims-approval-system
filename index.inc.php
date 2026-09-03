@@ -126,37 +126,16 @@ if (strtolower($row['role']) === 'approver') {
 
 log_audit($conn, 'auth.login', 'user', (int) $row['userId']);
 
-// Role-to-dashboard routing.
-$role     = strtolower((string) $row['role']);
-$redirect = null;
+// Role-to-dashboard routing. role_home_path() (includes/auth.php) is the single
+// source of truth for where each role lands, shared with the wrong-role guards.
+$role = strtolower((string) $row['role']);
 
-switch ($role) {
-    case 'user':
-    case 'claimant':
-        $redirect = './users/user/';
-        break;
-    case 'approver':
-        $redirect = './users/approver/';
-        break;
-    case 'admin':
-        $redirect = './users/admin';
-        break;
-    case 'finance':
-        $redirect = './users/finance';
-        break;
-    case 'hr':
-        $redirect = './users/hr';
-        break;
-    default:
-        $redirect = null;
-        break;
-}
-
-if ($redirect === null) {
+$known_roles = array('user', 'claimant', 'approver', 'admin', 'finance', 'hr');
+if (!in_array($role, $known_roles, true)) {
     $_SESSION['message'] = 'Your account role is not recognised. Please contact support.';
     header('Location: ./index.php');
     exit;
 }
 
-header('Location: ' . $redirect);
+header('Location: ' . role_home_path($role));
 exit;
