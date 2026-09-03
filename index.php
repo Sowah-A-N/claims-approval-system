@@ -18,8 +18,8 @@ if (empty($_SESSION['csrf_token'])) {
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.4.0/dist/tabler-icons.min.css" integrity="sha384-ldmpcx1x0Xzlz3FRdxRDXdddHL6gUAnUo8m6ERvU0MbQIl53rnzI7hCF+Fd8lRsX" crossorigin="anonymous" referrerpolicy="no-referrer">
-  <link rel="stylesheet" href="./assets/css/rmu-glass.css?v=6">
-  <script src="./assets/js/rmu-ui.js?v=1" defer></script>
+  <link rel="stylesheet" href="./assets/css/rmu-glass.css?v=7">
+  <script src="./assets/js/rmu-ui.js?v=7" defer></script>
 </head>
 <body>
 
@@ -38,10 +38,25 @@ if (empty($_SESSION['csrf_token'])) {
       <div class="rmu-login-form-wrap__title">Welcome back</div>
       <div class="rmu-login-form-wrap__sub">Sign in to your account to continue</div>
 
-      <?php if (isset($_SESSION['message'])): ?>
+      <?php
+        // Surface the state the app signals via query string on redirect —
+        // otherwise a timed-out or disabled user lands on a blank login page
+        // with no explanation. Session messages take precedence.
+        $login_notice = '';
+        if (isset($_SESSION['message'])) {
+            $login_notice = $_SESSION['message'];
+            unset($_SESSION['message']);
+        } elseif (isset($_GET['timeout'])) {
+            $login_notice = 'Your session expired after a period of inactivity. Please sign in again.';
+        } elseif (isset($_GET['disabled'])) {
+            $login_notice = 'This account is not active. Please contact an administrator.';
+        } elseif (isset($_GET['loggedout'])) {
+            $login_notice = 'You have been signed out.';
+        }
+      ?>
+      <?php if ($login_notice !== ''): ?>
         <div class="rmu-alert rmu-alert--warning" style="margin-bottom:20px;">
-          <?php echo htmlspecialchars($_SESSION['message'], ENT_QUOTES, 'UTF-8');
-                unset($_SESSION['message']); ?>
+          <?php echo htmlspecialchars($login_notice, ENT_QUOTES, 'UTF-8'); ?>
         </div>
       <?php endif; ?>
 

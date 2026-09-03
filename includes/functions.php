@@ -11,6 +11,46 @@
 
 
 /*
+ * Fatal-safe rendering. Under PHP 8.1+ mysqli throws on error, so an
+ * unguarded query failure would otherwise surface as a raw HTTP 500 (and,
+ * with display_errors on, a stack trace). Never leak internals to the browser:
+ * keep display_errors off, log the exception, and return a clean response —
+ * JSON for the AJAX endpoints (*.inc.php, or JSON-accepting callers) and the
+ * styled 500 page for ordinary page requests.
+ */
+ini_set('display_errors', '0');
+if (!defined('RMU_EXCEPTION_HANDLER')) {
+    define('RMU_EXCEPTION_HANDLER', 1);
+    set_exception_handler(function ($e) {
+        error_log('[uncaught] ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine());
+        if (!headers_sent()) {
+            http_response_code(500);
+        }
+        $script = isset($_SERVER['SCRIPT_NAME']) ? $_SERVER['SCRIPT_NAME'] : '';
+        $accept = isset($_SERVER['HTTP_ACCEPT']) ? $_SERVER['HTTP_ACCEPT'] : '';
+        $is_api = substr($script, -8) === '.inc.php'
+               || strpos($accept, 'application/json') !== false;
+        if ($is_api) {
+            if (!headers_sent()) {
+                header('Content-Type: application/json');
+            }
+            echo json_encode(array('success' => false, 'message' => 'A server error occurred. Please try again.'));
+        } else {
+            $render = __DIR__ . '/../error_pages/_render.php';
+            if (is_file($render)) {
+                $err_code  = 500;
+                $err_title = 'Something went wrong';
+                $err_msg   = 'An unexpected error occurred. Please try again in a moment.';
+                require $render;
+            } else {
+                echo 'A server error occurred. Please try again.';
+            }
+        }
+        exit;
+    });
+}
+
+/*
  * Escape a value for safe output inside HTML.
  * Use on every database value echoed into a page.
  *

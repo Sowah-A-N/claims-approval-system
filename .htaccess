@@ -29,6 +29,15 @@
 # ── Disable directory listing ─────────────────────────────────────────────────
 Options -Indexes
 
+# ── Custom error pages ────────────────────────────────────────────────────────
+# Paths are document-root-relative, correct for a domain-root deployment
+# (production). If the app is served from a subdirectory, prefix the path with
+# that directory, e.g. /claims-approval-system/error_pages/404.php.
+ErrorDocument 401 /error_pages/401.php
+ErrorDocument 403 /error_pages/403.php
+ErrorDocument 404 /error_pages/404.php
+ErrorDocument 500 /error_pages/500.php
+
 # ── Basic security headers ────────────────────────────────────────────────────
 <IfModule mod_headers.c>
     Header always set X-Content-Type-Options "nosniff"

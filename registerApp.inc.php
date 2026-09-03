@@ -40,6 +40,13 @@ if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
     exit;
 }
 
+// Minimum password strength: at least 8 characters, with a letter and a number.
+if (strlen($raw_password) < 8 || !preg_match('/[A-Za-z]/', $raw_password) || !preg_match('/\d/', $raw_password)) {
+    $_SESSION['message'] = 'Password must be at least 8 characters and include a letter and a number.';
+    header('Location: ./registerApp.php');
+    exit;
+}
+
 // Reject duplicate emails up front so the user gets a clear message rather
 // than a generic failure when the UNIQUE constraint fires.
 $dup = mysqli_prepare($conn, 'SELECT 1 FROM login_details WHERE email = ? LIMIT 1');

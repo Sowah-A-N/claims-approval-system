@@ -22,8 +22,8 @@ $depts     = $deptResult    ? mysqli_fetch_all($deptResult,    MYSQLI_ASSOC) : a
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.4.0/dist/tabler-icons.min.css" integrity="sha384-ldmpcx1x0Xzlz3FRdxRDXdddHL6gUAnUo8m6ERvU0MbQIl53rnzI7hCF+Fd8lRsX" crossorigin="anonymous" referrerpolicy="no-referrer">
-  <link rel="stylesheet" href="./assets/css/rmu-glass.css?v=6">
-  <script src="./assets/js/rmu-ui.js?v=1" defer></script>
+  <link rel="stylesheet" href="./assets/css/rmu-glass.css?v=7">
+  <script src="./assets/js/rmu-ui.js?v=7" defer></script>
 </head>
 <body>
 
@@ -63,29 +63,29 @@ $depts     = $deptResult    ? mysqli_fetch_all($deptResult,    MYSQLI_ASSOC) : a
         <div class="rmu-card__body">
           <div class="rmu-grid-3">
             <div class="rmu-form-group">
-              <label class="rmu-label">First Name <span class="required">*</span></label>
-              <input type="text" class="rmu-input" name="first_name" placeholder="First name" required>
+              <label class="rmu-label" for="first_name">First Name <span class="required">*</span></label>
+              <input type="text" class="rmu-input" id="first_name" name="first_name" placeholder="First name" required>
             </div>
             <div class="rmu-form-group">
-              <label class="rmu-label">Last Name <span class="required">*</span></label>
-              <input type="text" class="rmu-input" name="last_name" placeholder="Last name" required>
+              <label class="rmu-label" for="last_name">Last Name <span class="required">*</span></label>
+              <input type="text" class="rmu-input" id="last_name" name="last_name" placeholder="Last name" required>
             </div>
             <div class="rmu-form-group">
-              <label class="rmu-label">Other Names</label>
-              <input type="text" class="rmu-input" name="other_names" placeholder="Middle / other names">
+              <label class="rmu-label" for="other_names">Other Names</label>
+              <input type="text" class="rmu-input" id="other_names" name="other_names" placeholder="Middle / other names">
             </div>
           </div>
           <div class="rmu-grid-3">
             <div class="rmu-form-group">
-              <label class="rmu-label">Phone Number <span class="required">*</span></label>
+              <label class="rmu-label" for="phone_number">Phone Number <span class="required">*</span></label>
               <input type="tel" class="rmu-input" id="phone_number" name="phone_number"
                      placeholder="0XXXXXXXXX" required>
               <div class="rmu-form-error" id="phone-error">Enter a valid 10-digit phone number starting with 0.</div>
               <div class="rmu-form-hint">Format: 0XXXXXXXXX (10 digits)</div>
             </div>
             <div class="rmu-form-group">
-              <label class="rmu-label">Gender <span class="required">*</span></label>
-              <select class="rmu-select" name="gender" required>
+              <label class="rmu-label" for="gender">Gender <span class="required">*</span></label>
+              <select class="rmu-select" id="gender" name="gender" required>
                 <option value="">Select gender</option>
                 <option value="Male">Male</option>
                 <option value="Female">Female</option>
@@ -93,13 +93,14 @@ $depts     = $deptResult    ? mysqli_fetch_all($deptResult,    MYSQLI_ASSOC) : a
               </select>
             </div>
             <div class="rmu-form-group">
-              <label class="rmu-label">Email Address <span class="required">*</span></label>
-              <input type="email" class="rmu-input" name="email" placeholder="you@example.com" required>
+              <label class="rmu-label" for="email">Email Address <span class="required">*</span></label>
+              <input type="email" class="rmu-input" id="email" name="email" placeholder="you@example.com" required>
             </div>
           </div>
           <div class="rmu-form-group" style="max-width:340px;">
-            <label class="rmu-label">Password <span class="required">*</span></label>
-            <input type="password" class="rmu-input" name="password" placeholder="Choose a strong password" required>
+            <label class="rmu-label" for="password">Password <span class="required">*</span></label>
+            <input type="password" class="rmu-input" id="password" name="password" placeholder="Choose a strong password" minlength="8" required aria-describedby="password-hint">
+            <div class="rmu-form-hint" id="password-hint">At least 8 characters, including a letter and a number.</div>
           </div>
         </div>
       </div>
@@ -112,8 +113,8 @@ $depts     = $deptResult    ? mysqli_fetch_all($deptResult,    MYSQLI_ASSOC) : a
         <div class="rmu-card__body">
           <div class="rmu-grid-3">
             <div class="rmu-form-group">
-              <label class="rmu-label">Faculty <span class="required">*</span></label>
-              <select class="rmu-select" name="faculty" required>
+              <label class="rmu-label" for="faculty">Faculty <span class="required">*</span></label>
+              <select class="rmu-select" id="faculty" name="faculty" required>
                 <option value="">Select faculty</option>
                 <?php foreach ($faculties as $f): ?>
                   <option value="<?php echo htmlspecialchars($f['name'], ENT_QUOTES, 'UTF-8'); ?>">
@@ -123,8 +124,8 @@ $depts     = $deptResult    ? mysqli_fetch_all($deptResult,    MYSQLI_ASSOC) : a
               </select>
             </div>
             <div class="rmu-form-group">
-              <label class="rmu-label">Department <span class="required">*</span></label>
-              <select class="rmu-select" name="department" required>
+              <label class="rmu-label" for="department">Department <span class="required">*</span></label>
+              <select class="rmu-select" id="department" name="department" required>
                 <option value="">Select department</option>
                 <?php foreach ($depts as $d): ?>
                   <option value="<?php echo htmlspecialchars($d['dept_name'], ENT_QUOTES, 'UTF-8'); ?>">
@@ -134,7 +135,7 @@ $depts     = $deptResult    ? mysqli_fetch_all($deptResult,    MYSQLI_ASSOC) : a
               </select>
             </div>
             <div class="rmu-form-group">
-              <label class="rmu-label">Approver Rank <span class="required">*</span></label>
+              <label class="rmu-label" for="rank">Approver Rank <span class="required">*</span></label>
               <select class="rmu-select" id="rank" name="rank" required>
                 <option value="">Select rank</option>
                 <?php foreach ($ranks as $r): ?>
@@ -147,7 +148,7 @@ $depts     = $deptResult    ? mysqli_fetch_all($deptResult,    MYSQLI_ASSOC) : a
             </div>
           </div>
           <div class="rmu-form-group" style="max-width:260px;">
-            <label class="rmu-label">Approval Stage</label>
+            <label class="rmu-label" for="stage_display">Approval Stage</label>
             <input type="text" class="rmu-input" id="stage_display" placeholder="Auto-filled from rank" readonly
                    style="color:var(--txt-muted);">
             <input type="hidden" id="stage" name="stage" value="0">

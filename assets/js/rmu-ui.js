@@ -70,4 +70,109 @@
     new MutationObserver(sync).observe(sidebar, { attributes: true, attributeFilter: ['class'] });
     sync();
   });
+
+  // ── Profile menu: make the avatar toggle keyboard-operable (a11y) ──────────
+  // The markup ships a non-focusable <div id="profile-toggle">; enhance it into
+  // a real button in-place so Enter/Space open the menu and screen readers
+  // announce it, without touching every role's header partial.
+  document.addEventListener('DOMContentLoaded', function () {
+    var toggle = document.getElementById('profile-toggle');
+    var dd     = document.getElementById('profile-dropdown');
+    if (!toggle) return;
+    if (!toggle.hasAttribute('role'))     toggle.setAttribute('role', 'button');
+    if (!toggle.hasAttribute('tabindex')) toggle.setAttribute('tabindex', '0');
+    toggle.setAttribute('aria-haspopup', 'menu');
+    toggle.setAttribute('aria-expanded', 'false');
+    toggle.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') {
+        e.preventDefault();
+        toggle.click();
+      }
+    });
+    if (dd) {
+      new MutationObserver(function () {
+        toggle.setAttribute('aria-expanded', dd.classList.contains('open') ? 'true' : 'false');
+      }).observe(dd, { attributes: true, attributeFilter: ['class'] });
+    }
+  });
+
+  // ── Skip link + main-content anchor + consistent footer (a11y / content) ───
+  // Every portal page renders a <header id="rmu-header">, so we can insert a
+  // "Skip to content" link as the first focusable element, drop a focus anchor
+  // right after the header, and append a standard footer to any page that
+  // lacks one (the claimant pages already ship _footer.php).
+  document.addEventListener('DOMContentLoaded', function () {
+    var header = document.getElementById('rmu-header');
+
+    if (header && !document.querySelector('.rmu-skip-link')) {
+      var anchor = document.getElementById('rmu-main');
+      if (!anchor) {
+        anchor = document.createElement('span');
+        anchor.id = 'rmu-main';
+        anchor.tabIndex = -1;
+        header.insertAdjacentElement('afterend', anchor);
+      }
+      var skip = document.createElement('a');
+      skip.className = 'rmu-skip-link';
+      skip.href = '#rmu-main';
+      skip.textContent = 'Skip to content';
+      skip.addEventListener('click', function (e) {
+        e.preventDefault();
+        anchor.focus();
+        anchor.scrollIntoView({ block: 'start' });
+      });
+      document.body.insertBefore(skip, document.body.firstChild);
+    }
+
+    if (!document.querySelector('footer')) {
+      var host = header ? header.parentNode
+                        : document.querySelector('.main-panel, .body-wrapper');
+      if (host) {
+        var f = document.createElement('footer');
+        f.className = 'rmu-footer';
+        f.textContent = '© ' + new Date().getFullYear() +
+          ' Regional Maritime University · Claims Management System';
+        host.appendChild(f);
+      }
+    }
+  });
+
+  // ── Focus management for custom modals (a11y, WCAG 2.4.3) ──────────────────
+  // The .rmu-modal-backdrop dialogs open by toggling a `.open` class. Move
+  // focus into the dialog on open, trap Tab within it, and restore focus to the
+  // trigger on close.
+  document.addEventListener('DOMContentLoaded', function () {
+    var SEL = 'a[href],button:not([disabled]),textarea:not([disabled]),' +
+              'input:not([disabled]),select:not([disabled]),[tabindex]:not([tabindex="-1"])';
+    var restoreTo = null;
+
+    function focusables(modal) {
+      return Array.prototype.slice.call(modal.querySelectorAll(SEL))
+        .filter(function (el) { return el.offsetParent !== null; });
+    }
+
+    document.addEventListener('keydown', function (e) {
+      if (e.key !== 'Tab') return;
+      var modal = document.querySelector('.rmu-modal-backdrop.open');
+      if (!modal) return;
+      var f = focusables(modal);
+      if (!f.length) return;
+      var first = f[0], last = f[f.length - 1];
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    });
+
+    Array.prototype.forEach.call(document.querySelectorAll('.rmu-modal-backdrop'), function (modal) {
+      new MutationObserver(function () {
+        if (modal.classList.contains('open')) {
+          restoreTo = document.activeElement;
+          var f = focusables(modal);
+          if (f.length) f[0].focus();
+        } else if (restoreTo && restoreTo.focus) {
+          restoreTo.focus();
+          restoreTo = null;
+        }
+      }).observe(modal, { attributes: true, attributeFilter: ['class'] });
+    });
+  });
 })();

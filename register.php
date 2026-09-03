@@ -15,8 +15,8 @@ require_once __DIR__ . '/includes/auth.php';
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.4.0/dist/tabler-icons.min.css" integrity="sha384-ldmpcx1x0Xzlz3FRdxRDXdddHL6gUAnUo8m6ERvU0MbQIl53rnzI7hCF+Fd8lRsX" crossorigin="anonymous" referrerpolicy="no-referrer">
-  <link rel="stylesheet" href="./assets/css/rmu-glass.css?v=6">
-  <script src="./assets/js/rmu-ui.js?v=1" defer></script>
+  <link rel="stylesheet" href="./assets/css/rmu-glass.css?v=7">
+  <script src="./assets/js/rmu-ui.js?v=7" defer></script>
 </head>
 <body>
 
@@ -100,7 +100,8 @@ require_once __DIR__ . '/includes/auth.php';
           </div>
           <div class="rmu-form-group" style="max-width:340px;">
             <label class="rmu-label" for="password">Password <span class="required">*</span></label>
-            <input type="password" class="rmu-input" id="password" name="password" placeholder="Choose a strong password" required>
+            <input type="password" class="rmu-input" id="password" name="password" placeholder="Choose a strong password" minlength="8" required aria-describedby="password-hint">
+            <small id="password-hint" style="display:block;margin-top:6px;color:var(--txt-muted);font-size:.8rem;">At least 8 characters, including a letter and a number.</small>
           </div>
         </div>
       </div>

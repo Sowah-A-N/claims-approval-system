@@ -17,7 +17,7 @@ checkUserRole(['user', 'claimant']);
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.4.0/dist/tabler-icons.min.css" integrity="sha384-ldmpcx1x0Xzlz3FRdxRDXdddHL6gUAnUo8m6ERvU0MbQIl53rnzI7hCF+Fd8lRsX" crossorigin="anonymous" referrerpolicy="no-referrer">
-  <?php $rmu_css = ($pageTitle === 'Dashboard') ? '../../assets/css/rmu-glass.css?v=6' : '../../../../assets/css/rmu-glass.css?v=6'; ?>
+  <?php $rmu_css = ($pageTitle === 'Dashboard') ? '../../assets/css/rmu-glass.css?v=7' : '../../../../assets/css/rmu-glass.css?v=7'; ?>
   <link rel="stylesheet" href="<?php echo $rmu_css; ?>">
   <script src="<?php echo str_replace('css/rmu-glass.css', 'js/rmu-ui.js', $rmu_css); ?>" defer></script>
   <!-- SweetAlert2 for confirmations -->
