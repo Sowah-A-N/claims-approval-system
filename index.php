@@ -63,8 +63,10 @@ if (empty($_SESSION['csrf_token'])) {
       <form method="POST" action="index.inc.php" autocomplete="off">
         <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['csrf_token'], ENT_QUOTES, 'UTF-8'); ?>">
         <div class="rmu-login-input-group">
-          <i class="ti ti-mail rmu-login-input-group__icon"></i>
+          <label for="login-email" class="rmu-sr-only">Email address</label>
+          <i class="ti ti-mail rmu-login-input-group__icon" aria-hidden="true"></i>
           <input
+            id="login-email"
             class="rmu-input"
             type="email"
             name="email"
@@ -75,8 +77,10 @@ if (empty($_SESSION['csrf_token'])) {
         </div>
 
         <div class="rmu-login-input-group">
-          <i class="ti ti-lock rmu-login-input-group__icon"></i>
+          <label for="login-pw" class="rmu-sr-only">Password</label>
+          <i class="ti ti-lock rmu-login-input-group__icon" aria-hidden="true"></i>
           <input
+            id="login-pw"
             class="rmu-input"
             type="password"
             name="pw"
@@ -84,6 +88,10 @@ if (empty($_SESSION['csrf_token'])) {
             required
             autocomplete="current-password"
           >
+        </div>
+
+        <div style="text-align:right;margin:-4px 0 16px;">
+          <a href="forgot.php" style="font-size:.85rem;">Forgot password?</a>
         </div>
 
         <button type="submit" class="rmu-login-btn">
