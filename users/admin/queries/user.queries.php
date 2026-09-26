@@ -12,8 +12,13 @@
 /*
  * Return all users ordered by creation date (newest first).
  */
-function db_get_all_users($conn) {
-    $result = mysqli_query($conn,
+function db_count_users($conn) {
+    $r = mysqli_query($conn, "SELECT COUNT(*) FROM user_details");
+    return $r ? (int) mysqli_fetch_row($r)[0] : 0;
+}
+
+function db_get_all_users($conn, $limit = null, $offset = 0) {
+    $sql =
         "SELECT userId,
                 CONCAT(first_name, ' ', last_name) AS full_name,
                 email,
@@ -23,8 +28,11 @@ function db_get_all_users($conn) {
                 account_status,
                 date_created
          FROM user_details
-         ORDER BY date_created DESC"
-    );
+         ORDER BY date_created DESC";
+    if ($limit !== null) {
+        $sql .= ' LIMIT ' . (int) $limit . ' OFFSET ' . (int) $offset;
+    }
+    $result = mysqli_query($conn, $sql);
     if (!$result) return array();
     return mysqli_fetch_all($result, MYSQLI_ASSOC);
 }

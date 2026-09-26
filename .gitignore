@@ -25,3 +25,6 @@ node_modules/
 # stray root artefacts (pptx skill / debug)
 /*.pptx
 debug_*.rels
+
+# Local audit backlog (not tracked)
+AUDIT_TASKS.md

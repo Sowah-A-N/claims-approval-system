@@ -30,7 +30,7 @@ $_hr_role_label = 'HR Officer';
           <div style="font-size:.85rem;font-weight:600;color:var(--txt-primary);"><?php echo $_hr_name; ?></div>
           <div style="font-size:.75rem;color:var(--txt-muted);"><?php echo $_hr_role_label; ?></div>
         </div>
-        <a href="<?php echo $base_url; ?>logout.php" class="rmu-dropdown__item">
+        <a href="<?php echo $base_url; ?>logout.php?token=<?php echo urlencode(csrf_token()); ?>" class="rmu-dropdown__item">
           <i class="ti ti-logout"></i> Logout
         </a>
       </div>

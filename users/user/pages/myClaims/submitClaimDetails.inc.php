@@ -82,6 +82,8 @@ if (empty($rows)) {
 // Fraud guard (#1): block a duplicate course+class for a month already claimed.
 $draft_dates = array();
 foreach ($rows as $dr) $draft_dates[] = $dr['date'];
+// Serialise this user's submissions so the duplicate check + insert are atomic (A-02).
+db_claim_submit_lock($conn, $userId);
 $dup = db_claim_month_duplicate($conn, $userId, $draft['course'], isset($draft['class']) ? $draft['class'] : '', $draft_dates);
 if ($dup) {
     json_response([

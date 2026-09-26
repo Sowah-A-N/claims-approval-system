@@ -25,7 +25,7 @@ $base_url = (isset($_SERVER['HTTP_HOST']) && strpos($_SERVER['HTTP_HOST'], 'loca
 
     <div class="rmu-sidebar__section">Account</div>
 
-    <a class="rmu-sidebar__link" href="<?php echo $base_url; ?>logout.php">
+    <a class="rmu-sidebar__link" href="<?php echo $base_url; ?>logout.php?token=<?php echo urlencode(csrf_token()); ?>">
       <i class="ti ti-logout"></i>
       <span>Logout</span>
     </a>

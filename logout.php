@@ -2,6 +2,16 @@
 // Start the session
 session_start();
 
+// CSRF protection (A-11): only log out on a request carrying this session's token,
+// so a cross-site GET can't force-log-out the user. If the token is missing or
+// wrong, do nothing and return to the app.
+$token    = isset($_GET['token']) ? $_GET['token'] : (isset($_POST['token']) ? $_POST['token'] : '');
+$expected = isset($_SESSION['csrf_token']) ? $_SESSION['csrf_token'] : '';
+if ($expected === '' || !is_string($token) || !hash_equals($expected, $token)) {
+    header('Location: index.php');
+    exit();
+}
+
 // Unset all session variables
 $_SESSION = array();
 

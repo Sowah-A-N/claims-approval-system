@@ -33,7 +33,7 @@ if ($_admin_initials === '') $_admin_initials = 'A';
           <i class="ti ti-user"></i> My Profile
         </a>
         <div class="rmu-dropdown__divider"></div>
-        <a href="<?php echo $base_url; ?>logout.php" class="rmu-dropdown__item">
+        <a href="<?php echo $base_url; ?>logout.php?token=<?php echo urlencode(csrf_token()); ?>" class="rmu-dropdown__item">
           <i class="ti ti-logout"></i> Logout
         </a>
       </div>

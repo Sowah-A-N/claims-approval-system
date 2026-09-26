@@ -4,6 +4,18 @@ require_once __DIR__ . '/../../../../includes/auth.php';
 require_once __DIR__ . '/../../../../includes/db.php';
 require_once __DIR__ . '/../../../../includes/functions.php';
 checkUserRole(['user', 'claimant']);
+
+// Force a password change before anything else when the account was created with
+// a temporary password (A-06 / A-13). Settings is exempt so the user can change it.
+if (!empty($_SESSION['force_pw_change'])
+    && strpos($_SERVER['SCRIPT_NAME'], '/pages/settings/') === false) {
+    $_SESSION['message'] = 'Please set a new password to continue.';
+    $_SESSION['message_type'] = 'error';
+    $base = (isset($_SERVER['HTTP_HOST']) && strpos($_SERVER['HTTP_HOST'], 'localhost') !== false)
+        ? '/claims-approval-system/' : '/';
+    header('Location: ' . $base . 'users/user/pages/settings/');
+    exit;
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">

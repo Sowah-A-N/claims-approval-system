@@ -5,6 +5,14 @@ require_once __DIR__ . '/../../../../includes/functions.php';
 
 checkUserRole(['admin', 'Admin']);
 
+// Server-side pagination (A-04): don't render every claim at once.
+$per_page    = 50;
+$cnt_res     = mysqli_query($conn, "SELECT COUNT(*) FROM claim_details");
+$total_claims = $cnt_res ? (int) mysqli_fetch_row($cnt_res)[0] : 0;
+$total_pages = max(1, (int) ceil($total_claims / $per_page));
+$page        = isset($_GET['p']) ? max(1, min($total_pages, (int) $_GET['p'])) : 1;
+$offset      = ($page - 1) * $per_page;
+
 // All submitted claims with derived status
 $claims_stmt = mysqli_prepare($conn,
     "SELECT cd.claimId,
@@ -20,8 +28,10 @@ $claims_stmt = mysqli_prepare($conn,
             END AS status
      FROM claim_details cd
      JOIN user_details ud ON cd.userId = ud.userId
-     ORDER BY cd.time_submitted DESC"
+     ORDER BY cd.time_submitted DESC
+     LIMIT ? OFFSET ?"
 );
+mysqli_stmt_bind_param($claims_stmt, 'ii', $per_page, $offset);
 mysqli_stmt_execute($claims_stmt);
 $claims = mysqli_fetch_all(mysqli_stmt_get_result($claims_stmt), MYSQLI_ASSOC);
 mysqli_stmt_close($claims_stmt);
@@ -159,6 +169,17 @@ $pageTitle = 'Claims Overview';
               </tbody>
             </table>
           </div>
+          <?php if ($total_pages > 1): ?>
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 20px;border-top:1px solid var(--divider);flex-wrap:wrap;">
+            <span style="color:var(--txt-muted);font-size:.85rem;">
+              Page <?php echo $page; ?> of <?php echo $total_pages; ?> · <?php echo (int) $total_claims; ?> claims
+            </span>
+            <span style="display:flex;gap:8px;">
+              <?php if ($page > 1): ?><a class="rmu-btn rmu-btn--secondary rmu-btn--sm" href="?p=<?php echo $page - 1; ?>"><i class="ti ti-chevron-left"></i> Prev</a><?php endif; ?>
+              <?php if ($page < $total_pages): ?><a class="rmu-btn rmu-btn--secondary rmu-btn--sm" href="?p=<?php echo $page + 1; ?>">Next <i class="ti ti-chevron-right"></i></a><?php endif; ?>
+            </span>
+          </div>
+          <?php endif; ?>
         </div>
       </div>
 

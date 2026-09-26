@@ -58,6 +58,9 @@ foreach ($time_slots as $slot) {
         foreach ($slot['dates'] as $d) $all_dates[] = validated_str($d);
     }
 }
+// Serialise this user's submissions so the duplicate check + insert are atomic (A-02).
+db_claim_submit_lock($conn, $user_id);
+
 $dup = db_claim_month_duplicate($conn, $user_id, $course, $class, $all_dates);
 if ($dup) {
     json_response(array('status' => 'error',

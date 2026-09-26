@@ -7,7 +7,13 @@ require_once __DIR__ . '/../../queries/user.queries.php';
 checkUserRole(['admin', 'Admin']);
 csrf_token();
 
-$users = db_get_all_users($conn);
+// Server-side pagination (A-04): don't render every row. Client filters below
+// operate within the current page.
+$per_page   = 50;
+$total_users = db_count_users($conn);
+$total_pages = max(1, (int) ceil($total_users / $per_page));
+$page       = isset($_GET['p']) ? max(1, min($total_pages, (int) $_GET['p'])) : 1;
+$users      = db_get_all_users($conn, $per_page, ($page - 1) * $per_page);
 
 $dept_res  = mysqli_query($conn,
     "SELECT DISTINCT department FROM user_details
@@ -169,6 +175,17 @@ $pageTitle = 'All Users';
               </tbody>
             </table>
           </div>
+          <?php if ($total_pages > 1): ?>
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 20px;border-top:1px solid var(--divider);flex-wrap:wrap;">
+            <span style="color:var(--txt-muted);font-size:.85rem;">
+              Page <?php echo $page; ?> of <?php echo $total_pages; ?> · <?php echo (int) $total_users; ?> users
+            </span>
+            <span style="display:flex;gap:8px;">
+              <?php if ($page > 1): ?><a class="rmu-btn rmu-btn--secondary rmu-btn--sm" href="?p=<?php echo $page - 1; ?>"><i class="ti ti-chevron-left"></i> Prev</a><?php endif; ?>
+              <?php if ($page < $total_pages): ?><a class="rmu-btn rmu-btn--secondary rmu-btn--sm" href="?p=<?php echo $page + 1; ?>">Next <i class="ti ti-chevron-right"></i></a><?php endif; ?>
+            </span>
+          </div>
+          <?php endif; ?>
         </div>
       </div>
 

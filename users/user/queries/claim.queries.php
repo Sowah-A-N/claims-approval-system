@@ -77,6 +77,31 @@ function db_rank_rate_add_history($conn, $rank, $rate, $effectiveFrom = null) {
  * or bundling class codes can't sidestep the check. Flagged (rejected) claims are
  * ignored so a legitimately returned claim can be re-filed.
  */
+/*
+ * Per-user submit lock (A-02). The duplicate-claim guard is a check-then-insert,
+ * so two concurrent submits from the same user could both pass the check and both
+ * insert. Serialise a single user's submissions with a MySQL advisory lock so the
+ * check + insert are atomic. Different users are unaffected. The lock auto-releases
+ * when the connection/script ends; db_claim_submit_unlock() releases it early.
+ * Fails open (returns true) if the lock can't be taken, so a lock error never
+ * blocks a legitimate submission — the in-transaction check still applies.
+ */
+function db_claim_submit_lock($conn, $userId) {
+    $name = 'rmu_claim_submit_' . (int) $userId;
+    $stmt = mysqli_prepare($conn, 'SELECT GET_LOCK(?, 10)');
+    if (!$stmt) return true;
+    mysqli_stmt_bind_param($stmt, 's', $name);
+    mysqli_stmt_execute($stmt);
+    $row = mysqli_fetch_row(mysqli_stmt_get_result($stmt));
+    mysqli_stmt_close($stmt);
+    return !$row || (int) $row[0] === 1;
+}
+function db_claim_submit_unlock($conn, $userId) {
+    $name = 'rmu_claim_submit_' . (int) $userId;
+    $stmt = mysqli_prepare($conn, 'SELECT RELEASE_LOCK(?)');
+    if ($stmt) { mysqli_stmt_bind_param($stmt, 's', $name); mysqli_stmt_execute($stmt); mysqli_stmt_close($stmt); }
+}
+
 function db_claim_month_duplicate($conn, $userId, $course, $classList, $dates, $excludeClaimId = null) {
     $course = trim((string) $course);
     if ($course === '') return null;

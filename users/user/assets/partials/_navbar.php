@@ -33,7 +33,7 @@ if ($initials === '') $initials = 'U';
           <i class="ti ti-settings"></i> Settings
         </a>
         <div class="rmu-dropdown__divider"></div>
-        <a class="rmu-dropdown__item" href="<?php echo $base_url; ?>logout.php">
+        <a class="rmu-dropdown__item" href="<?php echo $base_url; ?>logout.php?token=<?php echo urlencode(csrf_token()); ?>">
           <i class="ti ti-logout"></i> Logout
         </a>
       </div>

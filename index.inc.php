@@ -116,6 +116,7 @@ $_SESSION['full_name'] = trim(
     (isset($profile['last_name'])  ? $profile['last_name']  : '') . ', ' .
     (isset($profile['first_name']) ? $profile['first_name'] : '')
 );
+$_SESSION['force_pw_change'] = (int) (isset($row['force_password_change']) ? $row['force_password_change'] : 0);
 $_SESSION['rate']      = isset($profile['rate'])       ? $profile['rate']       : '';
 $_SESSION['dept']      = isset($profile['department']) ? $profile['department'] : '';
 $_SESSION['faculty']   = isset($profile['faculty'])    ? $profile['faculty']    : '';

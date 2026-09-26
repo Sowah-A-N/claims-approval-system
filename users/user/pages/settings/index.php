@@ -37,10 +37,12 @@
                 $_SESSION['message_type'] = "error";
             } else {
                 $hash = password_hash($newPassword, PASSWORD_DEFAULT);
-                $stmt = mysqli_prepare($conn, "UPDATE login_details SET password = ? WHERE userId = ?");
+                // Clear the force-change flag on a successful change (A-06 / A-13).
+                $stmt = mysqli_prepare($conn, "UPDATE login_details SET password = ?, force_password_change = 0 WHERE userId = ?");
                 mysqli_stmt_bind_param($stmt, 'si', $hash, $userId);
                 mysqli_stmt_execute($stmt);
                 mysqli_stmt_close($stmt);
+                unset($_SESSION['force_pw_change']);
                 $_SESSION['message']      = "Password updated successfully!";
                 $_SESSION['message_type'] = "success";
             }

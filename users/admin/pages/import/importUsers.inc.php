@@ -15,6 +15,7 @@
 require_once __DIR__ . '/../../../../includes/auth.php';
 require_once __DIR__ . '/../../../../includes/db.php';
 require_once __DIR__ . '/../../../../includes/functions.php';
+require_once __DIR__ . '/../../../../includes/mailer.php';
 require_once __DIR__ . '/../../queries/user.queries.php';
 
 require_post();
@@ -124,7 +125,8 @@ while (($row = fgetcsv($fh, 0, ',', '"', '')) !== false) {
 
     if ($ok) {
         $s2 = mysqli_prepare($conn,
-            'INSERT INTO login_details (userId, email, `password`, `role`, `rank`) VALUES (?, ?, ?, ?, ?)');
+            'INSERT INTO login_details (userId, email, `password`, `role`, `rank`, force_password_change)
+             VALUES (?, ?, ?, ?, ?, 1)');
         if ($s2) {
             mysqli_stmt_bind_param($s2, 'issss', $new_id, $email, $hash, $role, $rank);
             $ok = mysqli_stmt_execute($s2);
@@ -134,10 +136,19 @@ while (($row = fgetcsv($fh, 0, ',', '"', '')) !== false) {
 
     if ($ok) {
         mysqli_commit($conn);
+        // Email the temporary password to the user rather than returning it in the
+        // response (A-06). They must change it on first sign-in (force flag above).
+        $body = email_wrap('Your account has been created',
+            '<p>Hi ' . h($first) . ',</p>'
+          . '<p>An RMU Claims account has been created for you. Once it is activated you can sign in with:</p>'
+          . '<p style="font-size:14px;"><b>Email:</b> ' . h($email) . '<br>'
+          . '<b>Temporary password:</b> <code style="background:#eef5f8;padding:2px 6px;border-radius:4px;">' . h($temp_password) . '</code></p>'
+          . '<p>For your security you\'ll be asked to choose a new password the first time you sign in.</p>');
+        $emailed = email_send($conn, $email, $first . ' ' . $last, 'Your RMU Claims account', $body, 'user_import', $new_id);
         $created[] = array(
-            'email'         => $email,
-            'name'          => $first . ' ' . $last,
-            'temp_password' => $temp_password,
+            'email'   => $email,
+            'name'    => $first . ' ' . $last,
+            'emailed' => $emailed ? 'sent' : 'queued',
         );
     } else {
         mysqli_rollback($conn);
