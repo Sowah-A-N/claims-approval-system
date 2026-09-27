@@ -58,7 +58,7 @@ $CSRF = csrf_token();
       </div>
       <div class="rmu-card__body" style="padding:0;">
         <div class="rmu-table-wrap">
-          <table class="rmu-table">
+          <table class="rmu-table" data-enhance>
             <thead>
               <tr>
                 <th>Full Name</th>

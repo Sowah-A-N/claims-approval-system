@@ -67,7 +67,7 @@ $claims = db_get_pending_claims_for_stage($conn, $approverStage, $approverDepart
                 </div>
                 <div class="rmu-card__body" style="padding:0;">
                     <div class="rmu-table-wrap">
-                        <table class="rmu-table">
+                        <table class="rmu-table" data-enhance>
                             <thead>
                                 <tr>
                                     <th style="width:36px;text-align:center;">

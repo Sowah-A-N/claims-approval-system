@@ -137,6 +137,86 @@
     }
   });
 
+  // ── Reusable table search + sort (opt-in: <table class="rmu-table" data-enhance>) ──
+  // Charter: tables should support search and sort. This enhances any opted-in
+  // table without per-page code. Search filters visible rows; headers become
+  // keyboard-operable sort controls with aria-sort. Empty-state rows (a single
+  // colspan cell) are never filtered or sorted. On server-paginated tables it
+  // operates within the loaded page.
+  document.addEventListener('DOMContentLoaded', function () {
+    document.querySelectorAll('table.rmu-table[data-enhance]').forEach(function (table) {
+      var head = table.tHead && table.tHead.rows[0];
+      var body = table.tBodies[0];
+      if (!head || !body) return;
+      var colCount = head.cells.length;
+      var wrap = table.closest('.rmu-table-wrap') || table;
+
+      function dataRows() {
+        return Array.prototype.filter.call(body.rows, function (r) {
+          return !r.querySelector('td[colspan]') && r.cells.length >= colCount - 1;
+        });
+      }
+
+      // Search box (unless the page opted out with data-search="off")
+      if (table.getAttribute('data-search') !== 'off') {
+        var id = 'ts-' + Math.random().toString(36).slice(2, 8);
+        var bar = document.createElement('div');
+        bar.className = 'rmu-table-search';
+        bar.innerHTML =
+          '<label class="rmu-sr-only" for="' + id + '">Search this table</label>' +
+          '<i class="ti ti-search" aria-hidden="true"></i>' +
+          '<input id="' + id + '" type="search" class="rmu-input" placeholder="Search…" autocomplete="off">';
+        wrap.parentNode.insertBefore(bar, wrap);
+        var empty = document.createElement('div');
+        empty.className = 'rmu-table-empty';
+        empty.hidden = true;
+        empty.textContent = 'No rows match your search.';
+        wrap.parentNode.insertBefore(empty, wrap.nextSibling);
+        bar.querySelector('input').addEventListener('input', function () {
+          var q = this.value.trim().toLowerCase(), vis = 0;
+          dataRows().forEach(function (r) {
+            var show = !q || r.textContent.toLowerCase().indexOf(q) !== -1;
+            r.style.display = show ? '' : 'none';
+            if (show) vis++;
+          });
+          empty.hidden = !(q && vis === 0);
+        });
+      }
+
+      // Sortable, keyboard-operable headers
+      Array.prototype.forEach.call(head.cells, function (th, i) {
+        if (th.getAttribute('data-sort') === 'off') return;
+        th.classList.add('rmu-th-sort');
+        th.tabIndex = 0;
+        th.setAttribute('role', 'button');
+        th.setAttribute('aria-sort', 'none');
+        var dir = 0;
+        function sortNow() {
+          dir = dir === 1 ? -1 : 1;
+          Array.prototype.forEach.call(head.cells, function (o) { if (o !== th) o.setAttribute('aria-sort', 'none'); });
+          th.setAttribute('aria-sort', dir === 1 ? 'ascending' : 'descending');
+          var rows = dataRows();
+          rows.sort(function (a, b) {
+            var x = (a.cells[i] ? a.cells[i].textContent : '').trim();
+            var y = (b.cells[i] ? b.cells[i].textContent : '').trim();
+            // dd/mm/yyyy → sortable timestamp
+            var dm = /^(\d{2})\/(\d{2})\/(\d{4})$/;
+            var mx = x.match(dm), my = y.match(dm);
+            if (mx && my) return dir * (new Date(mx[3], mx[2] - 1, mx[1]) - new Date(my[3], my[2] - 1, my[1]));
+            var nx = parseFloat(x.replace(/[^0-9.\-]/g, '')), ny = parseFloat(y.replace(/[^0-9.\-]/g, ''));
+            if (!isNaN(nx) && !isNaN(ny) && /\d/.test(x) && /\d/.test(y)) return dir * (nx - ny);
+            return dir * x.localeCompare(y, undefined, { numeric: true, sensitivity: 'base' });
+          });
+          rows.forEach(function (r) { body.appendChild(r); });
+        }
+        th.addEventListener('click', sortNow);
+        th.addEventListener('keydown', function (e) {
+          if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') { e.preventDefault(); sortNow(); }
+        });
+      });
+    });
+  });
+
   // ── Focus management for custom modals (a11y, WCAG 2.4.3) ──────────────────
   // The .rmu-modal-backdrop dialogs open by toggling a `.open` class. Move
   // focus into the dialog on open, trap Tab within it, and restore focus to the

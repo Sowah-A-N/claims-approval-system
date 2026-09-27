@@ -1100,6 +1100,26 @@ img, svg, video, canvas { max-width: 100%; height: auto; }
 }
 .rmu-skip-link:focus { top: 0; outline: 3px solid #fff; outline-offset: -3px; }
 
+/* ── Reusable table search + sortable headers (data-enhance) ───────────────── */
+.rmu-table-search {
+  position: relative; margin: 0 0 14px; max-width: 320px;
+}
+.rmu-table-search i {
+  position: absolute; left: 12px; top: 50%; transform: translateY(-50%);
+  color: var(--txt-muted); font-size: 1rem; pointer-events: none;
+}
+.rmu-table-search .rmu-input { padding-left: 34px; }
+.rmu-table-empty {
+  padding: 22px 16px; text-align: center; color: var(--txt-muted); font-size: .9rem;
+}
+th.rmu-th-sort { cursor: pointer; user-select: none; white-space: nowrap; }
+th.rmu-th-sort::after {
+  content: "\2195"; margin-left: 6px; opacity: .35; font-size: .85em;
+}
+th.rmu-th-sort[aria-sort="ascending"]::after  { content: "\2191"; opacity: 1; color: var(--accent); }
+th.rmu-th-sort[aria-sort="descending"]::after { content: "\2193"; opacity: 1; color: var(--accent); }
+th.rmu-th-sort:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+
 /* ── Shared footer injected on pages that don't ship their own ──────────────── */
 .rmu-footer {
   padding: 18px 32px; margin-top: 24px;

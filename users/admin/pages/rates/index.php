@@ -46,7 +46,7 @@ $pageTitle = 'Rank Rates';
       <div class="rmu-card" style="max-width:760px;">
         <div class="rmu-card__body" style="padding:0;">
           <div class="rmu-table-wrap">
-            <table class="rmu-table">
+            <table class="rmu-table" data-enhance>
               <thead>
                 <tr>
                   <th scope="col">Rank</th>
