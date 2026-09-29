@@ -137,6 +137,25 @@
     }
   });
 
+  // ── Auto-associate visible labels with their controls (a11y, WCAG 1.3.1/4.1.2) ──
+  // Many .rmu-form-group blocks show a <label class="rmu-label"> but never linked it
+  // to the field. Link each unlinked label to its control so screen readers announce
+  // it, and give bare checkboxes an accessible name. Idempotent (skips label[for]).
+  document.addEventListener('DOMContentLoaded', function () {
+    document.querySelectorAll('.rmu-form-group').forEach(function (g) {
+      var label = g.querySelector('label:not([for])');
+      if (!label) return;
+      var ctl = g.querySelector('input:not([type="hidden"]), select, textarea');
+      if (!ctl) return;
+      if (!ctl.id) ctl.id = 'fld-' + Math.random().toString(36).slice(2, 8);
+      label.setAttribute('for', ctl.id);
+    });
+    document.querySelectorAll('input[type="checkbox"]:not([aria-label])').forEach(function (cb) {
+      if (cb.labels && cb.labels.length) return;
+      cb.setAttribute('aria-label', cb.getAttribute('title') || (cb.closest('th') ? 'Select all rows' : 'Select row'));
+    });
+  });
+
   // ── Reusable table search + sort (opt-in: <table class="rmu-table" data-enhance>) ──
   // Charter: tables should support search and sort. This enhances any opted-in
   // table without per-page code. Search filters visible rows; headers become
