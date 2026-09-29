@@ -162,7 +162,7 @@ function cell($v) {
                             <span class="rmu-badge rmu-badge--warning"><?php echo $counts['flagged']; ?></span>
                         </div>
                         <div class="rmu-table-wrap">
-                            <table class="rmu-table">
+                            <table class="rmu-table" data-enhance data-search="off">
                                 <thead>
                                     <tr>
                                         <th>#</th><th>Department</th><th>Course</th><th>Class</th>
@@ -204,7 +204,7 @@ function cell($v) {
                             <span class="rmu-badge rmu-badge--primary"><?php echo $counts['pending']; ?></span>
                         </div>
                         <div class="rmu-table-wrap">
-                            <table class="rmu-table">
+                            <table class="rmu-table" data-enhance data-search="off">
                                 <thead>
                                     <tr>
                                         <th>#</th><th>Department</th><th>Programme</th><th>Course</th><th>Class</th>
@@ -249,7 +249,7 @@ function cell($v) {
                             <span class="rmu-badge rmu-badge--neutral"><?php echo $counts['saved']; ?></span>
                         </div>
                         <div class="rmu-table-wrap">
-                            <table class="rmu-table">
+                            <table class="rmu-table" data-enhance data-search="off">
                                 <thead>
                                     <tr>
                                         <th>#</th><th>Department</th><th>Programme</th><th>Course</th><th>Class</th>
@@ -302,7 +302,7 @@ function cell($v) {
                             <span class="rmu-badge rmu-badge--success"><?php echo $counts['completed']; ?></span>
                         </div>
                         <div class="rmu-table-wrap">
-                            <table class="rmu-table">
+                            <table class="rmu-table" data-enhance data-search="off">
                                 <thead>
                                     <tr>
                                         <th>#</th><th>Department</th><th>Programme</th><th>Course</th><th>Class</th>

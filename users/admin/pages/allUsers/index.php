@@ -110,7 +110,7 @@ $pageTitle = 'All Users';
         </div>
         <div class="rmu-card__body" style="padding:0;">
           <div class="rmu-table-wrap">
-            <table class="rmu-table" id="usersTable">
+            <table class="rmu-table" data-enhance data-search="off" id="usersTable">
               <thead>
                 <tr>
                   <th style="width:36px;text-align:center;">

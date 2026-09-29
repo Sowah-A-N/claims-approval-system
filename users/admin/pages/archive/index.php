@@ -106,7 +106,7 @@ FLUSH PRIVILEGES;</code></pre>
         </div>
         <div class="rmu-card__body" style="padding:0;">
           <div class="rmu-table-wrap">
-            <table class="rmu-table">
+            <table class="rmu-table" data-enhance>
               <thead><tr>
                 <th style="width:36px;"><input type="checkbox" id="selAllActive" onclick="toggleAll('active',this.checked)" aria-label="Select all active"></th>
                 <?php foreach ($cfg['columns'] as $c): ?><th scope="col"><?php echo h($c[1]); ?></th><?php endforeach; ?>
@@ -148,7 +148,7 @@ FLUSH PRIVILEGES;</code></pre>
         </div>
         <div class="rmu-card__body" style="padding:0;">
           <div class="rmu-table-wrap">
-            <table class="rmu-table">
+            <table class="rmu-table" data-enhance>
               <thead><tr>
                 <th style="width:36px;"><input type="checkbox" id="selAllArchived" onclick="toggleAll('archived',this.checked)" aria-label="Select all archived"></th>
                 <?php foreach ($cfg['columns'] as $c): ?><th scope="col"><?php echo h($c[1]); ?></th><?php endforeach; ?>

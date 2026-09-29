@@ -129,7 +129,7 @@ $pageTitle = 'Claims Overview';
         </div>
         <div class="rmu-card__body" style="padding:0;">
           <div class="rmu-table-wrap">
-            <table class="rmu-table" id="claimsTable">
+            <table class="rmu-table" data-enhance data-search="off" id="claimsTable">
               <thead>
                 <tr>
                   <th>#</th>

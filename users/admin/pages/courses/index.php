@@ -84,7 +84,7 @@ $pageTitle = 'Courses';
         </div>
         <div class="rmu-card__body" style="padding:0;">
           <div class="rmu-table-wrap">
-            <table class="rmu-table" id="coursesTable">
+            <table class="rmu-table" data-enhance data-search="off" id="coursesTable">
               <thead>
                 <tr>
                   <th>Code</th><th>Course Name</th><th>Department</th>

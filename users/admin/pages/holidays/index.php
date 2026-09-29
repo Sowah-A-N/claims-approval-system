@@ -78,7 +78,7 @@ $pageTitle = 'Holiday Calendar';
         </div>
         <div class="rmu-card__body" style="padding:0;">
           <div class="rmu-table-wrap">
-            <table class="rmu-table" id="holidaysTable">
+            <table class="rmu-table" data-enhance data-search="off" id="holidaysTable">
               <thead>
                 <tr>
                   <th>Date</th><th>Day</th><th>Holiday</th><th>Actions</th>
