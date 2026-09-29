@@ -1120,6 +1120,18 @@ th.rmu-th-sort[aria-sort="ascending"]::after  { content: "\2191"; opacity: 1; co
 th.rmu-th-sort[aria-sort="descending"]::after { content: "\2193"; opacity: 1; color: var(--accent); }
 th.rmu-th-sort:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
 
+/* ── Touch targets ≥44×44px on mobile (charter / WCAG 2.5.8) ────────────────── */
+@media (max-width: 768px) {
+  .rmu-btn, .rmu-btn--sm,
+  .rmu-input, .rmu-select, .rmu-textarea {
+    min-height: 44px;
+  }
+  .rmu-btn--sm { padding-top: 8px; padding-bottom: 8px; min-width: 44px; justify-content: center; }
+  .rmu-header__btn { width: 44px; height: 44px; }
+  .rmu-modal__close { min-width: 44px; min-height: 44px; }
+  .rmu-dropdown__item { padding-top: 12px; padding-bottom: 12px; }
+}
+
 /* ── Shared footer injected on pages that don't ship their own ──────────────── */
 .rmu-footer {
   padding: 18px 32px; margin-top: 24px;
