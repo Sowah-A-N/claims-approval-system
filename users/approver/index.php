@@ -14,7 +14,7 @@ $claims = db_get_pending_claims_for_stage($conn, $approverStage, $approverDepart
     <?php include './assets/partials/sidebar.php'; ?>
 
     <div class="body-wrapper">
-        <?php include './assets/partials/header.html'; ?>
+        <?php include './assets/partials/header.php'; ?>
 
         <div style="padding:28px 32px;">
 
